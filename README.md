@@ -252,7 +252,8 @@ while maintaining a unique PIHU identity.
 
 <img width="1437" height="954" alt="image" src="https://github.com/user-attachments/assets/0790e1a6-be5d-4d74-bcbf-b4298a7dca25" />
 
-<img width="774" height="954" alt="image" src="https://github.com/user-attachments/assets/8ff1c3af-ee6a-442f-af4e-a60d800eb6b3" />
+<img width="1437" height="954" alt="image" src="https://github.com/user-attachments/assets/8ff1c3af-ee6a-442f-af4e-a60d800eb6b3" />
+
 
 
 
