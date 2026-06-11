@@ -4,6 +4,7 @@ import { GlassCard } from '../GlassCard/GlassCard';
 import { useLayoutStore } from '../../../core/layout/LayoutStore';
 import { OrbWidget } from '../../../widgets/orb/OrbWidget';
 import { ClockWidget } from '../../../widgets/clock/ClockWidget';
+import { MusicWidget } from '../../../widgets/music/MusicWidget';
 
 export const WidgetDrawer: React.FC = () => {
   const { isWidgetDrawerOpen, toggleWidgetDrawer, spawnWidget } = useLayoutStore();
@@ -48,7 +49,7 @@ export const WidgetDrawer: React.FC = () => {
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 overflow-y-auto pb-10">
                 <p className="text-xs text-white/50 mb-6">Click a widget to add it to your screen</p>
                 
                 <div className="flex flex-col gap-8 items-center">
@@ -57,6 +58,11 @@ export const WidgetDrawer: React.FC = () => {
                     <OrbWidget preview onClick={() => handleWidgetClick('orb-widget')} />
                   </div>
                   
+                  <div className="w-full flex flex-col gap-2 items-center">
+                    <span className="text-sm font-medium text-white/80">Music Player</span>
+                    <MusicWidget preview onClick={() => handleWidgetClick('music-widget')} />
+                  </div>
+
                   <div className="w-full flex flex-col gap-2 items-center">
                     <span className="text-sm font-medium text-white/80">Clock</span>
                     <ClockWidget preview onClick={() => handleWidgetClick('clock-widget')} />

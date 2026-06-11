@@ -89,11 +89,11 @@ export const WidgetContainer: React.FC<WidgetContainerProps> = ({
       className="z-10"
       dragHandleClassName="drag-handle"
       onDrag={cancelPress} // Cancel only when actually moving
-      onDragStop={(e, d) => {
+      onDragStop={(_e, d) => {
         cancelPress();
         updateWidgetPosition(id, { x: d.x, y: d.y });
       }}
-      onResizeStop={(e, direction, ref, delta, position) => {
+      onResizeStop={(_e, _direction, ref, _delta, position) => {
         updateWidgetSize(id, { width: ref.style.width, height: ref.style.height });
         updateWidgetPosition(id, position);
       }}

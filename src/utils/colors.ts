@@ -1,7 +1,6 @@
 export function hexToRgb(hex: string): string {
   // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
-  const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
-  const fullHex = hex.replace(shorthandRegex, (m, r, g, b) => {
+  const fullHex = hex.replace(/^#?([a-f\d])([a-f\d])([a-f\d])$/i, (_m, r, g, b) => {
     return r + r + g + g + b + b;
   });
 

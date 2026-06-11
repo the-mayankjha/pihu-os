@@ -1,9 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import Lottie from 'lottie-react';
-import orbAnimation from '../../../../assets/orb.json';
 import { OrbState } from './states';
-import { ErrorBoundary } from '../ErrorBoundary';
 
 interface RingProps {
   state: OrbState;
