@@ -10,7 +10,7 @@ interface OrbStoreState {
 
 export const useOrbStore = create<OrbStoreState>((set) => ({
   currentState: OrbState.IDLE,
-  size: 120,
+  size: 160,
   setState: (state) => set({ currentState: state }),
   setSize: (size) => set({ size }),
 }));

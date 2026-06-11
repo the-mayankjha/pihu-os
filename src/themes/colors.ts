@@ -1,7 +1,7 @@
 import type { ThemeColors } from './types';
 
 export const defaultColors: ThemeColors = {
-  primary: "#FF4FA3",
+  primary: "#e3005b",
   secondary: "#FF80BF",
   accent: "#FF6EC7",
   background: "#090B12",

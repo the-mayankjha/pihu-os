@@ -40,6 +40,7 @@ export const ClockWidget: React.FC = () => {
 
   return (
     <WidgetContainer 
+      id="clock-widget"
       defaultPosition={{ x: 800, y: 50 }} 
       defaultSize={{ width: 380, height: 160 }}
       minWidth={300}

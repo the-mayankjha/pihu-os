@@ -2,7 +2,6 @@ import React from 'react';
 import { OrbState } from './states';
 import { Core } from './Core';
 import { Ring } from './Ring';
-import { Waveform } from './Waveform';
 import { WakeParticles } from './WakeParticles';
 import './Orb.css';
 
@@ -25,7 +24,6 @@ export const Orb: React.FC<OrbProps> = ({
       <WakeParticles state={state} size={size} />
       <Ring state={state} size={size} />
       <Core state={state} size={size} />
-      <Waveform state={state} size={size} />
     </div>
   );
 };

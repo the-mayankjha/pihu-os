@@ -1,18 +1,22 @@
 :root {
-  --pihu-primary: #ff4da6;
+  --pihu-primary: #e3005b;
   --pihu-secondary: #ff77c8;
   --pihu-glow: #ff5fb8;
 }
 
-.orb-core {
-  /* Extremely transparent inside to see the background, slight pink tint that gets darker at the very edge */
-  background: radial-gradient(circle at 50% 50%, rgba(255, 77, 166, 0.02) 0%, rgba(255, 77, 166, 0.1) 70%, rgba(255, 77, 166, 0.3) 100%);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+.orb-glass {
+  --pihu-primary: #e3005b;
+  position: absolute;
+  inset: 0;
   border-radius: 50%;
-  /* The magic glass rim: pure white incredibly thin border, backed by a strong pink inner glow */
+  
+  /* Complex internal shading for depth */
+  background: radial-gradient(circle at 50% 50%, rgba(227, 0, 91, 0.02) 0%, rgba(227, 0, 91, 0.1) 70%, rgba(227, 0, 91, 0.3) 100%);
+  
+  /* Multiple shadows to simulate light reflection and scattering inside a glass sphere */
   box-shadow: 
-    0 0 35px 10px rgba(255, 77, 166, 0.4), /* Soft outer pink ambient glow */
-    inset 0 0 15px 3px rgba(255, 77, 166, 0.8), /* Inner intense pink rim */
-    inset 0 0 2px 1px rgba(255, 255, 255, 0.4); /* Razor sharp inner white glass edge */
+    0 0 35px 10px rgba(227, 0, 91, 0.4), /* Soft outer pink ambient glow */
+    inset 0 0 15px 3px rgba(227, 0, 91, 0.8), /* Inner intense pink rim */
+    inset 0 0 30px 10px rgba(0, 0, 0, 0.3), /* Deep internal shadow to give 3D volume */
+    inset -10px -10px 20px rgba(0, 0, 0, 0.4); /* Bottom left darkening for spherical lighting */
 }

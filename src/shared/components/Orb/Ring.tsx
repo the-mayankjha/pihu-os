@@ -34,8 +34,8 @@ export const Ring: React.FC<RingProps> = ({ state, size }) => {
   }
 
   if (state === OrbState.LISTENING) {
-    const innerSize = size * 1.5;
-    const outerSize = size * 1.9;
+    const innerSize = size * 1.15;
+    const outerSize = size * 1.35;
 
     return (
       <motion.div 
@@ -54,9 +54,9 @@ export const Ring: React.FC<RingProps> = ({ state, size }) => {
             marginTop: -innerSize / 2,
             marginLeft: -innerSize / 2,
             border: '4px solid transparent',
-            borderLeftColor: 'rgba(255, 77, 166, 0.9)',
-            borderRightColor: 'rgba(255, 77, 166, 0.9)',
-            boxShadow: 'inset 5px 0 10px -5px rgba(255,77,166,0.6), inset -5px 0 10px -5px rgba(255,77,166,0.6)',
+            borderLeftColor: 'rgba(227, 0, 91, 0.9)',
+            borderRightColor: 'rgba(227, 0, 91, 0.9)',
+            boxShadow: 'inset 5px 0 10px -5px rgba(227, 0, 91, 0.6), inset -5px 0 10px -5px rgba(227, 0, 91, 0.6)',
           }}
           animate={{
             scale: 1 + pulseLevel * 0.1,
@@ -76,9 +76,9 @@ export const Ring: React.FC<RingProps> = ({ state, size }) => {
             marginTop: -outerSize / 2,
             marginLeft: -outerSize / 2,
             border: '2px solid transparent',
-            borderLeftColor: 'rgba(255, 77, 166, 0.5)',
-            borderRightColor: 'rgba(255, 77, 166, 0.5)',
-            boxShadow: 'inset 3px 0 8px -3px rgba(255,77,166,0.4), inset -3px 0 8px -3px rgba(255,77,166,0.4)',
+            borderLeftColor: 'rgba(227, 0, 91, 0.5)',
+            borderRightColor: 'rgba(227, 0, 91, 0.5)',
+            boxShadow: 'inset 3px 0 8px -3px rgba(227, 0, 91, 0.4), inset -3px 0 8px -3px rgba(227, 0, 91, 0.4)',
           }}
           animate={{
             scale: 1 + pulseLevel * 0.2,

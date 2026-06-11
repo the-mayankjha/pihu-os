@@ -19,6 +19,8 @@ export const WakeParticles: React.FC<WakeParticlesProps> = ({ state, size }) => 
 
   if (state !== OrbState.WAKE) return null;
 
+  const THEME_COLORS = ['#FF4DA6', '#FF6BCB', '#FF9BE2', '#FFD6F4'];
+
   // Generate 16 particles exploding outwards from the EDGE of the orb
   const particles = Array.from({ length: 16 }).map((_, i) => {
     const angle = (i * 22.5 * Math.PI) / 180;
@@ -35,8 +37,9 @@ export const WakeParticles: React.FC<WakeParticlesProps> = ({ state, size }) => 
     
     const particleSize = 2 + Math.random() * 5;
     const isDiamond = Math.random() > 0.5;
+    const color = THEME_COLORS[Math.floor(Math.random() * THEME_COLORS.length)];
 
-    return { id: i, startX, startY, endX, endY, particleSize, isDiamond };
+    return { id: i, startX, startY, endX, endY, particleSize, isDiamond, color };
   });
 
   return (
@@ -44,13 +47,14 @@ export const WakeParticles: React.FC<WakeParticlesProps> = ({ state, size }) => 
       {particles.map((p) => (
         <motion.div
           key={p.id}
-          className="absolute bg-white"
+          className="absolute"
           style={{
             width: p.particleSize,
             height: p.particleSize,
+            backgroundColor: p.color,
             borderRadius: p.isDiamond ? '2px' : '50%',
             rotate: p.isDiamond ? 45 : 0,
-            boxShadow: '0 0 12px 4px rgba(255, 77, 166, 0.9)',
+            boxShadow: `0 0 12px 4px ${p.color}80`, // 80 is 50% opacity in hex
           }}
           initial={{ x: p.startX, y: p.startY, scale: 0, opacity: 0 }}
           animate={{ 
