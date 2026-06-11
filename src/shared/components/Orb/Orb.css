@@ -1,0 +1,18 @@
+:root {
+  --pihu-primary: #ff4da6;
+  --pihu-secondary: #ff77c8;
+  --pihu-glow: #ff5fb8;
+}
+
+.orb-core {
+  /* Extremely transparent inside to see the background, slight pink tint that gets darker at the very edge */
+  background: radial-gradient(circle at 50% 50%, rgba(255, 77, 166, 0.02) 0%, rgba(255, 77, 166, 0.1) 70%, rgba(255, 77, 166, 0.3) 100%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 50%;
+  /* The magic glass rim: pure white incredibly thin border, backed by a strong pink inner glow */
+  box-shadow: 
+    0 0 35px 10px rgba(255, 77, 166, 0.4), /* Soft outer pink ambient glow */
+    inset 0 0 15px 3px rgba(255, 77, 166, 0.8), /* Inner intense pink rim */
+    inset 0 0 2px 1px rgba(255, 255, 255, 0.4); /* Razor sharp inner white glass edge */
+}
