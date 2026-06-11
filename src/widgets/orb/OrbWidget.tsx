@@ -10,10 +10,16 @@ interface WakeWordPayload {
   model: string;
 }
 
-export const OrbWidget: React.FC = () => {
+export interface OrbWidgetProps {
+  preview?: boolean;
+  onClick?: () => void;
+}
+
+export const OrbWidget: React.FC<OrbWidgetProps> = ({ preview = false, onClick }) => {
   const { currentState, setState, size } = useOrbStore();
 
   useEffect(() => {
+    if (preview) return; // Don't listen to events if in preview mode
     const unlistenWake = listen<WakeWordPayload>('wake-word-detected', (event) => {
       console.log('REACT GOT EVENT: Wake word detected:', event.payload.model);
       
@@ -47,7 +53,7 @@ export const OrbWidget: React.FC = () => {
       unlistenWake.then(f => f());
       unlistenSpeechEnded.then(f => f());
     };
-  }, [setState]);
+  }, [setState, preview]);
 
   const getHeaderText = () => {
     switch (currentState) {
@@ -73,42 +79,35 @@ export const OrbWidget: React.FC = () => {
     }
   };
 
-  return (
-    <WidgetContainer
-      id="orb-widget"
-      defaultPosition={{ x: 40, y: 60 }}
-      defaultSize={{ width: 320, height: 420 }}
-      minWidth={280}
-      minHeight={380}
-      isDraggable={true}
-    >
-      <div className="w-full h-full flex flex-col items-center justify-start relative group pt-8 pb-6 px-4">
-        {/* Content Wrapper to center everything together */}
-        <div className="flex-1 flex flex-col items-center justify-center w-full">
-          {/* The Magical Orb */}
-          <div className="flex items-center justify-center pointer-events-none w-full mb-4">
-            <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
-              <Orb state={currentState} size={size} />
-            </div>
-          </div>
-
-          {/* Text Area */}
-          <div className="flex flex-col items-center justify-center text-center z-10 w-full mb-2">
-            <h2 className="text-[22px] font-semibold tracking-wide mb-1 transition-all" style={{ color: '#FFD6F4' }}>
-              {getHeaderText()}
-            </h2>
-            <p className="text-[14px] font-medium transition-all" style={{ color: '#e3005b', opacity: 1, textShadow: '0 0 10px rgba(227, 0, 91, 0.4)' }}>
-              {getSubText()}
-            </p>
+  const innerContent = (
+    <div className="w-full h-full flex flex-col items-center justify-start relative group pt-8 pb-6 px-4">
+      {/* Content Wrapper to center everything together */}
+      <div className="flex-1 flex flex-col items-center justify-center w-full">
+        {/* The Magical Orb */}
+        <div className="flex items-center justify-center pointer-events-none w-full mb-4">
+          <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+            <Orb state={currentState} size={size} />
           </div>
         </div>
 
-        {/* Waveform Area */}
-        <div className="h-[40px] flex items-center justify-center w-full mb-2">
-          <Waveform state={currentState} size={size} />
+        {/* Text Area */}
+        <div className="flex flex-col items-center justify-center text-center z-10 w-full mb-2">
+          <h2 className="text-[22px] font-semibold tracking-wide mb-1 transition-all" style={{ color: '#FFD6F4' }}>
+            {getHeaderText()}
+          </h2>
+          <p className="text-[14px] font-medium transition-all" style={{ color: '#e3005b', opacity: 1, textShadow: '0 0 10px rgba(227, 0, 91, 0.4)' }}>
+            {getSubText()}
+          </p>
         </div>
+      </div>
 
-        {/* Developer Controls (MVP Testing) - Hidden until hover */}
+      {/* Waveform Area */}
+      <div className="h-[40px] flex items-center justify-center w-full mb-2">
+        <Waveform state={currentState} size={size} />
+      </div>
+
+      {/* Developer Controls (MVP Testing) - Hidden until hover */}
+      {!preview && (
         <div className="absolute bottom-2 flex gap-2 flex-wrap justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50">
           <button 
             onClick={() => setState(OrbState.IDLE)}
@@ -141,8 +140,37 @@ export const OrbWidget: React.FC = () => {
             Speak
           </button>
         </div>
+      )}
+    </div>
+  );
 
+  if (preview) {
+    // Original size is 320x420. Scale to 0.7 = 224x294
+    return (
+      <div 
+        onClick={onClick}
+        className="rounded-[32px] bg-slate-800/40 backdrop-blur-[60px] border border-white/5 shadow-lg flex items-center justify-center cursor-pointer overflow-hidden hover:scale-[1.02] transition-transform"
+        style={{ width: 224, height: 294 }}
+      >
+        <div style={{ transform: 'scale(0.7)', width: 320, height: 420 }} className="flex-shrink-0 origin-center flex items-center justify-center pointer-events-none">
+           {innerContent}
+        </div>
       </div>
+    );
+  }
+
+  return (
+    <WidgetContainer 
+      id="orb-widget"
+      defaultPosition={{ x: 100, y: 100 }} 
+      defaultSize={{ width: 320, height: 420 }}
+      minWidth={280}
+      minHeight={360}
+      isDraggable={true}
+      isResizable={true}
+      isRemovable={false}
+    >
+      {innerContent}
     </WidgetContainer>
   );
 };

@@ -3,14 +3,20 @@ import { GlassCard } from '../../shared/components/GlassCard/GlassCard';
 import { WidgetContainer } from '../../shared/components/WidgetContainer/WidgetContainer';
 import { useThemeStore } from '../../stores/themeStore';
 
-export const ClockWidget: React.FC = () => {
+export interface ClockWidgetProps {
+  preview?: boolean;
+  onClick?: () => void;
+}
+
+export const ClockWidget: React.FC<ClockWidgetProps> = ({ preview = false, onClick }) => {
   const [time, setTime] = useState(new Date());
   const { theme } = useThemeStore();
 
   useEffect(() => {
+    if (preview) return; // Optional: pause timer in preview? No, let's keep it ticking!
     const timer = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [preview]);
 
   const formatOptions: Intl.DateTimeFormatOptions = { 
     weekday: 'long', 
@@ -34,9 +40,89 @@ export const ClockWidget: React.FC = () => {
       ? 'Good afternoon' 
       : 'Good evening';
 
-  // For testing settings configuration, we'll hardcode to true as requested.
   const isDraggable = true;
   const isResizable = true;
+
+  const innerContent = (
+    <GlassCard 
+      blur="lg" 
+      frost="medium" 
+      className="w-full h-full p-6 flex items-center justify-between drag-handle cursor-move"
+    >
+      <div className="flex flex-col flex-1 overflow-hidden">
+        <span className="text-sm font-medium mb-1 truncate" style={{ color: theme.colors.textSecondary }}>
+          {dateStr}
+        </span>
+        <div className="flex items-baseline gap-1">
+          <span className="text-5xl font-bold tracking-tight truncate" style={{ color: theme.colors.textPrimary }}>
+            {timeNum}
+          </span>
+          <span className="text-xl font-medium" style={{ color: theme.colors.primary }}>
+            {ampm}
+          </span>
+        </div>
+        <span className="text-sm mt-2 font-medium truncate" style={{ color: theme.colors.textSecondary }}>
+          {greeting}, Mayank ✨
+        </span>
+      </div>
+      
+      {/* Simple Analog Clock Visualization */}
+      <div 
+        className="relative w-24 h-24 shrink-0 rounded-full border border-white/20 shadow-inner flex items-center justify-center"
+        style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}
+      >
+        <div className="absolute w-1.5 h-1.5 rounded-full z-10" style={{ backgroundColor: theme.colors.primary }} />
+        
+        {/* Hour Hand */}
+        <div 
+          className="absolute w-[3px] rounded-full origin-bottom" 
+          style={{ 
+            height: '25%', 
+            bottom: '50%', 
+            backgroundColor: theme.colors.textPrimary,
+            transform: `rotate(${time.getHours() * 30 + time.getMinutes() * 0.5}deg)`
+          }} 
+        />
+        
+        {/* Minute Hand */}
+        <div 
+          className="absolute w-[2px] rounded-full origin-bottom" 
+          style={{ 
+            height: '35%', 
+            bottom: '50%', 
+            backgroundColor: theme.colors.textSecondary,
+            transform: `rotate(${time.getMinutes() * 6}deg)`
+          }} 
+        />
+        
+        {/* Second Hand */}
+        <div 
+          className="absolute w-[1px] rounded-full origin-bottom transition-transform duration-1000 ease-linear" 
+          style={{ 
+            height: '40%', 
+            bottom: '50%', 
+            backgroundColor: theme.colors.primary,
+            transform: `rotate(${time.getSeconds() * 6}deg)`
+          }} 
+        />
+      </div>
+    </GlassCard>
+  );
+
+  if (preview) {
+    // Original size is 380x160. Scale to 0.7 = 266x112
+    return (
+      <div 
+        onClick={onClick}
+        className="rounded-[24px] flex items-center justify-center cursor-pointer hover:scale-[1.02] transition-transform overflow-hidden shadow-lg"
+        style={{ width: 266, height: 112 }}
+      >
+        <div style={{ transform: 'scale(0.7)', width: 380, height: 160 }} className="flex-shrink-0 origin-center flex items-center justify-center pointer-events-none">
+           {innerContent}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <WidgetContainer 
@@ -47,70 +133,9 @@ export const ClockWidget: React.FC = () => {
       minHeight={120}
       isDraggable={isDraggable}
       isResizable={isResizable}
+      isRemovable={true}
     >
-      <GlassCard 
-        blur="lg" 
-        frost="medium" 
-        className="w-full h-full p-6 flex items-center justify-between drag-handle cursor-move"
-      >
-        <div className="flex flex-col flex-1 overflow-hidden">
-          <span className="text-sm font-medium mb-1 truncate" style={{ color: theme.colors.textSecondary }}>
-            {dateStr}
-          </span>
-          <div className="flex items-baseline gap-1">
-            <span className="text-5xl font-bold tracking-tight truncate" style={{ color: theme.colors.textPrimary }}>
-              {timeNum}
-            </span>
-            <span className="text-xl font-medium" style={{ color: theme.colors.primary }}>
-              {ampm}
-            </span>
-          </div>
-          <span className="text-sm mt-2 font-medium truncate" style={{ color: theme.colors.textSecondary }}>
-            {greeting}, Mayank ✨
-          </span>
-        </div>
-        
-        {/* Simple Analog Clock Visualization */}
-        <div 
-          className="relative w-24 h-24 shrink-0 rounded-full border border-white/20 shadow-inner flex items-center justify-center"
-          style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}
-        >
-          <div className="absolute w-1.5 h-1.5 rounded-full z-10" style={{ backgroundColor: theme.colors.primary }} />
-          
-          {/* Hour Hand */}
-          <div 
-            className="absolute w-[3px] rounded-full origin-bottom" 
-            style={{ 
-              height: '25%', 
-              bottom: '50%', 
-              backgroundColor: theme.colors.textPrimary,
-              transform: `rotate(${time.getHours() * 30 + time.getMinutes() * 0.5}deg)`
-            }} 
-          />
-          
-          {/* Minute Hand */}
-          <div 
-            className="absolute w-[2px] rounded-full origin-bottom" 
-            style={{ 
-              height: '35%', 
-              bottom: '50%', 
-              backgroundColor: theme.colors.textSecondary,
-              transform: `rotate(${time.getMinutes() * 6}deg)`
-            }} 
-          />
-          
-          {/* Second Hand */}
-          <div 
-            className="absolute w-[1px] rounded-full origin-bottom transition-transform duration-1000 ease-linear" 
-            style={{ 
-              height: '40%', 
-              bottom: '50%', 
-              backgroundColor: theme.colors.primary,
-              transform: `rotate(${time.getSeconds() * 6}deg)`
-            }} 
-          />
-        </div>
-      </GlassCard>
+      {innerContent}
     </WidgetContainer>
   );
 };

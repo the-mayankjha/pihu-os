@@ -9,9 +9,12 @@ export interface WidgetState {
 
 interface LayoutState {
   widgets: Record<string, WidgetState>;
+  isWidgetDrawerOpen: boolean;
   updateWidgetPosition: (id: string, position: { x: number; y: number }) => void;
   updateWidgetSize: (id: string, size: { width: number | string; height: number | string }) => void;
   toggleWidget: (id: string) => void;
+  spawnWidget: (id: string, position: { x: number; y: number }) => void;
+  toggleWidgetDrawer: () => void;
   registerWidget: (id: string, defaultPosition: { x: number; y: number }, defaultSize: { width: number | string; height: number | string }) => void;
 }
 
@@ -19,6 +22,22 @@ export const useLayoutStore = create<LayoutState>()(
   persist(
     (set, get) => ({
       widgets: {},
+      isWidgetDrawerOpen: false,
+
+      toggleWidgetDrawer: () => set((state) => ({ isWidgetDrawerOpen: !state.isWidgetDrawerOpen })),
+
+      spawnWidget: (id, position) => {
+        set((state) => ({
+          widgets: {
+            ...state.widgets,
+            [id]: {
+              ...(state.widgets[id] || { size: { width: 'auto', height: 'auto' } }),
+              isOpen: true,
+              position,
+            },
+          },
+        }));
+      },
 
       updateWidgetPosition: (id, position) => {
         set((state) => ({
