@@ -12,7 +12,8 @@ export const YTMusicPlugin: React.FC = () => {
     trackInfo, isPlaying, togglePlay, next, prev, 
     progress, duration, setProgress, player,
     setPlaylistId, playlistTracks, playlistId,
-    likedSongs, toggleLike, savedPlaylists, savePlaylist, removePlaylist, playTrackAt
+    likedSongs, toggleLike, savedPlaylists, savePlaylist, removePlaylist, playTrackAt,
+    isYtAuthenticated
   } = useMusicStore();
   const { theme } = useThemeStore();
   const [inputValue, setInputValue] = useState('');
@@ -36,21 +37,51 @@ export const YTMusicPlugin: React.FC = () => {
     return () => clearTimeout(timer);
   }, [inputValue]);
 
-  // Fetch iTunes search results
+  // Fetch search results
   useEffect(() => {
     if (debouncedSearch) {
       setIsSearching(true);
-      fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(debouncedSearch)}&entity=song&limit=15`)
-        .then(res => res.json())
-        .then(data => {
-          setSearchResults(data.results || []);
-          setIsSearching(false);
-        })
-        .catch(() => {
-          setIsSearching(false);
-        });
+      
+      if (isYtAuthenticated) {
+        // Use local YTMusicAPI Server
+        fetch(`http://127.0.0.1:48123/search?q=${encodeURIComponent(debouncedSearch)}`)
+          .then(res => res.json())
+          .then(data => {
+            // Format to match old structure for compatibility
+            const formatted = (data.results || []).map((r: any) => ({
+              trackName: r.title,
+              artistName: r.artists?.[0]?.name || 'Unknown',
+              collectionName: r.album?.name || '',
+              artworkUrl100: r.thumbnails?.[0]?.url || '',
+              videoId: r.videoId
+            }));
+            setSearchResults(formatted);
+            setIsSearching(false);
+          })
+          .catch(() => {
+            setIsSearching(false);
+          });
+      } else {
+        // Fallback to iTunes Search
+        fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(debouncedSearch)}&entity=song&limit=15`)
+          .then(res => res.json())
+          .then(data => {
+            setSearchResults(data.results || []);
+            setIsSearching(false);
+          })
+          .catch(() => {
+            setIsSearching(false);
+          });
+      }
     }
-  }, [debouncedSearch]);
+  }, [debouncedSearch, isYtAuthenticated]);
+
+  const handleLogout = async () => {
+    try {
+      await fetch('http://127.0.0.1:48123/auth/logout', { method: 'POST' });
+      useMusicStore.getState().checkYtAuth();
+    } catch(e) {}
+  };
 
   const handleClose = () => {
     toggleWidget('ytmusic-plugin');
@@ -83,6 +114,13 @@ export const YTMusicPlugin: React.FC = () => {
   const handlePlaySearchResult = async (result: any) => {
     const query = `${result.trackName} ${result.artistName}`;
     setInputValue('');
+    
+    // If we already have the videoId from our ytmusicapi backend
+    if (result.videoId) {
+      setPlaylistId(`RD${result.videoId}`, 'playlist');
+      return;
+    }
+
     setPlaylistId(query, 'search'); // Set loading state initially
 
     // 1. Try Invidious API
@@ -186,9 +224,10 @@ export const YTMusicPlugin: React.FC = () => {
           <div className="space-y-1">
             <div className="px-4 py-2.5 rounded-xl text-white/60 hover:bg-white/5 hover:text-white transition-colors cursor-pointer flex items-center gap-3">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-              Liked Songs ({likedSongs.length})
+              Liked Songs {isYtAuthenticated ? '(Auto-sync)' : `(${likedSongs.length})`}
             </div>
-            {savedPlaylists.map(p => (
+            
+            {!isYtAuthenticated && savedPlaylists.map(p => (
               <div 
                 key={p.id} 
                 onClick={() => setPlaylistId(p.id)}
@@ -203,6 +242,30 @@ export const YTMusicPlugin: React.FC = () => {
                 </button>
               </div>
             ))}
+
+            {isYtAuthenticated && (
+              <>
+                <div 
+                  onClick={() => {
+                    fetch('http://127.0.0.1:48123/playlists').then(r=>r.json()).then(data => {
+                      if(data.results && data.results.length > 0) {
+                        setPlaylistId(data.results[0].playlistId, 'playlist');
+                      }
+                    });
+                  }}
+                  className="px-4 py-2 text-sm text-white/60 hover:text-white hover:bg-white/5 rounded-xl truncate cursor-pointer"
+                >
+                  Sync YT Playlists...
+                </div>
+                <div 
+                  onClick={handleLogout}
+                  className="px-4 py-2 mt-4 text-sm text-red-400/80 hover:text-red-400 hover:bg-red-400/10 rounded-xl truncate cursor-pointer flex items-center gap-3 transition-colors"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
+                  Sign Out
+                </div>
+              </>
+            )}
           </div>
         </div>
 

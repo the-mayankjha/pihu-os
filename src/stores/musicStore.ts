@@ -21,6 +21,7 @@ interface MusicState {
   showSettings: boolean;
   likedSongs: string[];
   savedPlaylists: { id: string, name: string }[];
+  isYtAuthenticated: boolean;
 
   // Setters
   setPlayer: (player: YouTubePlayer | null) => void;
@@ -32,6 +33,7 @@ interface MusicState {
   setPlaylistId: (playlistId: string, listType?: 'playlist' | 'search' | 'video') => void;
   setPlaylistTracks: (tracks: TrackInfo[]) => void;
   setShowSettings: (showSettings: boolean) => void;
+  setIsYtAuthenticated: (isAuth: boolean) => void;
 
   // Actions
   togglePlay: () => void;
@@ -42,6 +44,7 @@ interface MusicState {
   toggleLike: (trackId: string) => void;
   savePlaylist: (id: string, name: string) => void;
   removePlaylist: (id: string) => void;
+  checkYtAuth: () => Promise<void>;
 }
 
 export const useMusicStore = create<MusicState>()(
@@ -59,6 +62,7 @@ export const useMusicStore = create<MusicState>()(
       showSettings: false,
       likedSongs: [],
       savedPlaylists: [],
+      isYtAuthenticated: false,
 
       setPlayer: (player) => set({ player }),
       setIsPlaying: (isPlaying) => set({ isPlaying }),
@@ -75,7 +79,17 @@ export const useMusicStore = create<MusicState>()(
         trackInfo: { title: 'Loading...', artist: 'YouTube', id: '' }
       }),
       setShowSettings: (showSettings) => set({ showSettings }),
+      setIsYtAuthenticated: (isYtAuthenticated) => set({ isYtAuthenticated }),
 
+      checkYtAuth: async () => {
+        try {
+          const res = await fetch('http://127.0.0.1:48123/auth/check');
+          const data = await res.json();
+          set({ isYtAuthenticated: data.authenticated });
+        } catch (e) {
+          console.error("Failed to check YT auth", e);
+        }
+      },
 
   togglePlay: () => {
     const { player, isPlaying } = get();

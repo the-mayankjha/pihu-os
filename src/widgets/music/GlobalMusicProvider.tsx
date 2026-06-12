@@ -153,6 +153,112 @@ export const GlobalMusicProvider: React.FC = () => {
     setShowSettings(false);
   };
 
+  const [authFlow, setAuthFlow] = useState<{url: string, code: string, deviceCode: string} | null>(null);
+  const [authStatus, setAuthStatus] = useState<string>('');
+  const { isYtAuthenticated, checkYtAuth } = useMusicStore();
+
+  useEffect(() => {
+    checkYtAuth();
+  }, []);
+
+  const handleStartAuth = async () => {
+    setAuthStatus('Generating login code...');
+    
+    let popup: any = null;
+
+    try {
+      const res = await fetch('http://127.0.0.1:48123/auth/start');
+      const data = await res.json();
+      if (data.success) {
+        setAuthFlow({
+          url: data.code.verification_url,
+          code: data.code.user_code,
+          deviceCode: data.code.device_code
+        });
+        
+        try {
+          // Auto-copy code to clipboard
+          await navigator.clipboard.writeText(data.code.user_code);
+          setAuthStatus('Code copied to clipboard! Please paste it in the popup window.');
+        } catch (err) {
+          setAuthStatus('Please open the URL and enter the code.');
+        }
+
+        try {
+          // Dynamically import WebviewWindow to avoid breaking non-Tauri environments
+          const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+          const windowLabel = 'googleAuth_' + Date.now();
+          popup = new WebviewWindow(windowLabel, {
+            url: data.code.verification_url,
+            title: '',
+            width: 480,
+            height: 650,
+            center: true,
+            focus: true,
+            theme: 'dark',
+            titleBarStyle: 'overlay',
+            hiddenTitle: true
+          });
+          
+          popup.once('tauri://error', function (e: any) {
+            console.error('WebviewWindow error:', e);
+            setAuthStatus('Window error: ' + (e?.payload || 'Unknown error. Check capabilities.'));
+          });
+        } catch (e: any) {
+          console.error("Tauri WebviewWindow failed to spawn.", e);
+          setAuthStatus('Failed to spawn window. Did you restart the server?');
+        }
+
+        // Immediately start polling for verification
+        handleVerifyAuth(data.code.device_code, popup);
+        
+      } else {
+        setAuthStatus('Failed to start auth flow.');
+      }
+    } catch (e) {
+      setAuthStatus('Error connecting to local YTMusic server.');
+    }
+  };
+
+  const handleVerifyAuth = async (deviceCode: string, popup?: any) => {
+    try {
+      const res = await fetch('http://127.0.0.1:48123/auth/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ device_code: deviceCode })
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        setAuthStatus('Successfully authenticated!');
+        setAuthFlow(null);
+        if (popup) {
+          try {
+            popup.close(); // For WebviewWindow or window.open
+          } catch(e) {}
+        }
+        checkYtAuth();
+      } else if (data.pending) {
+        // Continue polling every 5 seconds without blocking the connection
+        setTimeout(() => {
+          handleVerifyAuth(deviceCode, popup);
+        }, 5000);
+      } else {
+        setAuthStatus('Authorization failed or expired.');
+      }
+    } catch (e: any) {
+      console.error("Verify Auth Error:", e);
+      setAuthStatus('Error verifying auth: ' + (e?.message || e?.toString() || 'Unknown fetch error'));
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch('http://127.0.0.1:48123/auth/logout', { method: 'POST' });
+      checkYtAuth();
+    } catch(e) {}
+  };
+
   return (
     <>
       {/* Hidden YouTube Player */}
@@ -193,31 +299,58 @@ export const GlobalMusicProvider: React.FC = () => {
               className="w-full max-w-[400px] p-6 bg-[#1a1a24]/90 backdrop-blur-xl rounded-[32px] shadow-2xl border border-white/10"
             >
               <h3 className="text-white font-semibold mb-2 text-xl text-center">Music Settings</h3>
-              <p className="text-white/60 text-sm text-center mb-6 leading-relaxed">Paste any public YouTube Playlist URL below to link your account's music.</p>
               
-              <input 
-                type="text" 
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={(e) => { if(e.key === 'Enter') handleSavePlaylist(); }}
-                placeholder="https://youtube.com/playlist?list=..."
-                className="w-full px-5 py-4 rounded-2xl bg-black/30 border border-white/5 text-white text-sm placeholder-white/30 focus:outline-none focus:border-white/30 focus:bg-black/50 transition-all mb-6"
-              />
-              
-              <div className="flex gap-3 w-full">
-                <button 
-                  onClick={() => setShowSettings(false)}
-                  className="flex-1 py-3.5 rounded-2xl font-medium text-white/70 hover:bg-white/5 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={handleSavePlaylist}
-                  className="flex-1 py-3.5 rounded-2xl font-semibold text-white shadow-lg transition-transform hover:scale-[1.02] active:scale-[0.98]"
-                  style={{ backgroundColor: theme.colors.primary }}
-                >
-                  Save & Play
-                </button>
+              <div className="mb-6 p-4 rounded-2xl bg-white/5 border border-white/10 text-center">
+                <h4 className="text-white/90 font-medium mb-2">YouTube Music Account</h4>
+                {isYtAuthenticated ? (
+                  <div>
+                    <p className="text-green-400 text-sm mb-3">✓ Authenticated</p>
+                    <button onClick={handleLogout} className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg text-sm hover:bg-red-500/30 transition-colors">Sign Out</button>
+                  </div>
+                ) : authFlow ? (
+                  <div>
+                    <p className="text-white/70 text-sm mb-2">{authStatus}</p>
+                    <a href={authFlow.url} target="_blank" rel="noreferrer" className="text-blue-400 text-sm hover:underline block mb-2">{authFlow.url}</a>
+                    <div className="text-2xl font-mono text-white tracking-widest bg-black/50 py-2 rounded-lg mb-4">{authFlow.code}</div>
+                    <button onClick={() => authFlow && handleVerifyAuth(authFlow.deviceCode)} className="w-full py-2 bg-white/10 text-white rounded-lg text-sm hover:bg-white/20 transition-colors mb-2">I have entered the code</button>
+                    <button onClick={() => setAuthFlow(null)} className="w-full py-2 text-white/50 text-sm hover:text-white/80 transition-colors">Cancel</button>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-white/60 text-sm mb-4">Sign in to unlock your personal library, liked songs, and better search.</p>
+                    <button onClick={handleStartAuth} className="px-5 py-2.5 bg-[#ff0000] text-white rounded-xl text-sm font-medium hover:bg-[#ff0000]/80 transition-colors">Sign In with YouTube</button>
+                    {authStatus && <p className="text-white/50 text-xs mt-3">{authStatus}</p>}
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t border-white/10 pt-6">
+                <p className="text-white/60 text-sm text-center mb-4 leading-relaxed">Or play an unauthenticated public playlist URL:</p>
+                
+                <input 
+                  type="text" 
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={(e) => { if(e.key === 'Enter') handleSavePlaylist(); }}
+                  placeholder="https://youtube.com/playlist?list=..."
+                  className="w-full px-5 py-4 rounded-2xl bg-black/30 border border-white/5 text-white text-sm placeholder-white/30 focus:outline-none focus:border-white/30 focus:bg-black/50 transition-all mb-4"
+                />
+                
+                <div className="flex gap-3 w-full">
+                  <button 
+                    onClick={() => setShowSettings(false)}
+                    className="flex-1 py-3.5 rounded-2xl font-medium text-white/70 hover:bg-white/5 transition-colors"
+                  >
+                    Close
+                  </button>
+                  <button 
+                    onClick={handleSavePlaylist}
+                    className="flex-1 py-3.5 rounded-2xl font-semibold text-white shadow-lg transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                    style={{ backgroundColor: theme.colors.primary }}
+                  >
+                    Play
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>
