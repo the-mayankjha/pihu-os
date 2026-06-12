@@ -5,14 +5,17 @@ import { useLayoutStore } from '../../../core/layout/LayoutStore';
 import { OrbWidget } from '../../../widgets/orb/OrbWidget';
 import { ClockWidget } from '../../../widgets/clock/ClockWidget';
 import { MusicWidget } from '../../../widgets/music/MusicWidget';
+import { MusicWidgetHorizontal } from '../../../widgets/music/MusicWidgetHorizontal';
+import { MusicWidgetCircle } from '../../../widgets/music/MusicWidgetCircle';
+import { MusicWidgetFolder } from '../../../widgets/music/MusicWidgetFolder';
 
 export const WidgetDrawer: React.FC = () => {
   const { isWidgetDrawerOpen, toggleWidgetDrawer, spawnWidget } = useLayoutStore();
 
   const handleWidgetClick = (widgetId: string) => {
     // Spawn the widget slightly offset from the center
-    const x = window.innerWidth / 2 - 150; 
-    const y = window.innerHeight / 2 - 200;
+    const x = window.innerWidth / 2 - 150 + (Math.random() * 50 - 25); 
+    const y = window.innerHeight / 2 - 200 + (Math.random() * 50 - 25);
     spawnWidget(widgetId, { x, y });
     toggleWidgetDrawer(); // Automatically close drawer after adding
   };
@@ -52,15 +55,30 @@ export const WidgetDrawer: React.FC = () => {
               <div className="flex-1 overflow-y-auto pb-10">
                 <p className="text-xs text-white/50 mb-6">Click a widget to add it to your screen</p>
                 
-                <div className="flex flex-col gap-8 items-center">
+                <div className="flex flex-col gap-10 items-center">
                   <div className="w-full flex flex-col gap-2 items-center">
                     <span className="text-sm font-medium text-white/80">AI Orb</span>
                     <OrbWidget preview onClick={() => handleWidgetClick('orb-widget')} />
                   </div>
                   
                   <div className="w-full flex flex-col gap-2 items-center">
-                    <span className="text-sm font-medium text-white/80">Music Player</span>
+                    <span className="text-sm font-medium text-white/80">Music Player (Square)</span>
                     <MusicWidget preview onClick={() => handleWidgetClick('music-widget')} />
+                  </div>
+
+                  <div className="w-full flex flex-col gap-2 items-center">
+                    <span className="text-sm font-medium text-white/80">Music Player (Compact)</span>
+                    <MusicWidgetHorizontal preview onClick={() => handleWidgetClick('music-widget-horizontal')} />
+                  </div>
+
+                  <div className="w-full flex flex-col gap-2 items-center">
+                    <span className="text-sm font-medium text-white/80">Music Player (Circle Disc)</span>
+                    <MusicWidgetCircle preview onClick={() => handleWidgetClick('music-widget-circle')} />
+                  </div>
+
+                  <div className="w-full flex flex-col gap-2 items-center">
+                    <span className="text-sm font-medium text-white/80">Music Player (Glass Folder)</span>
+                    <MusicWidgetFolder preview onClick={() => handleWidgetClick('music-widget-folder')} />
                   </div>
 
                   <div className="w-full flex flex-col gap-2 items-center">

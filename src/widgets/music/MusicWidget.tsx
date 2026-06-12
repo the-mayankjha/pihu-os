@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import YouTube from 'react-youtube';
-import type { YouTubePlayer } from 'react-youtube';
+import React from 'react';
 import { useThemeStore } from '../../stores/themeStore';
+import { useMusicStore } from '../../stores/musicStore';
 import { WidgetContainer } from '../../shared/components/WidgetContainer/WidgetContainer';
 import { GlassCard } from '../../shared/components/GlassCard/GlassCard';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 export interface MusicWidgetProps {
   preview?: boolean;
@@ -13,131 +12,14 @@ export interface MusicWidgetProps {
 
 export const MusicWidget: React.FC<MusicWidgetProps> = ({ preview = false, onClick }) => {
   const { theme } = useThemeStore();
+  const { 
+    isPlaying, isBuffering, progress, duration, trackInfo, 
+    togglePlay, next, prev, setShowSettings 
+  } = useMusicStore();
   
   const id = 'music-widget';
   const defaultPosition = { x: 300, y: 300 };
   const defaultSize = { width: 340, height: 360 };
-
-  const [playlistId, setPlaylistId] = useState<string>(() => {
-    return localStorage.getItem('pihu-music-playlist') || 'PLRBp0Fe2GpgnIh0AiYKh7o7HnYAej-5ph';
-  });
-  const [showSettings, setShowSettings] = useState(false);
-  const [inputValue, setInputValue] = useState('');
-
-  const [player, setPlayer] = useState<YouTubePlayer | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isBuffering, setIsBuffering] = useState(true); // default true while loading
-  const [progress, setProgress] = useState(0);
-  const [duration, setDuration] = useState(0);
-  
-  const [trackInfo, setTrackInfo] = useState({ title: 'Loading Playlist...', artist: 'YouTube', id: '' });
-
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval>;
-    if (isPlaying && player) {
-      interval = setInterval(async () => {
-        try {
-          const currentTime = await player.getCurrentTime();
-          const totalDuration = await player.getDuration();
-          setProgress(currentTime);
-          setDuration(totalDuration);
-        } catch (err) {
-          // Ignore errors
-        }
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isPlaying, player]);
-
-  const togglePlay = () => {
-    if (!player) return;
-    if (isPlaying) {
-      player.pauseVideo();
-    } else {
-      setIsBuffering(true);
-      player.playVideo();
-    }
-  };
-
-  const handleNext = () => {
-    if (player && player.nextVideo) {
-      player.nextVideo();
-      setIsBuffering(true);
-    }
-  };
-
-  const handlePrev = () => {
-    if (player && player.previousVideo) {
-      player.previousVideo();
-      setIsBuffering(true);
-    }
-  };
-
-  const handleSavePlaylist = () => {
-    let finalId = inputValue.trim();
-    if (finalId.includes('list=')) {
-      const match = finalId.match(/[?&]list=([^&]+)/);
-      if (match && match[1]) {
-        finalId = match[1];
-      }
-    }
-    if (!finalId) finalId = 'PLRBp0Fe2GpgnIh0AiYKh7o7HnYAej-5ph'; // fallback
-    setPlaylistId(finalId);
-    localStorage.setItem('pihu-music-playlist', finalId);
-    setShowSettings(false);
-    setIsBuffering(true);
-  };
-
-  const updateTrackInfo = (p = player) => {
-    if (p && p.getVideoData) {
-      try {
-        const data = p.getVideoData();
-        if (data && data.video_id) {
-          setTrackInfo({
-            title: data.title || 'Unknown Title',
-            artist: data.author || 'YouTube Music',
-            id: data.video_id
-          });
-        }
-      } catch(e) {}
-    }
-  };
-
-  const onReady = (event: any) => {
-    setPlayer(event.target);
-    updateTrackInfo(event.target);
-  };
-
-  const onStateChange = (event: any) => {
-    const state = event.data;
-    updateTrackInfo(event.target);
-
-    if (state === 1) {
-      setIsPlaying(true);
-      setIsBuffering(false);
-    } else if (state === 2 || state === 0) {
-      setIsPlaying(false);
-      setIsBuffering(false);
-    } else if (state === 3) {
-      setIsBuffering(true);
-    } else if (state === 5) {
-      if (isBuffering || isPlaying) {
-        event.target.playVideo();
-      } else {
-        setIsBuffering(false);
-      }
-    }
-    
-    if (state === 0) {
-      // YouTube automatically plays next in a playlist, but we can call it just in case
-      handleNext();
-    }
-  };
-
-  const onError = (event: any) => {
-    console.error('YouTube Player Error:', event.data);
-    handleNext();
-  };
 
   const formatTime = (seconds: number) => {
     if (!seconds || isNaN(seconds)) return '0:00';
@@ -147,80 +29,13 @@ export const MusicWidget: React.FC<MusicWidgetProps> = ({ preview = false, onCli
   };
 
   const innerContent = (
-    <GlassCard blur="lg" frost="heavy" className="w-full h-full relative overflow-hidden drag-handle cursor-move rounded-[32px] shadow-[0_16px_40px_rgba(0,0,0,0.6)]">
-      {/* Hidden YouTube Player */}
-      <div className="absolute top-0 left-0 w-[200px] h-[200px] opacity-0 pointer-events-none z-[-1] overflow-hidden">
-        {!preview && (
-          <YouTube 
-            key={playlistId} // Force reload when playlist changes
-            videoId=""
-            opts={{ 
-              height: '200', 
-              width: '200', 
-              playerVars: { 
-                listType: 'playlist',
-                list: playlistId,
-                autoplay: 1, 
-                controls: 0,
-                disablekb: 1,
-                enablejsapi: 1,
-                rel: 0,
-                showinfo: 0,
-                iv_load_policy: 3,
-                modestbranding: 1,
-                playsinline: 1
-              } 
-            }} 
-            onReady={onReady}
-            onStateChange={onStateChange}
-            onError={onError}
-          />
-        )}
-      </div>
-
-      <AnimatePresence>
-        {showSettings && (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="absolute inset-0 z-50 flex flex-col items-center justify-center p-6 bg-black/80 backdrop-blur-xl rounded-[32px]"
-          >
-            <h3 className="text-white font-semibold mb-2 text-lg">Playlist Link</h3>
-            <p className="text-white/60 text-xs text-center mb-5 leading-relaxed">Paste any public YouTube Playlist URL below.</p>
-            <input 
-              type="text" 
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={(e) => { if(e.key === 'Enter') handleSavePlaylist(); }}
-              placeholder="https://youtube.com/playlist?list=..."
-              className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-white/40 focus:bg-white/20 transition-all mb-5"
-            />
-            <div className="flex gap-3 w-full">
-              <button 
-                onClick={() => setShowSettings(false)}
-                className="flex-1 py-2.5 rounded-xl font-medium text-white/70 hover:bg-white/10 transition-colors"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleSavePlaylist}
-                className="flex-1 py-2.5 rounded-xl font-semibold text-white shadow-lg transition-transform hover:scale-[1.02] active:scale-[0.98]"
-                style={{ backgroundColor: theme.colors.primary }}
-              >
-                Apply
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
+    <GlassCard blur="lg" frost="heavy" className="w-full h-full relative overflow-hidden drag-handle cursor-move rounded-[32px] shadow-[0_16px_40px_rgba(0,0,0,0.6)] border border-white/5" style={{ backgroundColor: 'rgba(15, 15, 20, 0.45)' }}>
       <div className="relative w-full h-full p-[24px] flex flex-col z-10">
         {/* Top Header */}
         <div className="flex justify-between items-center mb-[24px]">
           <h4 className="text-[14px] font-semibold tracking-wide" style={{ color: theme.colors.textSecondary }}>Now Playing</h4>
           <button 
-            onClick={() => { setInputValue(playlistId); setShowSettings(true); }}
+            onClick={() => setShowSettings(true)}
             className="transition-transform hover:scale-110 active:scale-95"
             style={{ color: theme.colors.textSecondary }}
           >
@@ -299,7 +114,7 @@ export const MusicWidget: React.FC<MusicWidgetProps> = ({ preview = false, onCli
         {/* Controls Section */}
         <div className="flex items-center justify-center gap-[36px] mt-1 mb-2">
           <button 
-            onClick={(e) => { e.stopPropagation(); handlePrev(); }}
+            onClick={(e) => { e.stopPropagation(); prev(); }}
             className="transition-all transform hover:scale-110 active:scale-95 opacity-80 hover:opacity-100"
             style={{ color: theme.colors.textPrimary }}
           >
@@ -324,7 +139,7 @@ export const MusicWidget: React.FC<MusicWidgetProps> = ({ preview = false, onCli
           </button>
 
           <button 
-            onClick={(e) => { e.stopPropagation(); handleNext(); }}
+            onClick={(e) => { e.stopPropagation(); next(); }}
             className="transition-all transform hover:scale-110 active:scale-95 opacity-80 hover:opacity-100"
             style={{ color: theme.colors.textPrimary }}
           >
