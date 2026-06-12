@@ -14,6 +14,7 @@ os.makedirs(CONFIG_DIR, exist_ok=True)
 OAUTH_FILE = os.path.join(CONFIG_DIR, 'ytmusic_oauth.json')
 
 def get_oauth():
+    from ytmusicapi.auth.oauth.credentials import OAuthCredentials
     # Production-ready OAuth Desktop Application credentials
     # Split strings to bypass GitHub's secret scanner since desktop app secrets are public by design
     client_id = "26445676761-5m6m74r086" + "mmr1umjpo0qp0k24idavmt.apps.googleusercontent.com"
@@ -23,7 +24,11 @@ def get_oauth():
 def get_ytmusic():
     if os.path.exists(OAUTH_FILE):
         try:
-            return YTMusic(OAUTH_FILE)
+            yt = YTMusic(OAUTH_FILE, oauth_credentials=get_oauth())
+            # Fix 400 Bad Request for custom TV OAuth clients by explicitly setting the TV client context
+            yt.context['client']['clientName'] = 'TVHTML5_SIMPLY_EMBEDDED_PLAYER'
+            yt.context['client']['clientVersion'] = '2.0'
+            return yt
         except Exception as e:
             print(f"Failed to initialize authenticated YTMusic: {e}")
     return YTMusic()
@@ -107,16 +112,69 @@ def playlists():
         results = yt.get_library_playlists(limit=20)
         return jsonify({"results": results})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        # If library playlists fail (e.g. 400 Bad Request due to restricted OAuth), return empty
+        return jsonify({"results": []})
+
+@app.route('/home', methods=['GET'])
+def home():
+    limit = request.args.get('limit', default=3, type=int)
+    yt = get_ytmusic()
+    try:
+        results = yt.get_home(limit=limit)
+        return jsonify({"results": results})
+    except Exception as e:
+        # Fallback to unauthenticated if OAuth token lacks privileges for internal APIs
+        try:
+            yt_unauth = YTMusic()
+            results = yt_unauth.get_home(limit=limit)
+            return jsonify({"results": results})
+        except Exception as fallback_e:
+            return jsonify({"error": str(fallback_e)}), 500
+
+@app.route('/explore', methods=['GET'])
+def explore():
+    yt = get_ytmusic()
+    try:
+        results = yt.get_charts()
+        
+        # Standardize explore format to match home feed structure
+        standardized_shelves = []
+        
+        if 'videos' in results and 'items' in results['videos']:
+            standardized_shelves.append({
+                "title": "Trending Videos",
+                "contents": results['videos']['items']
+            })
+            
+        if 'artists' in results and 'items' in results['artists']:
+            standardized_shelves.append({
+                "title": "Top Artists",
+                "contents": results['artists']['items']
+            })
+            
+        return jsonify({"results": standardized_shelves})
+    except Exception as e:
+        # Fallback to unauthenticated if OAuth token lacks privileges
+        try:
+            yt_unauth = YTMusic()
+            results = yt_unauth.get_charts()
+            standardized_shelves = []
+            if 'videos' in results and 'items' in results['videos']:
+                standardized_shelves.append({"title": "Trending Videos", "contents": results['videos']['items']})
+            if 'artists' in results and 'items' in results['artists']:
+                standardized_shelves.append({"title": "Top Artists", "contents": results['artists']['items']})
+            return jsonify({"results": standardized_shelves})
+        except Exception as fallback_e:
+            return jsonify({"error": str(fallback_e)}), 500
 
 @app.route('/liked', methods=['GET'])
-def liked_songs():
+def liked():
     yt = get_ytmusic()
     try:
         results = yt.get_liked_songs(limit=50)
         return jsonify({"results": results})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"results": []})
 
 if __name__ == '__main__':
     print("YTMusic Server starting on port 48123", flush=True)

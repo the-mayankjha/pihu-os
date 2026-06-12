@@ -21,6 +21,12 @@ export const YTMusicPlugin: React.FC = () => {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
+  const [currentView, setCurrentView] = useState<'home' | 'explore' | 'library' | 'playlist'>('home');
+  const [homeData, setHomeData] = useState<any[]>([]);
+  const [exploreData, setExploreData] = useState<any[]>([]);
+  const [libraryData, setLibraryData] = useState<any[]>([]);
+  const [isLoadingView, setIsLoadingView] = useState(false);
+
   const isOpen = widgets['ytmusic-plugin']?.isOpen || false;
 
   // Debounce search input
@@ -36,6 +42,22 @@ export const YTMusicPlugin: React.FC = () => {
     }, 500);
     return () => clearTimeout(timer);
   }, [inputValue]);
+
+  // Fetch view data
+  useEffect(() => {
+    if (!isYtAuthenticated) return;
+    
+    if (currentView === 'home' && homeData.length === 0) {
+      setIsLoadingView(true);
+      fetch('http://127.0.0.1:48123/home').then(r=>r.json()).then(d => { setHomeData(d.results || []); setIsLoadingView(false); }).catch(()=>setIsLoadingView(false));
+    } else if (currentView === 'explore' && exploreData.length === 0) {
+      setIsLoadingView(true);
+      fetch('http://127.0.0.1:48123/explore').then(r=>r.json()).then(d => { setExploreData(d.results || []); setIsLoadingView(false); }).catch(()=>setIsLoadingView(false));
+    } else if (currentView === 'library' && libraryData.length === 0) {
+      setIsLoadingView(true);
+      fetch('http://127.0.0.1:48123/playlists').then(r=>r.json()).then(d => { setLibraryData(d.results || []); setIsLoadingView(false); }).catch(()=>setIsLoadingView(false));
+    }
+  }, [currentView, isYtAuthenticated]);
 
   // Fetch search results
   useEffect(() => {
@@ -109,6 +131,7 @@ export const YTMusicPlugin: React.FC = () => {
 
     setPlaylistId(finalId, type);
     setInputValue('');
+    setCurrentView('playlist');
   };
 
   const handlePlaySearchResult = async (result: any) => {
@@ -122,16 +145,18 @@ export const YTMusicPlugin: React.FC = () => {
     }
 
     setPlaylistId(query, 'search'); // Set loading state initially
+    setCurrentView('playlist');
 
     // 1. Try Invidious API
     try {
       const res = await fetch(`https://vid.puffyan.us/api/v1/search?q=${encodeURIComponent(query)}`);
       if (res.ok) {
         const data = await res.json();
-        if (data && data.length > 0 && data[0].videoId) {
-          setPlaylistId(`RD${data[0].videoId}`, 'playlist');
-          return;
-        }
+          if (data && data.length > 0 && data[0].videoId) {
+            setPlaylistId(`RD${data[0].videoId}`, 'playlist');
+            setCurrentView('playlist');
+            return;
+          }
       }
     } catch (e) {
       console.error('Invidious search failed', e);
@@ -147,6 +172,7 @@ export const YTMusicPlugin: React.FC = () => {
           const videoId = urlMatch ? urlMatch[1] : data.items[0].url.split('/watch?v=')[1];
           if (videoId) {
             setPlaylistId(`RD${videoId}`, 'playlist');
+            setCurrentView('playlist');
             return;
           }
         }
@@ -181,6 +207,50 @@ export const YTMusicPlugin: React.FC = () => {
   };
 
   const isShowingSearchResults = inputValue.trim() !== '' && !inputValue.includes('http');
+  
+  // Force view to playlist if searching
+  useEffect(() => {
+    if (isShowingSearchResults) {
+      setCurrentView('playlist');
+    }
+  }, [isShowingSearchResults]);
+
+  // Helper component for rendering a shelf
+  const ShelfCarousel = ({ title, contents }: { title: string, contents: any[] }) => (
+    <div className="mb-8">
+      <h2 className="text-xl font-bold mb-4 px-2" style={{ color: theme.colors.primary }}>{title}</h2>
+      <div className="flex gap-4 overflow-x-auto pb-4 px-2 snap-x" style={{ scrollbarWidth: 'none' }}>
+        {contents.map((item, idx) => {
+          const id = item.playlistId || item.videoId;
+          const isVideo = !!item.videoId;
+          const imageUrl = item.thumbnails?.[item.thumbnails.length - 1]?.url || item.thumbnails?.[0]?.url;
+          return (
+            <div 
+              key={idx} 
+              onClick={() => {
+                if (id) {
+                  setPlaylistId(isVideo ? `RD${id}` : id, 'playlist');
+                  setCurrentView('playlist');
+                }
+              }}
+              className="w-[160px] shrink-0 snap-start cursor-pointer group"
+            >
+              <div className="w-[160px] h-[160px] rounded-2xl overflow-hidden mb-3 relative bg-white/5 border border-white/5 shadow-lg group-hover:border-white/20 transition-all">
+                {imageUrl && <img src={imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={item.title} />}
+                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="text-white ml-1"><path d="M8 5v14l11-7z"/></svg>
+                  </div>
+                </div>
+              </div>
+              <div className="font-bold text-sm truncate px-1 text-white/90 group-hover:text-white transition-colors">{item.title}</div>
+              <div className="text-xs text-white/40 truncate px-1 mt-1">{item.description || (isVideo ? 'Song' : 'Playlist')}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 
   return (
     <PluginWindow
@@ -206,17 +276,37 @@ export const YTMusicPlugin: React.FC = () => {
           </div>
 
           <div className="space-y-1 mb-8">
-            <div className="px-4 py-2.5 rounded-xl bg-white/5 font-medium flex items-center gap-3" style={{ color: theme.colors.primary }}>
+            <div 
+              onClick={() => setCurrentView('home')}
+              className={`px-4 py-2.5 rounded-xl font-medium cursor-pointer flex items-center gap-3 transition-colors ${currentView === 'home' ? 'bg-white/5' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+              style={{ color: currentView === 'home' ? theme.colors.primary : undefined }}
+            >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
               Home
             </div>
-            <div className="px-4 py-2.5 rounded-xl text-white/60 hover:bg-white/5 hover:text-white transition-colors cursor-pointer flex items-center gap-3">
+            <div 
+              onClick={() => setCurrentView('explore')}
+              className={`px-4 py-2.5 rounded-xl font-medium cursor-pointer flex items-center gap-3 transition-colors ${currentView === 'explore' ? 'bg-white/5' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+              style={{ color: currentView === 'explore' ? theme.colors.primary : undefined }}
+            >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
               Explore
             </div>
-            <div className="px-4 py-2.5 rounded-xl text-white/60 hover:bg-white/5 hover:text-white transition-colors cursor-pointer flex items-center gap-3">
+            <div 
+              onClick={() => setCurrentView('library')}
+              className={`px-4 py-2.5 rounded-xl font-medium cursor-pointer flex items-center gap-3 transition-colors ${currentView === 'library' ? 'bg-white/5' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+              style={{ color: currentView === 'library' ? theme.colors.primary : undefined }}
+            >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12zM10 9h8v2h-8zm0 3h4v2h-4zm0-6h8v2h-8z"/></svg>
               Library
+            </div>
+            <div 
+              onClick={() => setCurrentView('playlist')}
+              className={`px-4 py-2.5 rounded-xl font-medium cursor-pointer flex items-center gap-3 transition-colors ${currentView === 'playlist' ? 'bg-white/5' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+              style={{ color: currentView === 'playlist' ? theme.colors.primary : undefined }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+              Current Player
             </div>
           </div>
 
@@ -298,6 +388,77 @@ export const YTMusicPlugin: React.FC = () => {
               </button>
             </div>
 
+            {/* Main Views Container */}
+            <div className="w-full relative">
+              
+              {/* Home View */}
+              {currentView === 'home' && (
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  {isLoadingView && <div className="text-center py-20 text-white/40">Loading Home Feed...</div>}
+                  {homeData.map((shelf, i) => (
+                    <ShelfCarousel key={`home-${i}`} title={shelf.title} contents={shelf.contents} />
+                  ))}
+                  {!isLoadingView && homeData.length === 0 && (
+                    <div className="text-center py-20 text-white/40">Please sign in to see your personalized Home feed.</div>
+                  )}
+                </div>
+              )}
+
+              {/* Explore View */}
+              {currentView === 'explore' && (
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  {isLoadingView && <div className="text-center py-20 text-white/40">Loading Charts & Trends...</div>}
+                  {exploreData.map((shelf, i) => (
+                    <ShelfCarousel key={`explore-${i}`} title={shelf.title} contents={shelf.contents} />
+                  ))}
+                </div>
+              )}
+
+              {/* Library View */}
+              {currentView === 'library' && (
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <h2 className="text-2xl font-bold mb-6 px-2" style={{ color: theme.colors.primary }}>Your Playlists</h2>
+                  {isLoadingView && <div className="text-center py-20 text-white/40">Loading Library...</div>}
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 px-2">
+                    {libraryData.map((playlist, idx) => {
+                      const imageUrl = playlist.thumbnails?.[playlist.thumbnails.length - 1]?.url || playlist.thumbnails?.[0]?.url;
+                      return (
+                        <div 
+                          key={`lib-${idx}`} 
+                          onClick={() => {
+                            if (playlist.playlistId) {
+                              setPlaylistId(playlist.playlistId, 'playlist');
+                              setCurrentView('playlist');
+                            }
+                          }}
+                          className="cursor-pointer group bg-white/5 border border-white/5 p-4 rounded-3xl hover:bg-white/10 hover:border-white/20 transition-all"
+                        >
+                          <div className="w-full aspect-square rounded-2xl overflow-hidden mb-4 relative shadow-lg">
+                            {imageUrl ? (
+                              <img src={imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={playlist.title} />
+                            ) : (
+                              <div className="w-full h-full bg-white/5 flex items-center justify-center">
+                                <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor" className="text-white/20"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/></svg>
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
+                                <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" className="text-white ml-1"><path d="M8 5v14l11-7z"/></svg>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="font-bold text-base truncate text-white/90 group-hover:text-white transition-colors">{playlist.title}</div>
+                          <div className="text-sm text-white/40 truncate mt-1">{playlist.count || ''} Tracks</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Playlist / Search View */}
+              {currentView === 'playlist' && (
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Playlist Header (Hide during search) */}
             {!isShowingSearchResults && (
               <div className="flex gap-8 mb-8 bg-white/5 p-6 rounded-3xl border border-white/5">
@@ -411,6 +572,9 @@ export const YTMusicPlugin: React.FC = () => {
                     );
                   })}
                 </>
+              )}
+            </div>
+                </div>
               )}
             </div>
           </div>
