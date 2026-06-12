@@ -66,7 +66,18 @@ export const useLayoutStore = create<LayoutState>()(
       toggleWidget: (id) => {
         set((state) => {
           const widget = state.widgets[id];
-          if (!widget) return state;
+          if (!widget) {
+            return {
+              widgets: {
+                ...state.widgets,
+                [id]: {
+                  isOpen: true,
+                  position: { x: 100, y: 100 },
+                  size: { width: 'auto', height: 'auto' }
+                }
+              }
+            };
+          }
           return {
             widgets: {
               ...state.widgets,

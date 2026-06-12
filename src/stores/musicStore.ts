@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import type { YouTubePlayer } from 'react-youtube';
 
 interface TrackInfo {
@@ -15,7 +16,11 @@ interface MusicState {
   duration: number;
   trackInfo: TrackInfo;
   playlistId: string;
+  listType: 'playlist' | 'search' | 'video';
+  playlistTracks: TrackInfo[];
   showSettings: boolean;
+  likedSongs: string[];
+  savedPlaylists: { id: string, name: string }[];
 
   // Setters
   setPlayer: (player: YouTubePlayer | null) => void;
@@ -23,37 +28,54 @@ interface MusicState {
   setIsBuffering: (isBuffering: boolean) => void;
   setProgress: (progress: number) => void;
   setDuration: (duration: number) => void;
-  setTrackInfo: (trackInfo: TrackInfo) => void;
-  setPlaylistId: (playlistId: string) => void;
-  setShowSettings: (show: boolean) => void;
+  setTrackInfo: (trackInfo: { title: string, artist: string, id: string }) => void;
+  setPlaylistId: (playlistId: string, listType?: 'playlist' | 'search' | 'video') => void;
+  setPlaylistTracks: (tracks: TrackInfo[]) => void;
+  setShowSettings: (showSettings: boolean) => void;
 
   // Actions
   togglePlay: () => void;
   next: () => void;
   prev: () => void;
+  playTrackAt: (index: number) => void;
+  fetchPlaylistDetails: (videoIds: string[]) => Promise<void>;
+  toggleLike: (trackId: string) => void;
+  savePlaylist: (id: string, name: string) => void;
+  removePlaylist: (id: string) => void;
 }
 
-export const useMusicStore = create<MusicState>((set, get) => ({
-  player: null,
-  isPlaying: false,
-  isBuffering: true,
-  progress: 0,
-  duration: 0,
-  trackInfo: { title: 'Loading Playlist...', artist: 'YouTube', id: '' },
-  playlistId: localStorage.getItem('pihu-music-playlist') || 'PLRBp0Fe2GpgnIh0AiYKh7o7HnYAej-5ph',
-  showSettings: false,
+export const useMusicStore = create<MusicState>()(
+  persist(
+    (set, get) => ({
+      player: null,
+      isPlaying: false,
+      isBuffering: true,
+      progress: 0,
+      duration: 0,
+      trackInfo: { title: 'Loading Playlist...', artist: 'YouTube', id: '' },
+      playlistId: 'PLRBp0Fe2GpgnIh0AiYKh7o7HnYAej-5ph',
+      listType: 'playlist',
+      playlistTracks: [],
+      showSettings: false,
+      likedSongs: [],
+      savedPlaylists: [],
 
-  setPlayer: (player) => set({ player }),
-  setIsPlaying: (isPlaying) => set({ isPlaying }),
-  setIsBuffering: (isBuffering) => set({ isBuffering }),
-  setProgress: (progress) => set({ progress }),
-  setDuration: (duration) => set({ duration }),
-  setTrackInfo: (trackInfo) => set({ trackInfo }),
-  setPlaylistId: (playlistId) => {
-    localStorage.setItem('pihu-music-playlist', playlistId);
-    set({ playlistId, isBuffering: true });
-  },
-  setShowSettings: (showSettings) => set({ showSettings }),
+      setPlayer: (player) => set({ player }),
+      setIsPlaying: (isPlaying) => set({ isPlaying }),
+      setIsBuffering: (isBuffering) => set({ isBuffering }),
+      setProgress: (progress) => set({ progress }),
+      setDuration: (duration) => set({ duration }),
+      setTrackInfo: (trackInfo) => set({ trackInfo }),
+      setPlaylistTracks: (tracks) => set({ playlistTracks: tracks }),
+      setPlaylistId: (playlistId, listType = 'playlist') => set({ 
+        playlistId, 
+        listType, 
+        isBuffering: true,
+        playlistTracks: [],
+        trackInfo: { title: 'Loading...', artist: 'YouTube', id: '' }
+      }),
+      setShowSettings: (showSettings) => set({ showSettings }),
+
 
   togglePlay: () => {
     const { player, isPlaying } = get();
@@ -80,5 +102,84 @@ export const useMusicStore = create<MusicState>((set, get) => ({
       set({ isBuffering: true, progress: 0 });
       player.previousVideo();
     }
+  },
+
+  playTrackAt: (index: number) => {
+    const { player } = get();
+    if (player && player.playVideoAt) {
+      set({ isBuffering: true, progress: 0 });
+      player.playVideoAt(index);
+    }
+  },
+
+  toggleLike: (trackId: string) => {
+    set((state) => {
+      const isLiked = state.likedSongs.includes(trackId);
+      if (isLiked) {
+        return { likedSongs: state.likedSongs.filter(id => id !== trackId) };
+      } else {
+        return { likedSongs: [...state.likedSongs, trackId] };
+      }
+    });
+  },
+
+  savePlaylist: (id: string, name: string) => {
+    set((state) => {
+      const exists = state.savedPlaylists.some(p => p.id === id);
+      if (exists) return state;
+      return { savedPlaylists: [...state.savedPlaylists, { id, name }] };
+    });
+  },
+
+  removePlaylist: (id: string) => {
+    set((state) => ({
+      savedPlaylists: state.savedPlaylists.filter(p => p.id !== id)
+    }));
+  },
+
+  fetchPlaylistDetails: async (videoIds: string[]) => {
+    const currentTracks = get().playlistTracks;
+    if (currentTracks.length > 0 && currentTracks[0].id === videoIds[0]) return;
+    
+    const initialTracks = videoIds.map(id => ({ id, title: 'Loading...', artist: 'YouTube' }));
+    set({ playlistTracks: initialTracks });
+
+    const fetchBatch = async (batch: string[]) => {
+      return Promise.all(batch.map(async (id) => {
+        try {
+          const res = await fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${id}`);
+          const data = await res.json();
+          return { id, title: data.title || 'Unknown Video', artist: data.author_name || 'YouTube' };
+        } catch (e) {
+          return { id, title: 'Unknown Video', artist: 'YouTube' };
+        }
+      }));
+    };
+
+    const chunkSize = 5;
+    for (let i = 0; i < videoIds.length; i += chunkSize) {
+      const batchIds = videoIds.slice(i, i + chunkSize);
+      const batchResults = await fetchBatch(batchIds);
+      
+      set((state) => {
+        const newTracks = [...state.playlistTracks];
+        batchResults.forEach(result => {
+          const idx = newTracks.findIndex(t => t.id === result.id);
+          if (idx !== -1) newTracks[idx] = result;
+        });
+        return { playlistTracks: newTracks };
+      });
+    }
   }
-}));
+    }),
+    {
+      name: 'pihu-music-storage',
+      partialize: (state) => ({ 
+        likedSongs: state.likedSongs, 
+        savedPlaylists: state.savedPlaylists,
+        playlistId: state.playlistId,
+        listType: state.listType
+      })
+    }
+  )
+);

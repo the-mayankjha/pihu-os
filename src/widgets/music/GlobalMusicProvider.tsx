@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 export const GlobalMusicProvider: React.FC = () => {
   const { 
-    playlistId, setPlayer, setIsPlaying, setIsBuffering, 
+    playlistId, listType, setPlayer, setIsPlaying, setIsBuffering, 
     setProgress, setDuration, setTrackInfo, next, isPlaying,
     showSettings, setShowSettings, setPlaylistId
   } = useMusicStore();
@@ -73,11 +73,34 @@ export const GlobalMusicProvider: React.FC = () => {
   const onReady = (event: any) => {
     setPlayer(event.target);
     updateTrackInfo(event.target);
+    
+    // Fetch full playlist metadata
+    if (event.target.getPlaylist) {
+      const videoIds = event.target.getPlaylist();
+      if (videoIds && videoIds.length > 0) {
+        useMusicStore.getState().fetchPlaylistDetails(videoIds);
+      }
+    }
+
+    // Force play to overcome autoplay blocking
+    setTimeout(() => {
+      if (event.target && typeof event.target.playVideo === 'function') {
+        event.target.playVideo();
+      }
+    }, 500);
   };
 
   const onStateChange = (event: any) => {
     const state = event.data;
     updateTrackInfo(event.target);
+
+    // Fetch full playlist metadata if it hasn't been fetched
+    if (event.target.getPlaylist) {
+      const videoIds = event.target.getPlaylist();
+      if (videoIds && videoIds.length > 0) {
+        useMusicStore.getState().fetchPlaylistDetails(videoIds);
+      }
+    }
 
     if (state === 1) {
       setIsPlaying(true);
@@ -108,14 +131,25 @@ export const GlobalMusicProvider: React.FC = () => {
 
   const handleSavePlaylist = () => {
     let finalId = inputValue.trim();
+    let type: 'playlist' | 'search' = 'search';
+    
     if (finalId.includes('list=')) {
       const match = finalId.match(/[?&]list=([^&]+)/);
       if (match && match[1]) {
         finalId = match[1];
+        type = 'playlist';
       }
+    } else if (finalId.includes('youtube.com/watch?v=') || finalId.includes('youtu.be/')) {
+      const match = finalId.match(/(?:v=|\/)([a-zA-Z0-9_-]{11})/);
+      if (match && match[1]) {
+        finalId = match[1];
+        type = 'playlist'; // A single video doesn't work well as a playlist, but we can try search
+      }
+    } else if (finalId.trim() === '') {
+      return;
     }
-    if (!finalId) finalId = 'PLRBp0Fe2GpgnIh0AiYKh7o7HnYAej-5ph';
-    setPlaylistId(finalId);
+
+    setPlaylistId(finalId, type);
     setShowSettings(false);
   };
 
@@ -124,14 +158,13 @@ export const GlobalMusicProvider: React.FC = () => {
       {/* Hidden YouTube Player */}
       <div className="fixed top-0 left-0 w-[200px] h-[200px] opacity-0 pointer-events-none z-[-9999] overflow-hidden">
         <YouTube 
-          key={playlistId}
-          videoId=""
+          key={`${listType}-${playlistId}`}
+          videoId={listType === 'video' ? playlistId : "dQw4w9WgXcQ"}
           opts={{ 
             height: '200', 
             width: '200', 
             playerVars: { 
-              listType: 'playlist',
-              list: playlistId,
+              ...(listType !== 'video' && { listType: listType, list: playlistId }),
               autoplay: 1, 
               controls: 0,
               disablekb: 1,
@@ -142,7 +175,7 @@ export const GlobalMusicProvider: React.FC = () => {
               modestbranding: 1,
               playsinline: 1
             } 
-          }} 
+          }}  
           onReady={onReady}
           onStateChange={onStateChange}
           onError={onError}

@@ -5,6 +5,7 @@ import { MusicWidgetHorizontal } from '../widgets/music/MusicWidgetHorizontal';
 import { MusicWidgetCircle } from '../widgets/music/MusicWidgetCircle';
 import { MusicWidgetFolder } from '../widgets/music/MusicWidgetFolder';
 import { GlobalMusicProvider } from '../widgets/music/GlobalMusicProvider';
+import { YTMusicPlugin } from '../widgets/music/YTMusicPlugin';
 import { useLayoutStore } from '../core/layout/LayoutStore';
 import { Dock } from '../shared/components/Dock/Dock';
 import { WidgetDrawer } from '../shared/components/WidgetDrawer/WidgetDrawer';
@@ -23,6 +24,8 @@ export default function App() {
       {(widgets['music-widget-horizontal']?.isOpen) && <MusicWidgetHorizontal />}
       {(widgets['music-widget-circle']?.isOpen) && <MusicWidgetCircle />}
       {(widgets['music-widget-folder']?.isOpen) && <MusicWidgetFolder />}
+      
+      <YTMusicPlugin />
 
       <Dock />
       <WidgetDrawer />
