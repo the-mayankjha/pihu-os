@@ -71,9 +71,10 @@ export const WidgetContainer: React.FC<WidgetContainerProps> = ({
       default={{
         x: widgetState.position.x,
         y: widgetState.position.y,
-        width: widgetState.size.width,
-        height: widgetState.size.height,
+        width: !isResizable ? defaultSize.width : widgetState.size.width,
+        height: !isResizable ? defaultSize.height : widgetState.size.height,
       }}
+      size={!isResizable ? { width: defaultSize.width, height: defaultSize.height } : undefined}
       minWidth={minWidth}
       minHeight={minHeight}
       disableDragging={!isDraggable || isEditing}
