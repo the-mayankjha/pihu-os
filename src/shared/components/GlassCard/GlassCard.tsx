@@ -8,6 +8,7 @@ export interface GlassCardProps extends React.HTMLAttributes<HTMLDivElement> {
   frost?: keyof FrostConfig;
   glow?: boolean;
   softness?: keyof SoftnessConfig;
+  borderless?: boolean;
   children: React.ReactNode;
   className?: string;
 }
@@ -17,6 +18,7 @@ export const GlassCard: React.FC<GlassCardProps> = ({
   frost = 'medium',
   glow = false,
   softness = 'medium',
+  borderless = false,
   children,
   className = '',
   ...props
@@ -38,7 +40,7 @@ export const GlassCard: React.FC<GlassCardProps> = ({
     WebkitBackdropFilter: `blur(${blurValue}px)`,
     backgroundColor,
     borderRadius: `${radiusValue}px`,
-    border: `1px solid ${borderColor}`,
+    border: borderless ? 'none' : `1px solid ${borderColor}`,
     boxShadow: glow 
       ? `0 0 ${softnessValue}px ${theme.glow.primary}` 
       : theme.shadows.md,

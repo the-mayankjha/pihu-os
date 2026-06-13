@@ -293,6 +293,7 @@ export const YTMusicPlugin: React.FC = () => {
       icon={ytMusicIcon}
       isOpen={isOpen}
       onClose={handleClose}
+      borderless
       defaultSize={{ width: 1000, height: 700 }}
       minWidth={800}
       minHeight={500}
@@ -307,7 +308,7 @@ export const YTMusicPlugin: React.FC = () => {
         )}
 
         {/* Global Top Header */}
-        <div className="flex items-center gap-4 px-4 py-4 md:px-6 shrink-0 z-20 relative border-b border-white/5">
+        <div className="plugin-drag-handle flex items-center gap-4 px-4 py-4 md:px-6 shrink-0 z-20 relative border-b border-white/5 cursor-grab active:cursor-grabbing">
           {/* Hamburger & Logo */}
           <div className="flex items-center gap-4 w-[200px] shrink-0">
             <button 
@@ -625,23 +626,19 @@ export const YTMusicPlugin: React.FC = () => {
                            
                            {/* Center Label (Album Art or Logo) */}
                            <div className="w-[55%] h-[55%] rounded-full overflow-hidden border-4 border-black bg-[#111] flex items-center justify-center z-10 relative">
-                             {isActualPlaylist ? (
-                               playlistMetadata ? (
-                                 <img 
-                                   src={playlistMetadata.thumbnails && playlistMetadata.thumbnails.length > 0 ? playlistMetadata.thumbnails[playlistMetadata.thumbnails.length - 1].url : logoImg} 
-                                   alt="Cover" 
-                                   className="w-[140%] h-[140%] object-cover absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" 
-                                 />
-                               ) : (
-                                 <img src={logoImg} alt="Loading" className="w-[140%] h-[140%] object-contain absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-50" />
-                               )
+                             {trackInfo.id ? (
+                               <img 
+                                 src={`https://img.youtube.com/vi/${trackInfo.id}/hqdefault.jpg`} 
+                                 alt="Cover" 
+                                 className="w-[140%] h-[140%] object-cover absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" 
+                                 onError={(e) => { e.currentTarget.src = logoImg; e.currentTarget.className = "w-[140%] h-[140%] object-contain absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-50"; }}
+                               />
                              ) : (
-                               trackInfo.id ? (
+                               playlistMetadata && playlistMetadata.thumbnails && playlistMetadata.thumbnails.length > 0 ? (
                                  <img 
-                                   src={`https://img.youtube.com/vi/${trackInfo.id}/hqdefault.jpg`} 
+                                   src={playlistMetadata.thumbnails[playlistMetadata.thumbnails.length - 1].url} 
                                    alt="Cover" 
                                    className="w-[140%] h-[140%] object-cover absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" 
-                                   onError={(e) => { e.currentTarget.src = logoImg; e.currentTarget.className = "w-[140%] h-[140%] object-contain absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-50"; }}
                                  />
                                ) : (
                                  <img src={logoImg} alt="Waiting" className="w-[140%] h-[140%] object-contain absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-50" />
