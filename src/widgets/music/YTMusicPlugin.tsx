@@ -515,7 +515,7 @@ export const YTMusicPlugin: React.FC = () => {
 
         {/* Main Content */}
         <div className="flex-1 overflow-y-auto relative z-10 scrollbar-hide">
-          <div className="p-4 md:p-8 max-w-[1600px] mx-auto min-h-full">
+          <div className="px-4 md:px-8 pb-4 md:pb-8 pt-0 max-w-[1600px] mx-auto min-h-full">
             <AnimatePresence mode="wait">
               {/* Account View */}
               {currentView === 'account' && (
@@ -692,7 +692,7 @@ export const YTMusicPlugin: React.FC = () => {
               {isShowingSearchResults ? (
                 // Render Search Results
                 <>
-                  <div className="flex text-xs font-bold tracking-widest text-white/40 pb-4 border-b border-white/10 mb-6 px-4 mt-8 pt-4">
+                  <div className="flex text-xs font-bold tracking-widest text-white/40 pb-4 border-b border-white/10 mb-6 px-4 mt-0 pt-0">
                     <div className="w-8">#</div>
                     <div className="flex-[2] md:flex-[3]">TITLE</div>
                     <div className="flex-1 hidden sm:block">ARTIST</div>
@@ -802,6 +802,25 @@ export const YTMusicPlugin: React.FC = () => {
                               </button>
                             </div>
                           </>
+                        ) : trackInfo.title ? (
+                          <>
+                            <div className="text-xs font-bold tracking-widest mb-2" style={{ color: theme.colors.primary }}>NOW PLAYING</div>
+                            <h2 className="text-2xl md:text-3xl font-bold text-white mb-2 leading-tight truncate w-full">{trackInfo.title}</h2>
+                            <p className="text-white/70 text-base font-medium mb-6 truncate w-full">{trackInfo.artist}</p>
+                            <div className="flex items-center gap-4 w-full justify-center md:justify-start">
+                              <button onClick={togglePlay} className="px-6 py-2.5 rounded-full font-bold text-white shadow-lg transition-transform hover:scale-105 active:scale-95 flex items-center gap-2" style={{ backgroundColor: theme.colors.primary }}>
+                                {isPlaying ? (
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                                ) : (
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                                )}
+                                {isPlaying ? 'Pause' : 'Play'}
+                              </button>
+                              <button onClick={next} className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 transition-colors flex items-center justify-center shrink-0">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+                              </button>
+                            </div>
+                          </>
                         ) : (
                           <div className="w-full flex flex-col items-center md:items-start animate-pulse">
                              <div className="w-3/4 h-7 bg-white/5 rounded mb-2"></div>
@@ -837,7 +856,7 @@ export const YTMusicPlugin: React.FC = () => {
 
                   {/* Right Column: Tracks */}
                   <div className={!isShowingSearchResults ? "flex-1 w-full min-w-0" : "w-full"}>
-                    <div className="flex text-xs font-bold tracking-widest text-white/40 pb-4 border-b border-white/10 mb-6 px-4 mt-8 pt-4">
+                    <div className="flex text-xs font-bold tracking-widest text-white/40 pb-4 border-b border-white/10 mb-6 px-4 mt-0 pt-0">
                       <div className="w-8">#</div>
                       <div className="flex-[2] md:flex-[3]">TITLE</div>
                       <div className="flex-1 hidden sm:block">ARTIST</div>
