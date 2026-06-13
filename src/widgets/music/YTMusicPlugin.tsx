@@ -5,13 +5,14 @@ import { useMusicStore } from '../../stores/musicStore';
 import { useThemeStore } from '../../stores/themeStore';
 import { useLayoutStore } from '../../core/layout/LayoutStore';
 import ytMusicIcon from '../../assets/ytmusic.svg';
+import logoImg from '../../assets/logo.png';
 
 export const YTMusicPlugin: React.FC = () => {
   const { widgets, toggleWidget } = useLayoutStore();
   const { 
     trackInfo, isPlaying, togglePlay, next, prev, 
     progress, duration, setProgress, player,
-    setPlaylistId, playlistTracks, playlistId,
+    setPlaylistId, playlistTracks, playlistId, playlistMetadata, listType,
     likedSongs, toggleLike, savedPlaylists, savePlaylist, removePlaylist, playTrackAt,
     isYtAuthenticated
   } = useMusicStore();
@@ -26,6 +27,7 @@ export const YTMusicPlugin: React.FC = () => {
   const [exploreData, setExploreData] = useState<any[]>([]);
   const [libraryData, setLibraryData] = useState<any[]>([]);
   const [isLoadingView, setIsLoadingView] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const isOpen = widgets['ytmusic-plugin']?.isOpen || false;
 
@@ -53,11 +55,15 @@ export const YTMusicPlugin: React.FC = () => {
     } else if (currentView === 'explore' && exploreData.length === 0) {
       setIsLoadingView(true);
       fetch('http://127.0.0.1:48123/explore').then(r=>r.json()).then(d => { setExploreData(d.results || []); setIsLoadingView(false); }).catch(()=>setIsLoadingView(false));
-    } else if (currentView === 'library' && libraryData.length === 0) {
-      setIsLoadingView(true);
-      fetch('http://127.0.0.1:48123/playlists').then(r=>r.json()).then(d => { setLibraryData(d.results || []); setIsLoadingView(false); }).catch(()=>setIsLoadingView(false));
     }
   }, [currentView, isYtAuthenticated]);
+
+  // Always fetch library data when authenticated for the sidebar
+  useEffect(() => {
+    if (isYtAuthenticated && libraryData.length === 0) {
+      fetch('http://127.0.0.1:48123/playlists').then(r=>r.json()).then(d => setLibraryData(d.results || [])).catch(console.error);
+    }
+  }, [isYtAuthenticated, libraryData.length]);
 
   // Fetch search results
   useEffect(() => {
@@ -207,6 +213,7 @@ export const YTMusicPlugin: React.FC = () => {
   };
 
   const isShowingSearchResults = inputValue.trim() !== '' && !inputValue.includes('http');
+  const isActualPlaylist = playlistId && !playlistId.startsWith('RD') && listType === 'playlist';
   
   // Force view to playlist if searching
   useEffect(() => {
@@ -252,6 +259,33 @@ export const YTMusicPlugin: React.FC = () => {
     </div>
   );
 
+  const ShelfSkeleton = () => (
+    <div className="mb-8 animate-pulse">
+      <div className="w-48 h-6 bg-white/5 rounded mb-4 ml-2"></div>
+      <div className="flex gap-4 overflow-hidden pb-4 px-2">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <div key={i} className="w-[160px] shrink-0">
+            <div className="w-[160px] h-[160px] rounded-2xl bg-white/5 mb-3 border border-white/5"></div>
+            <div className="w-3/4 h-4 bg-white/5 rounded mb-1 mx-1"></div>
+            <div className="w-1/2 h-3 bg-white/5 rounded mx-1"></div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const LibrarySkeleton = () => (
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 px-2 animate-pulse">
+      {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+        <div key={i} className="bg-white/5 border border-white/5 p-4 rounded-3xl">
+          <div className="w-full aspect-square rounded-2xl bg-white/5 mb-4"></div>
+          <div className="w-3/4 h-5 bg-white/5 rounded mb-1"></div>
+          <div className="w-1/2 h-3 bg-white/5 rounded"></div>
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <PluginWindow
       id="ytmusic-plugin"
@@ -263,19 +297,59 @@ export const YTMusicPlugin: React.FC = () => {
       minWidth={800}
       minHeight={500}
     >
-      <div className="flex h-full w-full bg-[#0a0a0f]/90 text-white font-sans text-sm">
-        
-        {/* Left Sidebar */}
-        <div className="w-[220px] shrink-0 border-r border-white/5 flex flex-col p-4 overflow-y-auto pb-28">
-          <div className="flex items-center gap-3 mb-8 px-2">
-            <img src={ytMusicIcon} className="w-8 h-8 drop-shadow-lg" alt="YT Music" />
-            <div>
-              <div className="text-[10px] text-white/50 font-bold tracking-widest">PIHU OS</div>
-              <div className="text-base font-bold tracking-wide">YT MUSIC</div>
+      <div className="flex flex-col h-full w-full bg-[#0a0a0f]/90 text-white font-sans text-sm relative">
+        {/* Ambient Background Gradient for Actual Playlist View */}
+        {currentView === 'playlist' && !isShowingSearchResults && isActualPlaylist && (
+          <div 
+            className="absolute top-0 left-0 right-0 h-[600px] pointer-events-none opacity-20 animate-in fade-in duration-1000 z-0" 
+            style={{ background: `linear-gradient(to bottom, ${theme.colors.primary}, transparent)` }} 
+          />
+        )}
+
+        {/* Global Top Header */}
+        <div className="flex items-center gap-4 px-4 py-4 md:px-6 shrink-0 z-20 relative border-b border-white/5">
+          {/* Hamburger & Logo */}
+          <div className="flex items-center gap-4 w-[200px] shrink-0">
+            <button 
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors shrink-0"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="text-white"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+            </button>
+            <div className="flex items-center gap-3">
+              <img src={ytMusicIcon} className="w-8 h-8 drop-shadow-lg" alt="YT Music" />
+              <div>
+                <div className="text-[10px] text-white/50 font-bold tracking-widest leading-none mb-0.5">PIHU OS</div>
+                <div className="text-base font-bold tracking-wide leading-none">YT MUSIC</div>
+              </div>
             </div>
           </div>
+          
+          {/* Search Bar */}
+          <div className="flex-1 max-w-2xl bg-white/5 rounded-2xl flex items-center px-4 border border-white/5 transition-colors focus-within:border-white/20 focus-within:bg-white/10 relative ml-2">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-white/40"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+            <input 
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              placeholder="Search song, album, artist, or paste YT URL..."
+              className="w-full bg-transparent border-none outline-none text-white px-4 py-3 text-sm placeholder-white/30"
+            />
+            {isSearching && (
+              <div className="absolute right-4 w-5 h-5 border-2 border-t-transparent border-white/50 rounded-full animate-spin"></div>
+            )}
+          </div>
+        </div>
 
-          <div className="space-y-1 mb-8">
+        {/* Body Container */}
+        <div className="flex flex-1 overflow-hidden relative z-10">
+        
+        {/* Left Sidebar */}
+        <div className={`${isSidebarOpen ? 'w-[220px] opacity-100 p-4' : 'w-0 opacity-0 p-0 border-transparent'} transition-all duration-300 overflow-hidden shrink-0 border-r border-white/5 flex flex-col pb-28 h-full relative z-10`}>
+          {/* Static Top Section */}
+          <div className="flex-none">
+
+          <div className="space-y-1 mb-4">
             <div 
               onClick={() => setCurrentView('home')}
               className={`px-4 py-2.5 rounded-xl font-medium cursor-pointer flex items-center gap-3 transition-colors ${currentView === 'home' ? 'bg-white/5' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
@@ -310,8 +384,11 @@ export const YTMusicPlugin: React.FC = () => {
             </div>
           </div>
 
-          <div className="mb-3 text-xs font-bold tracking-widest text-white/30 px-4 mt-4">YOUR MUSIC</div>
-          <div className="space-y-1">
+          <div className="mb-3 text-xs font-bold tracking-widest text-white/30 px-4 mt-4 shrink-0">YOUR MUSIC</div>
+          </div>
+          
+          {/* Scrollable Bottom Section */}
+          <div className="flex-1 overflow-y-auto space-y-1 pr-2 pb-4">
             <div className="px-4 py-2.5 rounded-xl text-white/60 hover:bg-white/5 hover:text-white transition-colors cursor-pointer flex items-center gap-3">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
               Liked Songs {isYtAuthenticated ? '(Auto-sync)' : `(${likedSongs.length})`}
@@ -335,18 +412,30 @@ export const YTMusicPlugin: React.FC = () => {
 
             {isYtAuthenticated && (
               <>
-                <div 
-                  onClick={() => {
-                    fetch('http://127.0.0.1:48123/playlists').then(r=>r.json()).then(data => {
-                      if(data.results && data.results.length > 0) {
-                        setPlaylistId(data.results[0].playlistId, 'playlist');
-                      }
-                    });
-                  }}
-                  className="px-4 py-2 text-sm text-white/60 hover:text-white hover:bg-white/5 rounded-xl truncate cursor-pointer"
-                >
-                  Sync YT Playlists...
-                </div>
+                {isLoadingView ? (
+                  <div className="px-2 py-2 space-y-3 animate-pulse">
+                    {[1, 2, 3, 4, 5].map(i => (
+                      <div key={i} className="h-4 bg-white/5 rounded w-3/4 ml-2"></div>
+                    ))}
+                  </div>
+                ) : libraryData.length > 0 ? (
+                  libraryData.map(playlist => (
+                    <div 
+                      key={playlist.playlistId}
+                      onClick={() => {
+                        setPlaylistId(playlist.playlistId, 'playlist');
+                        setCurrentView('playlist');
+                      }}
+                      className="px-4 py-2 text-sm text-white/60 hover:text-white hover:bg-white/5 rounded-xl truncate cursor-pointer transition-colors"
+                    >
+                      {playlist.title}
+                    </div>
+                  ))
+                ) : (
+                  <div className="px-4 py-2 text-sm text-white/40 italic truncate">
+                    No playlists found
+                  </div>
+                )}
                 <div 
                   onClick={handleLogout}
                   className="px-4 py-2 mt-4 text-sm text-red-400/80 hover:text-red-400 hover:bg-red-400/10 rounded-xl truncate cursor-pointer flex items-center gap-3 transition-colors"
@@ -360,41 +449,22 @@ export const YTMusicPlugin: React.FC = () => {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col min-w-0 bg-white/[0.02]">
+        <div className="flex-1 flex flex-col min-w-0 bg-white/[0.02] relative z-10">
           <div className="flex-1 p-8 overflow-y-auto pb-28">
             
-            {/* Top Search Bar */}
-            <div className="mb-8 flex gap-4">
-              <div className="flex-1 bg-white/5 rounded-2xl flex items-center px-4 border border-white/5 transition-colors focus-within:border-white/20 focus-within:bg-white/10 relative">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-white/40"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-                <input 
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                  placeholder="Search song, album, artist, or paste YT URL..."
-                  className="w-full bg-transparent border-none outline-none text-white px-4 py-4 text-sm placeholder-white/30"
-                />
-                {isSearching && (
-                  <div className="absolute right-4 w-5 h-5 border-2 border-t-transparent border-white/50 rounded-full animate-spin"></div>
-                )}
-              </div>
-              <button 
-                onClick={handleSaveCurrentPlaylist}
-                disabled={!playlistId || savedPlaylists.some(p => p.id === playlistId)}
-                className="px-6 py-4 rounded-2xl font-bold text-white shadow-lg transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed shrink-0"
-                style={{ backgroundColor: theme.colors.primary }}
-              >
-                {savedPlaylists.some(p => p.id === playlistId) ? 'Saved' : 'Save'}
-              </button>
-            </div>
-
             {/* Main Views Container */}
             <div className="w-full relative">
               
               {/* Home View */}
               {currentView === 'home' && (
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  {isLoadingView && <div className="text-center py-20 text-white/40">Loading Home Feed...</div>}
+                  {isLoadingView && (
+                    <>
+                      <ShelfSkeleton />
+                      <ShelfSkeleton />
+                      <ShelfSkeleton />
+                    </>
+                  )}
                   {homeData.map((shelf, i) => (
                     <ShelfCarousel key={`home-${i}`} title={shelf.title} contents={shelf.contents} />
                   ))}
@@ -407,7 +477,13 @@ export const YTMusicPlugin: React.FC = () => {
               {/* Explore View */}
               {currentView === 'explore' && (
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  {isLoadingView && <div className="text-center py-20 text-white/40">Loading Charts & Trends...</div>}
+                  {isLoadingView && (
+                    <>
+                      <ShelfSkeleton />
+                      <ShelfSkeleton />
+                      <ShelfSkeleton />
+                    </>
+                  )}
                   {exploreData.map((shelf, i) => (
                     <ShelfCarousel key={`explore-${i}`} title={shelf.title} contents={shelf.contents} />
                   ))}
@@ -418,86 +494,62 @@ export const YTMusicPlugin: React.FC = () => {
               {currentView === 'library' && (
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <h2 className="text-2xl font-bold mb-6 px-2" style={{ color: theme.colors.primary }}>Your Playlists</h2>
-                  {isLoadingView && <div className="text-center py-20 text-white/40">Loading Library...</div>}
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 px-2">
-                    {libraryData.map((playlist, idx) => {
-                      const imageUrl = playlist.thumbnails?.[playlist.thumbnails.length - 1]?.url || playlist.thumbnails?.[0]?.url;
-                      return (
-                        <div 
-                          key={`lib-${idx}`} 
-                          onClick={() => {
-                            if (playlist.playlistId) {
-                              setPlaylistId(playlist.playlistId, 'playlist');
-                              setCurrentView('playlist');
-                            }
-                          }}
-                          className="cursor-pointer group bg-white/5 border border-white/5 p-4 rounded-3xl hover:bg-white/10 hover:border-white/20 transition-all"
-                        >
-                          <div className="w-full aspect-square rounded-2xl overflow-hidden mb-4 relative shadow-lg">
-                            {imageUrl ? (
-                              <img src={imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={playlist.title} />
-                            ) : (
-                              <div className="w-full h-full bg-white/5 flex items-center justify-center">
-                                <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor" className="text-white/20"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/></svg>
-                              </div>
-                            )}
-                            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                              <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
-                                <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" className="text-white ml-1"><path d="M8 5v14l11-7z"/></svg>
+                  {isLoadingView ? (
+                    <LibrarySkeleton />
+                  ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 px-2">
+                      {libraryData.map((playlist, idx) => {
+                        const imageUrl = playlist.thumbnails?.[playlist.thumbnails.length - 1]?.url || playlist.thumbnails?.[0]?.url;
+                        return (
+                          <div 
+                            key={`lib-${idx}`} 
+                            onClick={() => {
+                              if (playlist.playlistId) {
+                                setPlaylistId(playlist.playlistId, 'playlist');
+                                setCurrentView('playlist');
+                              }
+                            }}
+                            className="cursor-pointer group bg-white/5 border border-white/5 p-4 rounded-3xl hover:bg-white/10 hover:border-white/20 transition-all"
+                          >
+                            <div className="w-full aspect-square rounded-2xl overflow-hidden mb-4 relative shadow-lg">
+                              {imageUrl ? (
+                                <img src={imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={playlist.title} />
+                              ) : (
+                                <div className="w-full h-full bg-white/5 flex items-center justify-center">
+                                  <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor" className="text-white/20"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/></svg>
+                                </div>
+                              )}
+                              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
+                                  <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" className="text-white ml-1"><path d="M8 5v14l11-7z"/></svg>
+                                </div>
                               </div>
                             </div>
+                            <div className="font-bold text-base truncate text-white/90 group-hover:text-white transition-colors">{playlist.title}</div>
+                            <div className="text-sm text-white/40 truncate mt-1">{playlist.count || ''} Tracks</div>
                           </div>
-                          <div className="font-bold text-base truncate text-white/90 group-hover:text-white transition-colors">{playlist.title}</div>
-                          <div className="text-sm text-white/40 truncate mt-1">{playlist.count || ''} Tracks</div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* Playlist / Search View */}
               {currentView === 'playlist' && (
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {/* Playlist Header (Hide during search) */}
-            {!isShowingSearchResults && (
-              <div className="flex gap-8 mb-8 bg-white/5 p-6 rounded-3xl border border-white/5">
-                <div className="w-[180px] h-[180px] shrink-0 rounded-2xl overflow-hidden shadow-2xl relative">
-                  <img src={`https://img.youtube.com/vi/${trackInfo.id}/hqdefault.jpg`} className="w-full h-full object-cover scale-110" alt="Cover" />
-                  <div className="absolute inset-0 bg-black/20 mix-blend-overlay"></div>
-                </div>
-                <div className="flex flex-col justify-end py-2 overflow-hidden">
-                  <div className="text-xs font-bold tracking-widest mb-2" style={{ color: theme.colors.primary }}>NOW PLAYING</div>
-                  <h1 className="text-4xl font-bold mb-2 truncate">{trackInfo.title}</h1>
-                  <p className="text-white/60 text-lg mb-6 truncate">{trackInfo.artist}</p>
-                  <div className="flex items-center gap-3">
-                    <button onClick={togglePlay} className="px-6 py-2.5 rounded-full font-bold text-white shadow-lg transition-transform hover:scale-105 active:scale-95 flex items-center gap-2 shrink-0" style={{ backgroundColor: theme.colors.primary }}>
-                      {isPlaying ? (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-                      ) : (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                      )}
-                      {isPlaying ? 'Pause' : 'Play All'}
-                    </button>
-                    <button onClick={next} className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 transition-colors flex items-center justify-center shrink-0">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Ambient Background Gradient moved to root */}
 
             {/* Tracklist or Search Results */}
-            <div className="w-full">
-              <div className="flex text-xs font-bold tracking-widest text-white/40 pb-4 border-b border-white/10 mb-4 px-4">
-                <div className="w-8">#</div>
-                <div className="flex-1">TITLE</div>
-                <div className="flex-1">ARTIST</div>
-              </div>
-              
+            <div className="w-full relative z-10">
               {isShowingSearchResults ? (
                 // Render Search Results
                 <>
+                  <div className="flex text-xs font-bold tracking-widest text-white/40 pb-4 border-b border-white/10 mb-6 px-4 mt-8 pt-4">
+                    <div className="w-8">#</div>
+                    <div className="flex-[2] md:flex-[3]">TITLE</div>
+                    <div className="flex-1 hidden sm:block">ARTIST</div>
+                  </div>
                   {searchResults.length === 0 && !isSearching && (
                     <div className="text-center py-10 text-white/40">No results found for "{inputValue}"</div>
                   )}
@@ -511,13 +563,13 @@ export const YTMusicPlugin: React.FC = () => {
                         <span className="group-hover:hidden">{idx + 1}</span>
                         <svg className="hidden group-hover:block text-white" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                       </div>
-                      <div className="flex-1 flex items-center gap-4 pr-4 truncate">
+                      <div className="flex-[2] md:flex-[3] flex items-center gap-4 pr-4 truncate">
                         {track.artworkUrl100 && (
-                          <img src={track.artworkUrl100} className="w-10 h-10 rounded-lg object-cover" alt="cover" />
+                          <img src={track.artworkUrl100} className="w-10 h-10 rounded-lg object-cover shrink-0" alt="cover" />
                         )}
                         <span className="font-medium text-white truncate">{track.trackName}</span>
                       </div>
-                      <div className="flex-1 truncate">
+                      <div className="flex-1 truncate hidden sm:block">
                         <span className="truncate text-white/40">{track.artistName} {track.collectionName ? `• ${track.collectionName}` : ''}</span>
                       </div>
                     </div>
@@ -525,12 +577,149 @@ export const YTMusicPlugin: React.FC = () => {
                 </>
               ) : (
                 // Render Playlist Tracks
-                <>
-                  {playlistTracks.length === 0 && (
-                    <div className="text-center py-10 text-white/40">Loading tracks...</div>
+                <div className={`flex flex-col md:flex-row gap-8 pb-32`}>
+                  {/* Left Column: Playlist/Player Details */}
+                  {!isShowingSearchResults && (
+                    <div className="w-full md:w-[280px] lg:w-[320px] flex flex-col items-center md:items-start text-center md:text-left shrink-0">
+                      
+                      {/* Vinyl Record */}
+                      <div className="relative w-64 h-64 md:w-full md:h-auto aspect-square mb-10 mt-4 flex items-center justify-center">
+                         {/* Vinyl Base */}
+                         <div className={`absolute inset-0 rounded-full border-[8px] border-white/5 bg-gradient-to-br from-[#181818] to-[#0a0a0a] shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex items-center justify-center transition-transform duration-1000 ${isPlaying ? 'animate-[spin_4s_linear_infinite]' : ''}`} style={{ boxShadow: `0 0 40px ${theme.colors.primary}20, inset 0 0 20px black` }}>
+                           {/* Grooves */}
+                           <div className="absolute inset-0 rounded-full border border-white/[0.03] m-3 pointer-events-none"></div>
+                           <div className="absolute inset-0 rounded-full border border-white/[0.02] m-8 pointer-events-none"></div>
+                           <div className="absolute inset-0 rounded-full border border-white/[0.03] m-14 pointer-events-none"></div>
+                           <div className="absolute inset-0 rounded-full border border-white/[0.02] m-20 pointer-events-none"></div>
+                           
+                           {/* Center Label (Album Art or Logo) */}
+                           <div className="w-[55%] h-[55%] rounded-full overflow-hidden border-4 border-black bg-[#111] flex items-center justify-center z-10 relative">
+                             {isActualPlaylist ? (
+                               playlistMetadata ? (
+                                 <img 
+                                   src={playlistMetadata.thumbnails && playlistMetadata.thumbnails.length > 0 ? playlistMetadata.thumbnails[playlistMetadata.thumbnails.length - 1].url : logoImg} 
+                                   alt="Cover" 
+                                   className="w-[140%] h-[140%] object-cover absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" 
+                                 />
+                               ) : (
+                                 <img src={logoImg} alt="Loading" className="w-[140%] h-[140%] object-contain absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-50" />
+                               )
+                             ) : (
+                               trackInfo.id ? (
+                                 <img 
+                                   src={`https://img.youtube.com/vi/${trackInfo.id}/hqdefault.jpg`} 
+                                   alt="Cover" 
+                                   className="w-[140%] h-[140%] object-cover absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" 
+                                   onError={(e) => { e.currentTarget.src = logoImg; e.currentTarget.className = "w-[140%] h-[140%] object-contain absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-50"; }}
+                                 />
+                               ) : (
+                                 <img src={logoImg} alt="Waiting" className="w-[140%] h-[140%] object-contain absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-50" />
+                               )
+                             )}
+                           </div>
+                           {/* Spindle hole */}
+                           <div className="absolute w-3 h-3 bg-black rounded-full z-20 border border-white/20"></div>
+                         </div>
+                         
+                         {/* Tonearm */}
+                         <div className={`absolute -right-2 md:-right-6 top-4 w-12 h-40 pointer-events-none transition-transform duration-700 origin-top z-20 ${isPlaying ? 'rotate-[15deg]' : '-rotate-[20deg]'}`}>
+                            <div className="absolute top-0 right-4 w-8 h-8 rounded-full bg-[#1a1a1a] border-2 border-black/50 shadow-lg z-20"></div>
+                            <div className="absolute top-4 right-[1.35rem] w-2.5 h-32 bg-gradient-to-b from-[#666] to-[#222] rounded-full shadow-md z-10"></div>
+                            <div className="absolute bottom-0 right-[0.6rem] w-5 h-12 bg-[#1a1a1a] rounded-sm z-10 border-b-4 shadow-xl" style={{ borderColor: theme.colors.primary, transform: 'rotate(20deg)' }}></div>
+                         </div>
+                      </div>
+
+                      {/* Title and Metadata */}
+                      {isActualPlaylist ? (
+                        playlistMetadata ? (
+                          <>
+                            <h2 className="text-2xl md:text-3xl font-bold text-white mb-2 leading-tight">{playlistMetadata.title}</h2>
+                            <p className="text-white/70 text-base font-medium mb-1">{playlistMetadata.author}</p>
+                            <p className="text-white/40 text-xs mb-6">
+                              Playlist • {playlistMetadata.year || new Date().getFullYear()} • {playlistMetadata.trackCount || playlistTracks.length} tracks
+                            </p>
+                            <div className="flex items-center gap-4 w-full justify-center md:justify-start">
+                              <button className="w-14 h-14 bg-white text-black rounded-full flex items-center justify-center hover:scale-105 transition-transform shadow-lg" onClick={() => handlePlayTrack(0)}>
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                              </button>
+                              <button 
+                                onClick={handleSaveCurrentPlaylist}
+                                disabled={!playlistId || savedPlaylists.some(p => p.id === playlistId)}
+                                className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                title={savedPlaylists.some(p => p.id === playlistId) ? "Saved" : "Save Playlist"}
+                              >
+                                {savedPlaylists.some(p => p.id === playlistId) ? (
+                                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2zm0 15l-5-2.18L7 18V5h10v13z"/></svg>
+                                ) : (
+                                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2zm0 15l-5-2.18L7 18V5h10v13z"/></svg>
+                                )}
+                              </button>
+                              <button className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center hover:bg-white/10 transition-colors">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="w-full flex flex-col items-center md:items-start animate-pulse">
+                             <div className="w-3/4 h-7 bg-white/5 rounded mb-2"></div>
+                             <div className="w-1/2 h-4 bg-white/5 rounded mb-6"></div>
+                             <div className="flex gap-4">
+                               <div className="w-14 h-14 bg-white/5 rounded-full"></div>
+                               <div className="w-10 h-10 bg-white/5 rounded-full"></div>
+                             </div>
+                          </div>
+                        )
+                      ) : (
+                        <>
+                          <div className="text-xs font-bold tracking-widest mb-2" style={{ color: theme.colors.primary }}>NOW PLAYING</div>
+                          <h2 className="text-2xl md:text-3xl font-bold text-white mb-2 leading-tight truncate w-full">{trackInfo.title || 'Waiting...'}</h2>
+                          <p className="text-white/70 text-base font-medium mb-6 truncate w-full">{trackInfo.artist || 'YouTube'}</p>
+                          <div className="flex items-center gap-4 w-full justify-center md:justify-start">
+                            <button onClick={togglePlay} className="px-6 py-2.5 rounded-full font-bold text-white shadow-lg transition-transform hover:scale-105 active:scale-95 flex items-center gap-2" style={{ backgroundColor: theme.colors.primary }}>
+                              {isPlaying ? (
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                              ) : (
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                              )}
+                              {isPlaying ? 'Pause' : 'Play'}
+                            </button>
+                            <button onClick={next} className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 transition-colors flex items-center justify-center shrink-0">
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   )}
 
-                  {playlistTracks.map((track, idx) => {
+                  {/* Right Column: Tracks */}
+                  <div className={!isShowingSearchResults ? "flex-1 w-full min-w-0" : "w-full"}>
+                    <div className="flex text-xs font-bold tracking-widest text-white/40 pb-4 border-b border-white/10 mb-6 px-4 mt-8 pt-4">
+                      <div className="w-8">#</div>
+                      <div className="flex-[2] md:flex-[3]">TITLE</div>
+                      <div className="flex-1 hidden sm:block">ARTIST</div>
+                    </div>
+                    
+                    {playlistTracks.length === 0 && (
+                      <div className="w-full space-y-1 mt-2">
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                          <div key={i} className="flex items-center px-4 py-3 w-full animate-pulse rounded-xl bg-white/[0.02]">
+                            <div className="w-8 flex items-center">
+                              <div className="w-4 h-4 bg-white/10 rounded"></div>
+                            </div>
+                            <div className="flex-1 flex items-center gap-4 pr-4">
+                               <div className="w-10 h-10 bg-white/10 rounded-lg shrink-0"></div>
+                               <div className="w-1/2 h-4 bg-white/10 rounded"></div>
+                            </div>
+                            <div className="flex-1 hidden sm:block">
+                               <div className="w-1/3 h-4 bg-white/10 rounded"></div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {playlistTracks.map((track, idx) => {
                     const isCurrentTrack = track.id === trackInfo.id;
                     const isLiked = likedSongs.includes(track.id);
                     
@@ -555,7 +744,7 @@ export const YTMusicPlugin: React.FC = () => {
                           )}
                         </div>
                         <div className={`flex-1 font-medium truncate pr-4 ${isCurrentTrack ? 'text-white' : ''}`}>{track.title}</div>
-                        <div className="flex-1 flex items-center justify-between">
+                        <div className="flex-1 flex items-center justify-between hidden sm:flex">
                           <span className="truncate text-white/40">{track.artist}</span>
                           <button 
                             onClick={(e) => { e.stopPropagation(); toggleLike(track.id); }}
@@ -571,15 +760,17 @@ export const YTMusicPlugin: React.FC = () => {
                       </div>
                     );
                   })}
-                </>
-              )}
-            </div>
+                  </div>
                 </div>
               )}
             </div>
           </div>
-        </div>
+        )}
       </div>
+    </div>
+  </div>
+</div>
+</div>
 
       {/* Bottom Player Bar */}
       <div className="absolute bottom-0 left-0 right-0 h-[90px] bg-[#0a0a0f] border-t border-white/5 flex items-center justify-between px-6 z-50">

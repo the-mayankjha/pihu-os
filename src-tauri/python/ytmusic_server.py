@@ -26,8 +26,8 @@ def get_ytmusic():
         try:
             yt = YTMusic(OAUTH_FILE, oauth_credentials=get_oauth())
             # Fix 400 Bad Request for custom TV OAuth clients by explicitly setting the TV client context
-            yt.context['client']['clientName'] = 'TVHTML5_SIMPLY_EMBEDDED_PLAYER'
-            yt.context['client']['clientVersion'] = '2.0'
+            yt.context['context']['client']['clientName'] = 'TVHTML5_SIMPLY_EMBEDDED_PLAYER'
+            yt.context['context']['client']['clientVersion'] = '2.0'
             return yt
         except Exception as e:
             print(f"Failed to initialize authenticated YTMusic: {e}")
@@ -109,11 +109,82 @@ def search():
 def playlists():
     yt = get_ytmusic()
     try:
+        # If we have an OAuth token, we can use the official Data API to bypass the 400 Bad Request error
+        auth_header = yt.headers.get('Authorization')
+        if auth_header and auth_header.startswith('Bearer '):
+            import urllib.request
+            import json
+            url = 'https://www.googleapis.com/youtube/v3/playlists?part=snippet&mine=true&maxResults=50'
+            req = urllib.request.Request(url, headers={'Authorization': auth_header})
+            with urllib.request.urlopen(req) as response:
+                data = json.loads(response.read().decode('utf-8'))
+                results = []
+                for item in data.get('items', []):
+                    results.append({
+                        "playlistId": item['id'],
+                        "title": item['snippet']['title'],
+                        "thumbnails": [{"url": item['snippet']['thumbnails'].get('high', item['snippet']['thumbnails'].get('default', {})).get('url', '')}]
+                    })
+                return jsonify({"results": results})
+                
+        # Fallback to normal method if no OAuth (e.g. unauthenticated which will fail gracefully)
         results = yt.get_library_playlists(limit=20)
         return jsonify({"results": results})
     except Exception as e:
-        # If library playlists fail (e.g. 400 Bad Request due to restricted OAuth), return empty
+        print(f"Error fetching playlists: {e}")
         return jsonify({"results": []})
+@app.route('/playlist_details', methods=['GET'])
+def playlist_details():
+    playlist_id = request.args.get('id')
+    if not playlist_id:
+        return jsonify({"error": "No id provided"}), 400
+
+    yt_auth = get_ytmusic()
+    # Try using YouTube Data API first for Playlists (works for private playlists if we have OAuth)
+    auth_header = yt_auth.headers.get('Authorization')
+    if auth_header and auth_header.startswith('Bearer ') and not playlist_id.startswith('MPREb_'):
+        import urllib.request, json
+        url = f'https://www.googleapis.com/youtube/v3/playlists?part=snippet,contentDetails&id={playlist_id}'
+        req = urllib.request.Request(url, headers={'Authorization': auth_header})
+        try:
+            with urllib.request.urlopen(req) as response:
+                data = json.loads(response.read().decode('utf-8'))
+                if data.get('items'):
+                    item = data['items'][0]
+                    return jsonify({
+                        "title": item['snippet']['title'],
+                        "author": item['snippet'].get('channelTitle', 'YouTube'),
+                        "trackCount": item['contentDetails']['itemCount'],
+                        "thumbnails": [{"url": item['snippet']['thumbnails'].get('high', item['snippet']['thumbnails'].get('default', {})).get('url', '')}],
+                        "year": item['snippet']['publishedAt'][:4]
+                    })
+        except Exception as e:
+            print("Data API failed for playlist_details:", e)
+
+    # Fallback to unauthenticated ytmusicapi (for Albums or public playlists if Data API fails)
+    yt_unauth = YTMusic()
+    try:
+        if playlist_id.startswith('MPREb_'):
+            data = yt_unauth.get_album(playlist_id)
+            return jsonify({
+                "title": data.get('title'),
+                "author": ", ".join([a.get('name', '') for a in data.get('artists', [])]),
+                "trackCount": data.get('trackCount'),
+                "thumbnails": data.get('thumbnails', []),
+                "year": data.get('year')
+            })
+        else:
+            data = yt_unauth.get_playlist(playlist_id)
+            return jsonify({
+                "title": data.get('title'),
+                "author": data.get('author', {}).get('name', 'YouTube'),
+                "trackCount": data.get('trackCount'),
+                "thumbnails": data.get('thumbnails', []),
+                "year": data.get('year')
+            })
+    except Exception as e:
+        print("ytmusicapi fallback failed:", e)
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/home', methods=['GET'])
 def home():

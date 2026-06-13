@@ -15,6 +15,7 @@ interface MusicState {
   progress: number;
   duration: number;
   trackInfo: TrackInfo;
+  playlistMetadata: any;
   playlistId: string;
   listType: 'playlist' | 'search' | 'video';
   playlistTracks: TrackInfo[];
@@ -30,6 +31,7 @@ interface MusicState {
   setProgress: (progress: number) => void;
   setDuration: (duration: number) => void;
   setTrackInfo: (trackInfo: { title: string, artist: string, id: string }) => void;
+  setPlaylistMetadata: (metadata: any) => void;
   setPlaylistId: (playlistId: string, listType?: 'playlist' | 'search' | 'video') => void;
   setPlaylistTracks: (tracks: TrackInfo[]) => void;
   setShowSettings: (showSettings: boolean) => void;
@@ -55,10 +57,11 @@ export const useMusicStore = create<MusicState>()(
       isBuffering: true,
       progress: 0,
       duration: 0,
-      trackInfo: { title: 'Loading Playlist...', artist: 'YouTube', id: '' },
-      playlistId: 'PLRBp0Fe2GpgnIh0AiYKh7o7HnYAej-5ph',
+      trackInfo: { title: 'Waiting for music...', artist: '', id: '' },
+      playlistId: '',
       listType: 'playlist',
       playlistTracks: [],
+      playlistMetadata: null,
       showSettings: false,
       likedSongs: [],
       savedPlaylists: [],
@@ -70,14 +73,30 @@ export const useMusicStore = create<MusicState>()(
       setProgress: (progress) => set({ progress }),
       setDuration: (duration) => set({ duration }),
       setTrackInfo: (trackInfo) => set({ trackInfo }),
+      setPlaylistMetadata: (metadata) => set({ playlistMetadata: metadata }),
       setPlaylistTracks: (tracks) => set({ playlistTracks: tracks }),
-      setPlaylistId: (playlistId, listType = 'playlist') => set({ 
-        playlistId, 
-        listType, 
-        isBuffering: true,
-        playlistTracks: [],
-        trackInfo: { title: 'Loading...', artist: 'YouTube', id: '' }
-      }),
+      setPlaylistId: (playlistId, listType = 'playlist') => {
+        set({ 
+          playlistId, 
+          listType, 
+          isBuffering: true,
+          playlistTracks: [],
+          playlistMetadata: null,
+          trackInfo: { title: 'Loading...', artist: 'YouTube', id: '' }
+        });
+        
+        // Fetch playlist metadata from backend
+        if (playlistId && !playlistId.startsWith('RD') && listType === 'playlist') {
+          fetch(`http://127.0.0.1:48123/playlist_details?id=${playlistId}`)
+            .then(res => res.json())
+            .then(data => {
+              if (!data.error) {
+                set({ playlistMetadata: data });
+              }
+            })
+            .catch(err => console.error("Failed to fetch playlist metadata", err));
+        }
+      },
       setShowSettings: (showSettings) => set({ showSettings }),
       setIsYtAuthenticated: (isYtAuthenticated) => set({ isYtAuthenticated }),
 
