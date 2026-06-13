@@ -1,5 +1,5 @@
 import React from 'react';
-import { GlassCard, GlassCardProps } from './GlassCard';
+import { GlassCard, type GlassCardProps } from './GlassCard';
 
 export interface WindowCardProps extends GlassCardProps {
   borderless?: boolean;
