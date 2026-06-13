@@ -15,6 +15,7 @@ interface PluginWindowProps {
   minHeight?: number;
   borderless?: boolean;
   controls?: boolean;
+  frostui?: boolean;
   children: React.ReactNode;
 }
 
@@ -30,6 +31,7 @@ export const PluginWindow: React.FC<PluginWindowProps> = ({
   minHeight = 300,
   borderless = false,
   controls = true,
+  frostui = false,
   children
 }) => {
   const [isMinimized, setIsMinimized] = useState(false);
@@ -67,6 +69,7 @@ export const PluginWindow: React.FC<PluginWindowProps> = ({
               frost="heavy" 
               borderless={borderless}
               controls={controls}
+              frostui={frostui}
               title={title}
               icon={icon}
               onMinimize={() => setIsMinimized(true)}

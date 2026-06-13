@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { PluginWindow } from '../../core/windows/components/PluginWindow';
 import { useMusicStore } from '../../stores/musicStore';
 import { useThemeStore } from '../../stores/themeStore';
@@ -14,13 +14,14 @@ export const YTMusicPlugin: React.FC = () => {
     progress, duration, setProgress, player,
     setPlaylistId, playlistTracks, playlistId, playlistMetadata, listType,
     likedSongs, toggleLike, savedPlaylists, savePlaylist, removePlaylist, playTrackAt,
-    isYtAuthenticated
+    isYtAuthenticated, checkYtAuth, setShowSettings
   } = useMusicStore();
   const { theme } = useThemeStore();
   const [inputValue, setInputValue] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
 
   const [currentView, setCurrentView] = useState<'home' | 'explore' | 'library' | 'playlist'>('home');
   const [homeData, setHomeData] = useState<any[]>([]);
@@ -107,7 +108,8 @@ export const YTMusicPlugin: React.FC = () => {
   const handleLogout = async () => {
     try {
       await fetch('http://127.0.0.1:48123/auth/logout', { method: 'POST' });
-      useMusicStore.getState().checkYtAuth();
+      checkYtAuth();
+      setIsProfileDropdownOpen(false);
     } catch(e) {}
   };
 
@@ -286,6 +288,8 @@ export const YTMusicPlugin: React.FC = () => {
     </div>
   );
 
+  const isFrostUI = true;
+
   return (
     <PluginWindow
       id="ytmusic-plugin"
@@ -294,11 +298,12 @@ export const YTMusicPlugin: React.FC = () => {
       isOpen={isOpen}
       onClose={handleClose}
       borderless
+      frostui={isFrostUI}
       defaultSize={{ width: 1000, height: 700 }}
       minWidth={800}
       minHeight={500}
     >
-      <div className="flex flex-col h-full w-full bg-[#0a0a0f]/90 text-white font-sans text-sm relative">
+      <div className={`flex flex-col h-full w-full ${isFrostUI ? 'bg-transparent' : 'bg-[#0a0a0f]/90'} text-white font-sans text-sm relative`}>
         {/* Ambient Background Gradient for Actual Playlist View */}
         {currentView === 'playlist' && !isShowingSearchResults && isActualPlaylist && (
           <div 
@@ -308,7 +313,7 @@ export const YTMusicPlugin: React.FC = () => {
         )}
 
         {/* Global Top Header */}
-        <div className="plugin-drag-handle flex items-center gap-4 px-4 py-4 md:px-6 shrink-0 z-20 relative border-b border-white/5 cursor-grab active:cursor-grabbing">
+        <div className="plugin-drag-handle flex items-center gap-4 pl-4 md:pl-6 pr-24 py-4 shrink-0 z-20 relative border-b border-white/5 cursor-grab active:cursor-grabbing">
           {/* Hamburger & Logo */}
           <div className="flex items-center gap-4 w-[200px] shrink-0">
             <button 
@@ -339,6 +344,42 @@ export const YTMusicPlugin: React.FC = () => {
             {isSearching && (
               <div className="absolute right-4 w-5 h-5 border-2 border-t-transparent border-white/50 rounded-full animate-spin"></div>
             )}
+          </div>
+
+          {/* Right Actions (Profile) */}
+          <div className="flex items-center gap-4 ml-auto pl-4 shrink-0 relative">
+            <button 
+              onClick={() => {
+                if (!isYtAuthenticated) {
+                  setShowSettings(true);
+                } else {
+                  setIsProfileDropdownOpen(!isProfileDropdownOpen);
+                }
+              }}
+              className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-500 flex items-center justify-center text-white font-bold text-sm shadow-lg border border-white/10 hover:border-white/30 transition-all hover:scale-105 shrink-0"
+              title={isYtAuthenticated ? "Profile" : "Sign In"}
+            >
+              {isYtAuthenticated ? 'P' : '?'}
+            </button>
+
+            <AnimatePresence>
+              {isProfileDropdownOpen && isYtAuthenticated && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="absolute top-12 right-0 w-48 bg-[#1a1a24]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden py-2 z-[100]"
+                >
+                  <button 
+                    onClick={handleLogout}
+                    className="w-full text-left px-4 py-2 text-red-400 hover:bg-white/5 transition-colors text-sm font-medium flex items-center gap-2"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
+                    Sign Out
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
@@ -801,7 +842,7 @@ export const YTMusicPlugin: React.FC = () => {
 </div>
 
       {/* Bottom Player Bar */}
-      <div className="absolute bottom-0 left-0 right-0 h-[90px] bg-[#0a0a0f] border-t border-white/5 flex items-center justify-between px-6 z-50">
+      <div className={`absolute bottom-0 left-0 right-0 h-[90px] ${isFrostUI ? 'bg-[#0a0a0f]/80' : 'bg-[#0a0a0f]'} border-t border-white/5 flex items-center justify-between px-6 z-50`}>
         
         {/* Left: Track Info */}
         <div className="flex items-center gap-4 w-[250px] cursor-pointer group" onClick={() => setCurrentView('playlist')}>

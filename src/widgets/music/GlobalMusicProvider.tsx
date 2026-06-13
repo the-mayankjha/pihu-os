@@ -291,64 +291,96 @@ export const GlobalMusicProvider: React.FC = () => {
       {/* Global Settings Modal */}
       <AnimatePresence>
         {showSettings && (
-          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-6 bg-black/40 backdrop-blur-md">
             <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="w-full max-w-[400px] p-6 bg-[#1a1a24]/90 backdrop-blur-xl rounded-[32px] shadow-2xl border border-white/10"
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="w-full max-w-[420px] bg-[#0a0a0f]/80 backdrop-blur-3xl rounded-[32px] shadow-[0_0_80px_rgba(0,0,0,0.8)] border border-white/10 overflow-hidden relative"
             >
-              <h3 className="text-white font-semibold mb-2 text-xl text-center">Music Settings</h3>
+              {/* Subtle top gradient glow */}
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 via-red-500 to-yellow-500 opacity-80"></div>
               
-              <div className="mb-6 p-4 rounded-2xl bg-white/5 border border-white/10 text-center">
-                <h4 className="text-white/90 font-medium mb-2">YouTube Music Account</h4>
-                {isYtAuthenticated ? (
-                  <div>
-                    <p className="text-green-400 text-sm mb-3">✓ Authenticated</p>
-                    <button onClick={handleLogout} className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg text-sm hover:bg-red-500/30 transition-colors">Sign Out</button>
-                  </div>
-                ) : authFlow ? (
-                  <div>
-                    <p className="text-white/70 text-sm mb-2">{authStatus}</p>
-                    <a href={authFlow.url} target="_blank" rel="noreferrer" className="text-blue-400 text-sm hover:underline block mb-2">{authFlow.url}</a>
-                    <div className="text-2xl font-mono text-white tracking-widest bg-black/50 py-2 rounded-lg mb-4">{authFlow.code}</div>
-                    <button onClick={() => authFlow && handleVerifyAuth(authFlow.deviceCode)} className="w-full py-2 bg-white/10 text-white rounded-lg text-sm hover:bg-white/20 transition-colors mb-2">I have entered the code</button>
-                    <button onClick={() => setAuthFlow(null)} className="w-full py-2 text-white/50 text-sm hover:text-white/80 transition-colors">Cancel</button>
-                  </div>
-                ) : (
-                  <div>
-                    <p className="text-white/60 text-sm mb-4">Sign in to unlock your personal library, liked songs, and better search.</p>
-                    <button onClick={handleStartAuth} className="px-5 py-2.5 bg-[#ff0000] text-white rounded-xl text-sm font-medium hover:bg-[#ff0000]/80 transition-colors">Sign In with YouTube</button>
-                    {authStatus && <p className="text-white/50 text-xs mt-3">{authStatus}</p>}
-                  </div>
-                )}
-              </div>
-
-              <div className="border-t border-white/10 pt-6">
-                <p className="text-white/60 text-sm text-center mb-4 leading-relaxed">Or play an unauthenticated public playlist URL:</p>
-                
-                <input 
-                  type="text" 
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={(e) => { if(e.key === 'Enter') handleSavePlaylist(); }}
-                  placeholder="https://youtube.com/playlist?list=..."
-                  className="w-full px-5 py-4 rounded-2xl bg-black/30 border border-white/5 text-white text-sm placeholder-white/30 focus:outline-none focus:border-white/30 focus:bg-black/50 transition-all mb-4"
-                />
-                
-                <div className="flex gap-3 w-full">
+              <div className="p-8">
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="text-white font-bold text-2xl tracking-tight flex items-center gap-3">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+                    Music Settings
+                  </h3>
                   <button 
                     onClick={() => setShowSettings(false)}
-                    className="flex-1 py-3.5 rounded-2xl font-medium text-white/70 hover:bg-white/5 transition-colors"
+                    className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/20 flex items-center justify-center text-white/70 hover:text-white transition-all"
                   >
-                    Close
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                   </button>
+                </div>
+                
+                {/* Account Section */}
+                <div className="mb-8 p-6 rounded-3xl bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 relative overflow-hidden group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  <h4 className="text-white/90 font-semibold mb-1 relative z-10 text-lg">YouTube Music Account</h4>
+                  
+                  {isYtAuthenticated ? (
+                    <div className="relative z-10 mt-4">
+                      <div className="flex items-center gap-3 bg-green-500/10 text-green-400 px-4 py-3 rounded-xl border border-green-500/20 mb-4">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                        <span className="font-medium text-sm">Successfully Authenticated</span>
+                      </div>
+                      <button onClick={handleLogout} className="w-full px-4 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl text-sm font-semibold transition-all border border-red-500/20 hover:border-red-500/40">Sign Out</button>
+                    </div>
+                  ) : authFlow ? (
+                    <div className="relative z-10 mt-4 space-y-4">
+                      <p className="text-white/70 text-sm">{authStatus}</p>
+                      <a href={authFlow.url} target="_blank" rel="noreferrer" className="text-blue-400 text-sm hover:underline flex items-center gap-1 font-medium">
+                        Open Auth URL <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                      </a>
+                      <div className="text-3xl font-mono text-white tracking-[0.2em] bg-black/50 py-4 rounded-xl text-center border border-white/10 shadow-inner">{authFlow.code}</div>
+                      <div className="flex gap-2">
+                        <button onClick={() => setAuthFlow(null)} className="flex-1 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl text-sm font-medium transition-colors border border-white/5">Cancel</button>
+                        <button onClick={() => authFlow && handleVerifyAuth(authFlow.deviceCode)} className="flex-[2] py-3 bg-white text-black rounded-xl text-sm font-bold hover:bg-white/90 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(255,255,255,0.3)]">I entered the code</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="relative z-10 mt-3">
+                      <p className="text-white/50 text-sm mb-5 leading-relaxed">Sign in to unlock your personal library, liked songs, and better search capabilities.</p>
+                      <button onClick={handleStartAuth} className="w-full py-3.5 bg-gradient-to-r from-[#ff0000] to-[#cc0000] text-white rounded-xl text-sm font-bold shadow-[0_0_20px_rgba(255,0,0,0.3)] hover:shadow-[0_0_30px_rgba(255,0,0,0.5)] transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M21.582,6.186c-0.23-0.86-0.908-1.538-1.768-1.768C18.254,4,12,4,12,4S5.746,4,4.186,4.418c-0.86,0.23-1.538,0.908-1.768,1.768C2,7.746,2,12,2,12s0,4.254,0.418,5.814c0.23,0.86,0.908,1.538,1.768,1.768C5.746,20,12,20,12,20s6.254,0,7.814-0.418c0.86-0.23,1.538-0.908,1.768-1.768C22,16.254,22,12,22,12S22,7.746,21.582,6.186z M10,15.464V8.536L16,12L10,15.464z"/></svg>
+                        Sign In with YouTube
+                      </button>
+                      {authStatus && <p className="text-red-400 text-xs mt-3 text-center font-medium">{authStatus}</p>}
+                    </div>
+                  )}
+                </div>
+  
+                {/* Manual Playlist URL Section */}
+                <div className="pt-2">
+                  <p className="text-white/50 text-sm mb-3 font-medium flex items-center gap-2">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                    Quick Play URL
+                  </p>
+                  
+                  <div className="relative mb-6 group">
+                    <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white/30 group-focus-within:text-white/70 transition-colors"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    </div>
+                    <input 
+                      type="text" 
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      onKeyDown={(e) => { if(e.key === 'Enter') { handleSavePlaylist(); setShowSettings(false); } }}
+                      placeholder="Paste YouTube Playlist URL..."
+                      className="w-full pl-11 pr-5 py-3.5 rounded-2xl bg-black/40 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:border-white/30 focus:bg-white/5 transition-all focus:shadow-[0_0_20px_rgba(255,255,255,0.05)]"
+                    />
+                  </div>
+                  
                   <button 
-                    onClick={handleSavePlaylist}
-                    className="flex-1 py-3.5 rounded-2xl font-semibold text-white shadow-lg transition-transform hover:scale-[1.02] active:scale-[0.98]"
-                    style={{ backgroundColor: theme.colors.primary }}
+                    onClick={() => { handleSavePlaylist(); setShowSettings(false); }}
+                    className="w-full py-3.5 rounded-2xl font-bold text-white shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 border border-white/10"
+                    style={{ background: `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.secondary})` }}
                   >
-                    Play
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    Play Now
                   </button>
                 </div>
               </div>

@@ -4,6 +4,7 @@ import { GlassCard, type GlassCardProps } from './GlassCard';
 export interface WindowCardProps extends GlassCardProps {
   borderless?: boolean;
   controls?: boolean;
+  frostui?: boolean;
   title?: string;
   icon?: string;
   onMinimize?: () => void;
@@ -14,6 +15,7 @@ export interface WindowCardProps extends GlassCardProps {
 export const WindowCard: React.FC<WindowCardProps> = ({
   borderless = false,
   controls = true,
+  frostui = false,
   title,
   icon,
   onMinimize,
@@ -26,7 +28,20 @@ export const WindowCard: React.FC<WindowCardProps> = ({
   return (
     <GlassCard 
       className={`w-full h-full flex flex-col ${className}`} 
-      style={borderless ? { border: 'none', ...props.style } : props.style}
+      blur={frostui ? 'md' : undefined}
+      frost={frostui ? 'light' : undefined}
+      style={
+        frostui 
+          ? { 
+              background: 'rgba(10, 10, 15, 0.5)', 
+              backdropFilter: 'blur(20px)', 
+              WebkitBackdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              ...(borderless ? { border: 'none' } : {}),
+              ...props.style 
+            }
+          : (borderless ? { border: 'none', ...props.style } : props.style)
+      }
       {...props}
     >
       {/* Titlebar (Drag Handle) or Absolute Window Controls */}
