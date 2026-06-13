@@ -225,7 +225,7 @@ export const YTMusicPlugin: React.FC = () => {
   // Helper component for rendering a shelf
   const ShelfCarousel = ({ title, contents }: { title: string, contents: any[] }) => (
     <div className="mb-8">
-      <h2 className="text-xl font-bold mb-4 px-2" style={{ color: theme.colors.primary }}>{title}</h2>
+      <h2 className="text-xl font-bold text-white mb-4 px-2">{title}</h2>
       <div className="flex gap-4 overflow-x-auto pb-4 px-2 snap-x" style={{ scrollbarWidth: 'none' }}>
         {contents.map((item, idx) => {
           const id = item.playlistId || item.videoId;
@@ -493,11 +493,30 @@ export const YTMusicPlugin: React.FC = () => {
               {/* Library View */}
               {currentView === 'library' && (
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <h2 className="text-2xl font-bold mb-6 px-2" style={{ color: theme.colors.primary }}>Your Playlists</h2>
+                  {/* Top Header & Filters */}
+                  <div className="mb-8 px-2">
+                    <h2 className="text-3xl font-bold text-white mb-6">Library</h2>
+                  </div>
+
+                  {/* All Playlists Header */}
+                  <div className="flex items-center justify-between mb-6 px-2">
+                    <h3 className="text-lg font-bold text-white">All Playlists</h3>
+                    <div className="flex items-center gap-4 text-white/50 text-sm">
+                      <button className="flex items-center gap-1 hover:text-white transition-colors">
+                        Recently updated
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5H7z"/></svg>
+                      </button>
+                      <div className="flex items-center gap-2">
+                        <button className="w-8 h-8 rounded bg-white/10 text-white flex items-center justify-center"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h4v4H4V4zm6 0h4v4h-4V4zm6 0h4v4h-4V4zM4 10h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4zM4 16h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4z"/></svg></button>
+                        <button className="w-8 h-8 rounded hover:bg-white/10 transition-colors flex items-center justify-center"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg></button>
+                      </div>
+                    </div>
+                  </div>
+
                   {isLoadingView ? (
                     <LibrarySkeleton />
                   ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 px-2">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 px-2">
                       {libraryData.map((playlist, idx) => {
                         const imageUrl = playlist.thumbnails?.[playlist.thumbnails.length - 1]?.url || playlist.thumbnails?.[0]?.url;
                         return (
@@ -509,24 +528,36 @@ export const YTMusicPlugin: React.FC = () => {
                                 setCurrentView('playlist');
                               }
                             }}
-                            className="cursor-pointer group bg-white/5 border border-white/5 p-4 rounded-3xl hover:bg-white/10 hover:border-white/20 transition-all"
+                            className="flex flex-col bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.05] hover:border-white/10 rounded-2xl overflow-hidden cursor-pointer group transition-all"
                           >
-                            <div className="w-full aspect-square rounded-2xl overflow-hidden mb-4 relative shadow-lg">
+                            <div className="w-full aspect-square relative overflow-hidden bg-white/5">
                               {imageUrl ? (
                                 <img src={imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={playlist.title} />
                               ) : (
-                                <div className="w-full h-full bg-white/5 flex items-center justify-center">
+                                <div className="w-full h-full flex items-center justify-center">
                                   <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor" className="text-white/20"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/></svg>
                                 </div>
                               )}
-                              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
-                                  <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" className="text-white ml-1"><path d="M8 5v14l11-7z"/></svg>
-                                </div>
+                              
+                              {/* Top Right 3-dots */}
+                              <button className="absolute top-2 right-2 text-white/70 hover:text-white p-1 rounded-full hover:bg-black/20 opacity-0 group-hover:opacity-100 transition-all z-10" onClick={(e) => e.stopPropagation()}>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+                              </button>
+                              
+                              {/* Bottom Right Icon */}
+                              <div className="absolute bottom-2 right-2 w-8 h-8 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 shadow-lg z-10">
+                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
                               </div>
+
+                              {/* Gradient overlay on image */}
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-80 pointer-events-none"></div>
                             </div>
-                            <div className="font-bold text-base truncate text-white/90 group-hover:text-white transition-colors">{playlist.title}</div>
-                            <div className="text-sm text-white/40 truncate mt-1">{playlist.count || ''} Tracks</div>
+                            
+                            <div className="p-4 flex flex-col relative z-20">
+                              <div className="font-bold text-sm text-white/90 truncate group-hover:text-white transition-colors mb-1">{playlist.title}</div>
+                              <div className="text-[13px] text-white/50 truncate mb-2">{playlist.author || 'The Mayank Jha'}</div>
+                              <div className="text-[11px] text-white/40">{playlist.count || '0'} songs</div>
+                            </div>
                           </div>
                         );
                       })}
@@ -776,15 +807,20 @@ export const YTMusicPlugin: React.FC = () => {
       <div className="absolute bottom-0 left-0 right-0 h-[90px] bg-[#0a0a0f] border-t border-white/5 flex items-center justify-between px-6 z-50">
         
         {/* Left: Track Info */}
-        <div className="flex items-center gap-4 w-[250px]">
-          <img src={`https://img.youtube.com/vi/${trackInfo.id}/hqdefault.jpg`} className="w-14 h-14 rounded-lg object-cover shadow-md" alt="Cover" />
+        <div className="flex items-center gap-4 w-[250px] cursor-pointer group" onClick={() => setCurrentView('playlist')}>
+          <div className="relative overflow-hidden rounded-lg shrink-0">
+            <img src={`https://img.youtube.com/vi/${trackInfo.id}/hqdefault.jpg`} className="w-14 h-14 object-cover shadow-md group-hover:scale-105 transition-transform duration-300" alt="Cover" />
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-white translate-y-1 group-hover:translate-y-0 transition-all"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+            </div>
+          </div>
           <div className="min-w-0">
-            <div className="text-white font-bold text-sm truncate">{trackInfo.title}</div>
+            <div className="text-white font-bold text-sm truncate group-hover:underline">{trackInfo.title}</div>
             <div className="text-white/50 text-xs truncate">{trackInfo.artist}</div>
           </div>
           <button 
-            onClick={() => trackInfo.id && toggleLike(trackInfo.id)}
-            className={`ml-2 transition-colors ${trackInfo.id && likedSongs.includes(trackInfo.id) ? 'text-[#FF0000]' : 'text-white/40 hover:text-white'}`}
+            onClick={(e) => { e.stopPropagation(); trackInfo.id && toggleLike(trackInfo.id); }}
+            className={`ml-2 transition-colors z-10 ${trackInfo.id && likedSongs.includes(trackInfo.id) ? 'text-[#FF0000]' : 'text-white/40 hover:text-white'}`}
           >
             {trackInfo.id && likedSongs.includes(trackInfo.id) ? (
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
