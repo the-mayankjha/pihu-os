@@ -23,7 +23,7 @@ export const YTMusicPlugin: React.FC = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
 
-  const [currentView, setCurrentView] = useState<'home' | 'explore' | 'library' | 'playlist'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'explore' | 'library' | 'playlist' | 'account'>('home');
   const [homeData, setHomeData] = useState<any[]>([]);
   const [exploreData, setExploreData] = useState<any[]>([]);
   const [libraryData, setLibraryData] = useState<any[]>([]);
@@ -109,8 +109,48 @@ export const YTMusicPlugin: React.FC = () => {
     try {
       await fetch('http://127.0.0.1:48123/auth/logout', { method: 'POST' });
       checkYtAuth();
-      setIsProfileDropdownOpen(false);
+      setCurrentView('home');
     } catch(e) {}
+  };
+
+  const [authFlow, setAuthFlow] = useState<{url: string, code: string, deviceCode: string} | null>(null);
+  const [authStatus, setAuthStatus] = useState<string>('');
+
+  const handleStartAuth = async () => {
+    setAuthStatus('Generating login code...');
+    let popup: any = null;
+    try {
+      const res = await fetch('http://127.0.0.1:48123/auth/start');
+      const data = await res.json();
+      if (data.success) {
+        setAuthFlow({ url: data.code.verification_url, code: data.code.user_code, deviceCode: data.code.device_code });
+        try {
+          await navigator.clipboard.writeText(data.code.user_code);
+          setAuthStatus('Code copied to clipboard! Please paste it in the popup window.');
+        } catch (err) { setAuthStatus('Please open the URL and enter the code.'); }
+        try {
+          const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+          popup = new WebviewWindow('googleAuth_' + Date.now(), { url: data.code.verification_url, title: '', width: 480, height: 650, center: true, focus: true, theme: 'dark', titleBarStyle: 'overlay', hiddenTitle: true });
+          popup.once('tauri://error', (e: any) => setAuthStatus('Window error: ' + (e?.payload || 'Unknown error.')));
+        } catch (e: any) { setAuthStatus('Failed to spawn window.'); }
+        handleVerifyAuth(data.code.device_code, popup);
+      } else { setAuthStatus('Failed to start auth flow.'); }
+    } catch (e) { setAuthStatus('Error connecting to local YTMusic server.'); }
+  };
+
+  const handleVerifyAuth = async (deviceCode: string, popup?: any) => {
+    try {
+      const res = await fetch('http://127.0.0.1:48123/auth/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ device_code: deviceCode }) });
+      const data = await res.json();
+      if (data.success) {
+        setAuthStatus('Successfully authenticated!');
+        setAuthFlow(null);
+        if (popup) { try { popup.close(); } catch(e) {} }
+        checkYtAuth();
+      } else if (data.pending) {
+        setTimeout(() => handleVerifyAuth(deviceCode, popup), 5000);
+      } else { setAuthStatus('Authorization failed or expired.'); }
+    } catch (e: any) { setAuthStatus('Error verifying auth.'); }
   };
 
   const handleClose = () => {
@@ -349,37 +389,12 @@ export const YTMusicPlugin: React.FC = () => {
           {/* Right Actions (Profile) */}
           <div className="flex items-center gap-4 ml-auto pl-4 shrink-0 relative">
             <button 
-              onClick={() => {
-                if (!isYtAuthenticated) {
-                  setShowSettings(true);
-                } else {
-                  setIsProfileDropdownOpen(!isProfileDropdownOpen);
-                }
-              }}
+              onClick={() => setCurrentView('account')}
               className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-500 flex items-center justify-center text-white font-bold text-sm shadow-lg border border-white/10 hover:border-white/30 transition-all hover:scale-105 shrink-0"
               title={isYtAuthenticated ? "Profile" : "Sign In"}
             >
               {isYtAuthenticated ? 'P' : '?'}
             </button>
-
-            <AnimatePresence>
-              {isProfileDropdownOpen && isYtAuthenticated && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  className="absolute top-12 right-0 w-48 bg-[#1a1a24]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden py-2 z-[100]"
-                >
-                  <button 
-                    onClick={handleLogout}
-                    className="w-full text-left px-4 py-2 text-red-400 hover:bg-white/5 transition-colors text-sm font-medium flex items-center gap-2"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
-                    Sign Out
-                  </button>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
         </div>
 
@@ -423,6 +438,14 @@ export const YTMusicPlugin: React.FC = () => {
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
               Current Player
+            </div>
+            <div 
+              onClick={() => setCurrentView('account')}
+              className={`px-4 py-2.5 rounded-xl font-medium cursor-pointer flex items-center gap-3 transition-colors ${currentView === 'account' ? 'bg-white/5' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+              style={{ color: currentView === 'account' ? theme.colors.primary : undefined }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+              Account
             </div>
           </div>
 
@@ -491,12 +514,63 @@ export const YTMusicPlugin: React.FC = () => {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col min-w-0 bg-white/[0.02] relative z-10">
-          <div className="flex-1 p-8 overflow-y-auto pb-28">
+        <div className="flex-1 overflow-y-auto relative z-10 scrollbar-hide">
+          <div className="p-4 md:p-8 max-w-[1600px] mx-auto min-h-full">
+            <AnimatePresence mode="wait">
+              {/* Account View */}
+              {currentView === 'account' && (
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-2xl mx-auto pt-8">
+                  <h2 className="text-3xl font-bold text-white mb-8 text-center flex items-center justify-center gap-3">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                    Account Settings
+                  </h2>
+                  
+                  <div className="p-8 rounded-3xl bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 relative overflow-hidden group mb-8">
+                    <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+                    <h4 className="text-white/90 font-semibold mb-2 relative z-10 text-xl">YouTube Music Connection</h4>
+                    
+                    {isYtAuthenticated ? (
+                      <div className="relative z-10 mt-6">
+                        <div className="flex items-center gap-4 bg-green-500/10 text-green-400 p-6 rounded-2xl border border-green-500/20 mb-6">
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                          <div>
+                            <span className="font-bold text-lg block">Successfully Authenticated</span>
+                            <span className="text-green-500/70 text-sm">Your playlists, library, and liked songs are synced.</span>
+                          </div>
+                        </div>
+                        <button onClick={handleLogout} className="w-full px-4 py-4 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-2xl font-bold transition-all border border-red-500/20 hover:border-red-500/40 hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
+                          Sign Out
+                        </button>
+                      </div>
+                    ) : authFlow ? (
+                      <div className="relative z-10 mt-6 space-y-6">
+                        <p className="text-white/70">{authStatus}</p>
+                        <a href={authFlow.url} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline flex items-center gap-2 font-medium text-lg">
+                          Open Authentication URL <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                        </a>
+                        <div className="text-4xl font-mono text-white tracking-[0.25em] bg-black/40 p-6 rounded-2xl text-center border border-white/10 shadow-inner">
+                          {authFlow.code}
+                        </div>
+                        <div className="flex gap-4">
+                          <button onClick={() => setAuthFlow(null)} className="flex-1 py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl font-medium transition-colors border border-white/5">Cancel</button>
+                          <button onClick={() => authFlow && handleVerifyAuth(authFlow.deviceCode)} className="flex-[2] py-4 bg-white text-black rounded-2xl font-bold hover:bg-white/90 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_30px_rgba(255,255,255,0.2)]">I entered the code</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="relative z-10 mt-6">
+                        <p className="text-white/50 mb-8 leading-relaxed text-lg">Sign in to unlock your personal library, liked songs, and better search capabilities directly inside Pihu OS.</p>
+                        <button onClick={handleStartAuth} className="w-full py-4 bg-gradient-to-r from-[#ff0000] to-[#cc0000] text-white rounded-2xl font-bold shadow-[0_0_30px_rgba(255,0,0,0.3)] hover:shadow-[0_0_40px_rgba(255,0,0,0.5)] transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3 text-lg">
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M21.582,6.186c-0.23-0.86-0.908-1.538-1.768-1.768C18.254,4,12,4,12,4S5.746,4,4.186,4.418c-0.86,0.23-1.538,0.908-1.768,1.768C2,7.746,2,12,2,12s0,4.254,0.418,5.814c0.23,0.86,0.908,1.538,1.768,1.768C5.746,20,12,20,12,20s6.254,0,7.814-0.418c0.86-0.23,1.538-0.908,1.768-1.768C22,16.254,22,12,22,12S22,7.746,21.582,6.186z M10,15.464V8.536L16,12L10,15.464z"/></svg>
+                          Sign In with YouTube
+                        </button>
+                        {authStatus && <p className="text-red-400 mt-4 text-center font-medium">{authStatus}</p>}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             
-            {/* Main Views Container */}
-            <div className="w-full relative">
-              
               {/* Home View */}
               {currentView === 'home' && (
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -835,11 +909,11 @@ export const YTMusicPlugin: React.FC = () => {
             </div>
           </div>
         )}
+            </AnimatePresence>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-</div>
-</div>
 
       {/* Bottom Player Bar */}
       <div className={`absolute bottom-0 left-0 right-0 h-[90px] ${isFrostUI ? 'bg-[#0a0a0f]/80' : 'bg-[#0a0a0f]'} border-t border-white/5 flex items-center justify-between px-6 z-50`}>
