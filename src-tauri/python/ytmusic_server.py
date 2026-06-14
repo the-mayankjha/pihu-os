@@ -205,36 +205,48 @@ def home():
 @app.route('/explore', methods=['GET'])
 def explore():
     yt = get_ytmusic()
-    try:
-        results = yt.get_charts()
-        
-        # Standardize explore format to match home feed structure
+    def get_charts_safely(yt_instance):
+        results = yt_instance.get_charts()
         standardized_shelves = []
-        
-        if 'videos' in results and 'items' in results['videos']:
-            standardized_shelves.append({
-                "title": "Trending Videos",
-                "contents": results['videos']['items']
-            })
-            
-        if 'artists' in results and 'items' in results['artists']:
-            standardized_shelves.append({
-                "title": "Top Artists",
-                "contents": results['artists']['items']
-            })
-            
-        return jsonify({"results": standardized_shelves})
+        if 'videos' in results:
+            v = results['videos']
+            if isinstance(v, dict) and 'items' in v: standardized_shelves.append({"title": "Trending Videos", "contents": v['items']})
+            elif isinstance(v, list): standardized_shelves.append({"title": "Trending Videos", "contents": v})
+        if 'artists' in results:
+            a = results['artists']
+            if isinstance(a, dict) and 'items' in a: standardized_shelves.append({"title": "Top Artists", "contents": a['items']})
+            elif isinstance(a, list): standardized_shelves.append({"title": "Top Artists", "contents": a})
+        return standardized_shelves
+
+    try:
+        shelves = get_charts_safely(yt)
+        # Fetch moods
+        moods = yt.get_mood_categories()
+        return jsonify({"results": shelves, "moods": moods})
     except Exception as e:
-        # Fallback to unauthenticated if OAuth token lacks privileges
         try:
             yt_unauth = YTMusic()
-            results = yt_unauth.get_charts()
-            standardized_shelves = []
-            if 'videos' in results and 'items' in results['videos']:
-                standardized_shelves.append({"title": "Trending Videos", "contents": results['videos']['items']})
-            if 'artists' in results and 'items' in results['artists']:
-                standardized_shelves.append({"title": "Top Artists", "contents": results['artists']['items']})
-            return jsonify({"results": standardized_shelves})
+            shelves = get_charts_safely(yt_unauth)
+            moods = yt_unauth.get_mood_categories()
+            return jsonify({"results": shelves, "moods": moods})
+        except Exception as fallback_e:
+            return jsonify({"error": str(fallback_e)}), 500
+
+@app.route('/explore/mood_playlists', methods=['GET'])
+def explore_mood_playlists():
+    params = request.args.get('params')
+    if not params:
+        return jsonify({"error": "No params provided"}), 400
+    
+    yt = get_ytmusic()
+    try:
+        playlists = yt.get_mood_playlists(params)
+        return jsonify({"results": playlists})
+    except Exception as e:
+        try:
+            yt_unauth = YTMusic()
+            playlists = yt_unauth.get_mood_playlists(params)
+            return jsonify({"results": playlists})
         except Exception as fallback_e:
             return jsonify({"error": str(fallback_e)}), 500
 

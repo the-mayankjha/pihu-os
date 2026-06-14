@@ -23,9 +23,11 @@ export const YTMusicPlugin: React.FC = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
 
-  const [currentView, setCurrentView] = useState<'home' | 'explore' | 'library' | 'playlist' | 'account'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'explore' | 'explore_detail' | 'library' | 'playlist' | 'account'>('home');
   const [homeData, setHomeData] = useState<any[]>([]);
   const [exploreData, setExploreData] = useState<any[]>([]);
+  const [exploreMoods, setExploreMoods] = useState<Record<string, any[]>>({});
+  const [exploreDetailData, setExploreDetailData] = useState<{title: string, contents: any[]}>({title: '', contents: []});
   const [libraryData, setLibraryData] = useState<any[]>([]);
   const [isLoadingView, setIsLoadingView] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -55,7 +57,11 @@ export const YTMusicPlugin: React.FC = () => {
       fetch('http://127.0.0.1:48123/home').then(r=>r.json()).then(d => { setHomeData(d.results || []); setIsLoadingView(false); }).catch(()=>setIsLoadingView(false));
     } else if (currentView === 'explore' && exploreData.length === 0) {
       setIsLoadingView(true);
-      fetch('http://127.0.0.1:48123/explore').then(r=>r.json()).then(d => { setExploreData(d.results || []); setIsLoadingView(false); }).catch(()=>setIsLoadingView(false));
+      fetch('http://127.0.0.1:48123/explore').then(r=>r.json()).then(d => { 
+        setExploreData(d.results || []); 
+        setExploreMoods(d.moods || {});
+        setIsLoadingView(false); 
+      }).catch(()=>setIsLoadingView(false));
     }
   }, [currentView, isYtAuthenticated]);
 
@@ -603,6 +609,73 @@ export const YTMusicPlugin: React.FC = () => {
                   {exploreData.map((shelf, i) => (
                     <ShelfCarousel key={`explore-${i}`} title={shelf.title} contents={shelf.contents} />
                   ))}
+
+                  {/* Moods Section */}
+                  {Object.entries(exploreMoods).map(([category, items], i) => (
+                    <div key={`mood-${i}`} className="mt-12 px-2">
+                      <h3 className="text-2xl font-bold text-white mb-6 tracking-tight">{category}</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                        {items.map((item, j) => (
+                          <div 
+                            key={j} 
+                            onClick={() => {
+                                setIsLoadingView(true);
+                                fetch(`http://127.0.0.1:48123/explore/mood_playlists?params=${item.params}`)
+                                  .then(r => r.json())
+                                  .then(d => {
+                                      setExploreDetailData({ title: item.title, contents: d.results || [] });
+                                      setCurrentView('explore_detail');
+                                      setIsLoadingView(false);
+                                  });
+                            }}
+                            className="bg-white/5 hover:bg-white/10 p-4 rounded-xl cursor-pointer transition-colors border border-white/5 hover:border-white/20 relative overflow-hidden group flex items-center justify-center min-h-[100px]"
+                          >
+                            <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            <h4 className="text-white font-medium text-center relative z-10">{item.title}</h4>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Explore Detail View */}
+              {currentView === 'explore_detail' && (
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <div className="mb-8 px-2 flex items-center gap-4">
+                    <button onClick={() => setCurrentView('explore')} className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z"/></svg>
+                    </button>
+                    <h2 className="text-3xl font-bold text-white">{exploreDetailData.title}</h2>
+                  </div>
+                  {isLoadingView ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 px-2 animate-pulse">
+                      {[1,2,3,4,5].map(i => <div key={i} className="w-full aspect-square bg-white/5 rounded-xl"></div>)}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 px-2">
+                      {exploreDetailData.contents.map(playlist => (
+                        <div 
+                          key={playlist.playlistId}
+                          onClick={() => {
+                            setPlaylistId(playlist.playlistId, 'playlist');
+                            setCurrentView('playlist');
+                          }}
+                          className="group cursor-pointer"
+                        >
+                          <div className="relative w-full aspect-square rounded-xl overflow-hidden mb-3 shadow-lg">
+                            <img src={playlist.thumbnails?.[0]?.url || playlist.thumbnails?.[playlist.thumbnails?.length - 1]?.url} alt={playlist.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor" className="text-white"><path d="M8 5v14l11-7z"/></svg>
+                            </div>
+                          </div>
+                          <h4 className="font-bold text-white text-sm truncate group-hover:underline">{playlist.title}</h4>
+                          <p className="text-white/50 text-xs truncate mt-1">{playlist.description || playlist.author}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
