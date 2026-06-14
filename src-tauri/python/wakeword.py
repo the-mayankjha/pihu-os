@@ -63,6 +63,8 @@ def get_rms(np_data):
     return math.sqrt(np.mean(np.square(np_data.astype(np.float32))))
 
 mode = "WAKEWORD" # Modes: WAKEWORD, LISTENING
+total_listening_frames = 0
+MAX_LISTENING_FRAMES = int((16000 / CHUNK) * 10)  # 10 seconds max
 silence_frames = 0
 SILENCE_THRESHOLD = 500  # Adjust this based on mic sensitivity
 FRAMES_FOR_SILENCE = int((16000 / CHUNK) * 1.5)  # 1.5 seconds of silence
@@ -83,6 +85,7 @@ while True:
                     # Switch to LISTENING mode
                     mode = "LISTENING"
                     silence_frames = 0
+                    total_listening_frames = 0
                     time.sleep(1.0) # Grace period while Orb does Wake animation
                     break
 
@@ -94,7 +97,8 @@ while True:
             else:
                 silence_frames = 0
                 
-            if silence_frames > FRAMES_FOR_SILENCE:
+            total_listening_frames += 1
+            if silence_frames > FRAMES_FOR_SILENCE or total_listening_frames > MAX_LISTENING_FRAMES:
                 print("SPEECH_ENDED")
                 sys.stdout.flush()
                 # Reset to WAKEWORD mode

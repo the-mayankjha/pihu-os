@@ -4,6 +4,7 @@ import { useMusicStore } from '../../stores/musicStore';
 import { useThemeStore } from '../../stores/themeStore';
 import { useLayoutStore } from '../../core/layout/LayoutStore';
 import { motion, AnimatePresence } from 'framer-motion';
+import { listen } from '@tauri-apps/api/event';
 
 export const GlobalMusicProvider: React.FC = () => {
   const { 
@@ -28,6 +29,21 @@ export const GlobalMusicProvider: React.FC = () => {
       }
     }
   }, [widgets, isPlaying, setIsPlaying]);
+
+  // Pause music on wake word detected
+  useEffect(() => {
+    const unlisten = listen('wake-word-detected', () => {
+      const { player, isPlaying, setIsPlaying } = useMusicStore.getState();
+      if (player && isPlaying) {
+        player.pauseVideo();
+        setIsPlaying(false);
+      }
+    });
+
+    return () => {
+      unlisten.then(f => f());
+    };
+  }, []);
 
   // Time syncing
   useEffect(() => {

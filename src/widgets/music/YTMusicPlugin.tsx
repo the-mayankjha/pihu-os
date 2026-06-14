@@ -14,14 +14,13 @@ export const YTMusicPlugin: React.FC = () => {
     progress, duration, setProgress, player,
     setPlaylistId, playlistTracks, playlistId, playlistMetadata, listType,
     likedSongs, toggleLike, savedPlaylists, savePlaylist, removePlaylist, playTrackAt,
-    isYtAuthenticated, checkYtAuth, setShowSettings
+    isYtAuthenticated, checkYtAuth
   } = useMusicStore();
   const { theme } = useThemeStore();
   const [inputValue, setInputValue] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
 
   const [currentView, setCurrentView] = useState<'home' | 'explore' | 'explore_detail' | 'library' | 'playlist' | 'account'>('home');
   const [homeData, setHomeData] = useState<any[]>([]);
