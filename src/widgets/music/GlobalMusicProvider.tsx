@@ -15,6 +15,7 @@ export const GlobalMusicProvider: React.FC = () => {
   const { theme } = useThemeStore();
   const { widgets } = useLayoutStore();
   const [inputValue, setInputValue] = useState(playlistId);
+  const isInitialLoad = React.useRef(true);
 
   // Auto-pause when all music widgets are closed
   useEffect(() => {
@@ -87,6 +88,7 @@ export const GlobalMusicProvider: React.FC = () => {
   };
 
   const onReady = (event: any) => {
+    isInitialLoad.current = false;
     setPlayer(event.target);
     updateTrackInfo(event.target);
     
@@ -98,10 +100,27 @@ export const GlobalMusicProvider: React.FC = () => {
       }
     }
 
-    // Force play to overcome autoplay blocking
+    // Force play and apply initial state
     setTimeout(() => {
       if (event.target && typeof event.target.playVideo === 'function') {
-        event.target.playVideo();
+        // Apply initial playback state if available
+        const { index, start, autoplay } = initialPlaybackRef.current;
+        
+        if (index !== undefined) {
+          event.target.playVideoAt(index);
+          initialPlaybackRef.current.index = undefined;
+        }
+        
+        if (start !== undefined) {
+          event.target.seekTo(start, true);
+          initialPlaybackRef.current.start = undefined;
+        }
+        
+        if (autoplay || useMusicStore.getState().isPlaying) {
+          event.target.playVideo();
+        } else {
+          event.target.pauseVideo();
+        }
       }
     }, 500);
   };
@@ -274,6 +293,21 @@ export const GlobalMusicProvider: React.FC = () => {
       checkYtAuth();
     } catch(e) {}
   };
+
+  // Compute playback start parameters for persistence
+  const initialPlaybackRef = React.useRef({ index: undefined as number | undefined, start: undefined as number | undefined, autoplay: true });
+  
+  // Set initial ref values only once on mount
+  useEffect(() => {
+    const storedState = useMusicStore.getState();
+    let idx = undefined;
+    if (storedState.trackInfo?.id && storedState.playlistTracks?.length > 0) {
+      const foundIdx = storedState.playlistTracks.findIndex((t: any) => t.id === storedState.trackInfo.id);
+      if (foundIdx !== -1) idx = foundIdx;
+    }
+    const st = storedState.progress > 0 ? Math.floor(storedState.progress) : undefined;
+    initialPlaybackRef.current = { index: idx, start: st, autoplay: storedState.isPlaying };
+  }, []);
 
   return (
     <>

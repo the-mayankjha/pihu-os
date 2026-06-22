@@ -80,6 +80,7 @@ export const useMusicStore = create<MusicState>()(
           playlistId, 
           listType, 
           isBuffering: true,
+          progress: 0,
           playlistTracks: [],
           playlistMetadata: null,
           trackInfo: { title: 'Loading...', artist: 'YouTube', id: '' }
@@ -211,7 +212,13 @@ export const useMusicStore = create<MusicState>()(
         likedSongs: state.likedSongs, 
         savedPlaylists: state.savedPlaylists,
         playlistId: state.playlistId,
-        listType: state.listType
+        listType: state.listType,
+        progress: state.progress,
+        duration: state.duration,
+        trackInfo: state.trackInfo,
+        playlistTracks: state.playlistTracks,
+        playlistMetadata: state.playlistMetadata,
+        isPlaying: state.isPlaying
       })
     }
   )
