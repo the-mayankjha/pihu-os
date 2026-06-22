@@ -110,7 +110,8 @@ def search():
     
     limit = int(request.args.get('limit', 10))
     
-    yt = get_ytmusic()
+    # Use unauthenticated client for search to avoid TVHTML5 context bug which returns []
+    yt = YTMusic()
     try:
         results = yt.search(query.strip(), filter=filter_type, limit=limit)
         return jsonify({"results": results})

@@ -183,6 +183,12 @@ export const YTMusicPlugin: React.FC = () => {
       }
     } else if (finalId.trim() === '') {
       return;
+    } else {
+      // It's a text query, let's play the first search result if available to avoid buggy third-party search fallbacks
+      if (searchResults.length > 0) {
+        handlePlaySearchResult(searchResults[0]);
+        return;
+      }
     }
 
     setPlaylistId(finalId, type);

@@ -315,7 +315,7 @@ export const GlobalMusicProvider: React.FC = () => {
       <div className="fixed top-0 left-0 w-[200px] h-[200px] opacity-0 pointer-events-none z-[-9999] overflow-hidden">
         <YouTube 
           key={`${listType}-${playlistId}`}
-          videoId={listType === 'video' ? playlistId : "dQw4w9WgXcQ"}
+          videoId={listType === 'video' ? playlistId : (playlistId?.startsWith('RD') ? playlistId.substring(2) : undefined)}
           opts={{ 
             height: '200', 
             width: '200', 
