@@ -13,6 +13,17 @@ import { WidgetDrawer } from '../shared/components/WidgetDrawer/WidgetDrawer';
 import { VoiceOverlay } from '../core/voice/VoiceOverlay';
 import { VoiceManager } from '../core/voice/VoiceManager';
 
+// System Widgets
+import { 
+  SystemCompactCpuWidget, SystemCompactMemWidget, SystemCompactDiskWidget, SystemCompactNetWidget, SystemCompactBatWidget 
+} from '../widgets/system/SystemCompactWidgets';
+import { 
+  SystemSquareCpuWidget, SystemSquareMemWidget, SystemSquareDiskWidget 
+} from '../widgets/system/SystemSquareWidgets';
+import { 
+  SystemResourceMonitorWidget, SystemTopProcessesWidget, SystemDetailedOverviewWidget 
+} from '../widgets/system/SystemLargeWidgets';
+
 export default function App() {
   const { widgets } = useLayoutStore();
 
@@ -33,6 +44,21 @@ export default function App() {
       {(widgets['music-widget-circle']?.isOpen) && <MusicWidgetCircle />}
       {(widgets['music-widget-folder']?.isOpen) && <MusicWidgetFolder />}
       
+      {/* System Widgets */}
+      {(widgets['system-compact-cpu']?.isOpen) && <SystemCompactCpuWidget />}
+      {(widgets['system-compact-mem']?.isOpen) && <SystemCompactMemWidget />}
+      {(widgets['system-compact-disk']?.isOpen) && <SystemCompactDiskWidget />}
+      {(widgets['system-compact-net']?.isOpen) && <SystemCompactNetWidget />}
+      {(widgets['system-compact-bat']?.isOpen) && <SystemCompactBatWidget />}
+      
+      {(widgets['system-square-cpu']?.isOpen) && <SystemSquareCpuWidget />}
+      {(widgets['system-square-mem']?.isOpen) && <SystemSquareMemWidget />}
+      {(widgets['system-square-disk']?.isOpen) && <SystemSquareDiskWidget />}
+      
+      {(widgets['system-large-resource']?.isOpen) && <SystemResourceMonitorWidget />}
+      {(widgets['system-large-processes']?.isOpen) && <SystemTopProcessesWidget />}
+      {(widgets['system-large-overview']?.isOpen) && <SystemDetailedOverviewWidget />}
+
       <YTMusicPlugin />
 
       <Dock />

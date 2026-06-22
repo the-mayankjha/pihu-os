@@ -14,9 +14,15 @@ import { WeatherWidgetLarge } from '../../../widgets/weather/WeatherWidgetLarge'
 import { WeatherWidgetCompact } from '../../../widgets/weather/WeatherWidgetCompact';
 import { WeatherWidgetWide } from '../../../widgets/weather/WeatherWidgetWide';
 import { WeatherWidgetHourly } from '../../../widgets/weather/WeatherWidgetHourly';
-import { SystemWidgetCompact } from '../../../widgets/system/SystemWidgetCompact';
-import { SystemWidgetLarge } from '../../../widgets/system/SystemWidgetLarge';
-import { SystemWidgetWide } from '../../../widgets/system/SystemWidgetWide';
+import { 
+  SystemCompactCpuWidget, SystemCompactMemWidget, SystemCompactDiskWidget, SystemCompactNetWidget, SystemCompactBatWidget 
+} from '../../../widgets/system/SystemCompactWidgets';
+import { 
+  SystemSquareCpuWidget, SystemSquareMemWidget, SystemSquareDiskWidget 
+} from '../../../widgets/system/SystemSquareWidgets';
+import { 
+  SystemResourceMonitorWidget, SystemTopProcessesWidget, SystemDetailedOverviewWidget 
+} from '../../../widgets/system/SystemLargeWidgets';
 
 export const WidgetDrawer: React.FC = () => {
   const { isWidgetDrawerOpen, toggleWidgetDrawer, spawnWidget } = useLayoutStore();
@@ -125,19 +131,54 @@ export const WidgetDrawer: React.FC = () => {
                     <WeatherWidgetHourly preview onClick={() => handleWidgetClick('weather-widget-hourly')} />
                   </div>
 
+                  {/* Compact Widgets */}
                   <div className="w-full flex flex-col gap-2 items-center">
-                    <span className="text-sm font-medium text-white/80">System Monitor (Compact)</span>
-                    <SystemWidgetCompact preview onClick={() => handleWidgetClick('system-widget-compact')} />
+                    <span className="text-sm font-medium text-white/80">CPU (Compact)</span>
+                    <SystemCompactCpuWidget preview onClick={() => handleWidgetClick('system-compact-cpu')} />
+                  </div>
+                  <div className="w-full flex flex-col gap-2 items-center">
+                    <span className="text-sm font-medium text-white/80">RAM (Compact)</span>
+                    <SystemCompactMemWidget preview onClick={() => handleWidgetClick('system-compact-mem')} />
+                  </div>
+                  <div className="w-full flex flex-col gap-2 items-center">
+                    <span className="text-sm font-medium text-white/80">Disk (Compact)</span>
+                    <SystemCompactDiskWidget preview onClick={() => handleWidgetClick('system-compact-disk')} />
+                  </div>
+                  <div className="w-full flex flex-col gap-2 items-center">
+                    <span className="text-sm font-medium text-white/80">Network (Compact)</span>
+                    <SystemCompactNetWidget preview onClick={() => handleWidgetClick('system-compact-net')} />
+                  </div>
+                  <div className="w-full flex flex-col gap-2 items-center">
+                    <span className="text-sm font-medium text-white/80">Battery (Compact)</span>
+                    <SystemCompactBatWidget preview onClick={() => handleWidgetClick('system-compact-bat')} />
                   </div>
 
+                  {/* Square Widgets */}
                   <div className="w-full flex flex-col gap-2 items-center">
-                    <span className="text-sm font-medium text-white/80">System Monitor (Large)</span>
-                    <SystemWidgetLarge preview onClick={() => handleWidgetClick('system-widget-large')} />
+                    <span className="text-sm font-medium text-white/80">CPU (Square)</span>
+                    <SystemSquareCpuWidget preview onClick={() => handleWidgetClick('system-square-cpu')} />
+                  </div>
+                  <div className="w-full flex flex-col gap-2 items-center">
+                    <span className="text-sm font-medium text-white/80">RAM (Square)</span>
+                    <SystemSquareMemWidget preview onClick={() => handleWidgetClick('system-square-mem')} />
+                  </div>
+                  <div className="w-full flex flex-col gap-2 items-center">
+                    <span className="text-sm font-medium text-white/80">Disk (Square)</span>
+                    <SystemSquareDiskWidget preview onClick={() => handleWidgetClick('system-square-disk')} />
                   </div>
 
+                  {/* Large Widgets */}
                   <div className="w-full flex flex-col gap-2 items-center">
-                    <span className="text-sm font-medium text-white/80">System Monitor (Wide)</span>
-                    <SystemWidgetWide preview onClick={() => handleWidgetClick('system-widget-wide')} />
+                    <span className="text-sm font-medium text-white/80">Resource Monitor</span>
+                    <SystemResourceMonitorWidget preview onClick={() => handleWidgetClick('system-large-resource')} />
+                  </div>
+                  <div className="w-full flex flex-col gap-2 items-center">
+                    <span className="text-sm font-medium text-white/80">Top Processes</span>
+                    <SystemTopProcessesWidget preview onClick={() => handleWidgetClick('system-large-processes')} />
+                  </div>
+                  <div className="w-full flex flex-col gap-2 items-center">
+                    <span className="text-sm font-medium text-white/80">Detailed Overview</span>
+                    <SystemDetailedOverviewWidget preview onClick={() => handleWidgetClick('system-large-overview')} />
                   </div>
                 </div>
               </div>
