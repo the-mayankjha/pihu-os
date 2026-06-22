@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Plus, Star, Trash2 } from 'lucide-react';
+import { Check, Plus, Trash2 } from 'lucide-react';
 import { GlassCard } from '../../shared/components/GlassCard/GlassCard';
 import { WidgetContainer } from '../../shared/components/WidgetContainer/WidgetContainer';
 import { useThemeStore } from '../../stores/themeStore';
@@ -14,7 +14,7 @@ export interface TodoWidgetFocusProps {
 
 export const TodoWidgetFocus: React.FC<TodoWidgetFocusProps> = ({ preview = false, onClick }) => {
   const [isAdding, setIsAdding] = useState(false);
-  const { todos, toggleTodo, deleteTodo, tagColors } = useTodoStore();
+  const { todos, toggleTodo, deleteTodo } = useTodoStore();
   const { theme } = useThemeStore();
   
   // "Today Focus" strictly filters for today's tasks

@@ -4,15 +4,27 @@ import { persist } from 'zustand/middleware';
 export interface Todo {
   id: string;
   text: string;
+  description?: string;
   completed: boolean;
   createdAt: number;
-  time?: string;
+  time?: string;          // Keep as legacy due time / string
+  dueDate?: string;       // NEW: Explicit due date if time is too ambiguous
   category?: string;
   categoryColor?: string;
   isStarred?: boolean;
   project?: string;
-  priority?: string;
+  workspace?: string;     // NEW
+  priority?: string;      // High, Medium, Low
   tags?: string[];
+  reminder?: string;      // NEW
+  repeat?: string;        // NEW
+  attachments?: string[]; // NEW
+  subtasks?: {            // NEW
+    id: string;
+    title: string;
+    completed: boolean;
+  }[];
+  isArchived?: boolean;   // NEW: for Archive Task intent
 }
 
 interface TodoState {
@@ -20,9 +32,15 @@ interface TodoState {
   projects: string[];
   tags: string[];
   tagColors: Record<string, string>;
+  focusedTaskId: string | null;
+  setFocusedTaskId: (id: string | null) => void;
   addTodo: (payload: Partial<Todo>) => void;
+  updateTodo: (id: string, updates: Partial<Todo>) => void;
   toggleTodo: (id: string) => void;
   deleteTodo: (id: string) => void;
+  archiveTodo: (id: string) => void;
+  duplicateTodo: (id: string) => void;
+  moveTodo: (id: string, workspace?: string, project?: string) => void;
   reorderTodos: (todos: Todo[]) => void;
   clearCompleted: () => void;
   addProject: (project: string) => void;
@@ -125,6 +143,9 @@ export const useTodoStore = create<TodoState>()(
         "Health": "#F59E0B",
         "Docs": "#06B6D4"
       },
+      focusedTaskId: null,
+
+      setFocusedTaskId: (id) => set({ focusedTaskId: id }),
 
       addTodo: (payload) => set((state) => ({
         todos: [
@@ -133,9 +154,16 @@ export const useTodoStore = create<TodoState>()(
             id: crypto.randomUUID(),
             completed: false,
             createdAt: Date.now(),
+            isArchived: false,
             ...payload
           } as Todo
         ]
+      })),
+
+      updateTodo: (id, updates) => set((state) => ({
+        todos: state.todos.map(todo =>
+          todo.id === id ? { ...todo, ...updates } : todo
+        )
       })),
 
       toggleTodo: (id) => set((state) => ({
@@ -146,6 +174,36 @@ export const useTodoStore = create<TodoState>()(
 
       deleteTodo: (id) => set((state) => ({
         todos: state.todos.filter(todo => todo.id !== id)
+      })),
+
+      archiveTodo: (id) => set((state) => ({
+        todos: state.todos.map(todo =>
+          todo.id === id ? { ...todo, isArchived: true } : todo
+        )
+      })),
+
+      duplicateTodo: (id) => set((state) => {
+        const todoToDuplicate = state.todos.find(t => t.id === id);
+        if (!todoToDuplicate) return state;
+        const newTodo = {
+          ...todoToDuplicate,
+          id: crypto.randomUUID(),
+          createdAt: Date.now(),
+          text: `${todoToDuplicate.text} (Copy)`
+        };
+        return { todos: [...state.todos, newTodo] };
+      }),
+
+      moveTodo: (id, workspace, project) => set((state) => ({
+        todos: state.todos.map(todo => {
+          if (todo.id === id) {
+            const updates: Partial<Todo> = {};
+            if (workspace !== undefined) updates.workspace = workspace;
+            if (project !== undefined) updates.project = project;
+            return { ...todo, ...updates };
+          }
+          return todo;
+        })
       })),
 
       reorderTodos: (todos) => set({ todos }),

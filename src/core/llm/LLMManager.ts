@@ -1,5 +1,5 @@
 import { GeminiModel } from './types';
-import type { GeminiRequestBody, GeminiResponse, LLMRequest } from './types';
+import type { GeminiRequestBody, GeminiResponse, GeminiContent, LLMRequest, LLMToolRequest } from './types';
 
 export class LLMManager {
   private static instance: LLMManager;
@@ -44,9 +44,45 @@ export class LLMManager {
   }
 
   /**
+   * Internal fetch — returns the raw first candidate (not just text).
+   * Used by generateWithTools which needs to inspect functionCall parts.
+   */
+  private async executeRawFetch(
+    model: GeminiModel,
+    body: GeminiRequestBody,
+    maxRetries: number = 4
+  ): Promise<GeminiResponse['candidates']> {
+    if (!this.currentApiKey) throw new Error('No Gemini API Keys configured.');
+    let attempts = 0;
+    while (attempts < maxRetries) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.currentApiKey}`;
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (response.ok) {
+          const data: GeminiResponse = await response.json();
+          return data.candidates ?? [];
+        }
+        if (response.status === 429 || response.status === 403) {
+          if (this.rotateKey()) { attempts++; continue; }
+        }
+        const errorText = await response.text();
+        throw new Error(`Gemini API Error ${response.status}: ${errorText}`);
+      } catch (error) {
+        if (attempts >= maxRetries - 1) throw error;
+        attempts++;
+      }
+    }
+    throw new Error(`Failed after ${maxRetries} attempts. (Possibly rate limited or quota exceeded on all keys)`);
+  }
+
+  /**
    * Internal fetch method with retry and fallback logic.
    */
-  private async executeFetchWithFailover(model: GeminiModel, body: GeminiRequestBody, maxRetries: number = 2): Promise<string> {
+  private async executeFetchWithFailover(model: GeminiModel, body: GeminiRequestBody, maxRetries: number = 4): Promise<string> {
     if (!this.currentApiKey) {
       throw new Error("No Gemini API Keys configured.");
     }
@@ -66,7 +102,7 @@ export class LLMManager {
         if (response.ok) {
           const data: GeminiResponse = await response.json();
           if (data.candidates && data.candidates.length > 0) {
-            return data.candidates[0].content.parts[0].text;
+            return data.candidates[0].content.parts[0].text ?? '';
           }
           throw new Error("No candidates returned from Gemini");
         }
@@ -80,8 +116,8 @@ export class LLMManager {
           }
         }
         
-        // 400 or 403 could mean invalid key or quota exceeded
-        if (response.status === 400 || response.status === 403) {
+        // 403 could mean invalid key or quota exceeded
+        if (response.status === 403) {
            console.warn(`[LLMManager] Auth/Quota error (${response.status}) on key index ${this.currentKeyIndex}.`);
            if (this.rotateKey()) {
              attempts++;
@@ -102,7 +138,7 @@ export class LLMManager {
       }
     }
 
-    throw new Error(`Failed to execute prompt after ${maxRetries} attempts.`);
+    throw new Error(`Failed to execute prompt after ${maxRetries} attempts. (Possibly rate limited or quota exceeded on all keys)`);
   }
 
   private buildRequestBody(req: LLMRequest): GeminiRequestBody {
@@ -152,5 +188,89 @@ export class LLMManager {
   public async generateTertiaryTask(request: LLMRequest): Promise<string> {
     const body = this.buildRequestBody(request);
     return this.executeFetchWithFailover(GeminiModel.TERTIARY, body);
+  }
+
+  /**
+   * Generates content using Gemini Function Calling.
+   * Sends user message + tool schemas → if Gemini calls a tool, runs it → sends
+   * the result back → returns Gemini's final spoken response.
+   *
+   * Flow:
+   *   Turn 1: User message + tools → Gemini picks a tool (functionCall)
+   *   Execute: toolExecutor runs the function against real stores
+   *   Turn 2: Send tool result back → Gemini generates natural spoken response
+   *   Fallback: If Gemini returns plain text on Turn 1, return it directly.
+   */
+  public async generateWithTools(
+    request: LLMToolRequest,
+    toolExecutor: (name: string, args: Record<string, any>) => Promise<{ success: boolean; data?: any; error?: string }>
+  ): Promise<string> {
+    const body: GeminiRequestBody = {
+      contents: [{ role: 'user', parts: [{ text: request.prompt }] }],
+      tools: request.tools,
+      tool_config: { function_calling_config: { mode: 'AUTO' } },
+    };
+
+    if (request.systemInstruction) {
+      body.systemInstruction = { parts: [{ text: request.systemInstruction }] };
+    }
+
+    if (request.temperature !== undefined || request.maxOutputTokens !== undefined) {
+      body.generationConfig = {};
+      if (request.temperature !== undefined) body.generationConfig.temperature = request.temperature;
+      if (request.maxOutputTokens !== undefined) body.generationConfig.maxOutputTokens = request.maxOutputTokens;
+    }
+
+    // ── Turn 1: Gemini decides intent ──────────────────────────────────────
+    const candidates = await this.executeRawFetch(GeminiModel.PRIMARY, body);
+    const firstCandidate = candidates?.[0];
+    if (!firstCandidate) throw new Error('No candidates returned from Gemini.');
+
+    const firstPart = firstCandidate.content.parts[0];
+
+    // Plain text response — no tool call needed (general question / chitchat)
+    if (!firstPart?.functionCall) {
+      return firstPart?.text ?? '';
+    }
+
+    // ── Tool Call: Execute the requested function ───────────────────────────
+    const { name, args } = firstPart.functionCall;
+    console.log(`[LLMManager] 🔧 Gemini called tool: ${name}`, args);
+
+    const toolResult = await toolExecutor(name, args);
+    console.log(`[LLMManager] ✅ Tool result:`, toolResult);
+
+    // ── Turn 2: Send tool result back for a natural spoken response ─────────
+    const modelTurn: GeminiContent = {
+      role: 'model',
+      parts: [firstPart],
+    };
+
+    const toolTurn: GeminiContent = {
+      role: 'user',
+      parts: [{
+        functionResponse: {
+          name,
+          response: {
+            result: toolResult.success ? toolResult.data : { error: toolResult.error },
+          },
+        },
+      }],
+    };
+
+    const body2: GeminiRequestBody = {
+      ...body,
+      contents: [
+        { role: 'user', parts: [{ text: request.prompt }] },
+        modelTurn,
+        toolTurn,
+      ],
+      // Remove tools from turn 2 — we want a conversational text response only
+      tools: undefined,
+      tool_config: undefined,
+    };
+
+    const candidates2 = await this.executeRawFetch(GeminiModel.PRIMARY, body2);
+    return candidates2?.[0]?.content?.parts?.[0]?.text ?? '';
   }
 }

@@ -1,5 +1,6 @@
 import { LLMManager } from '../../llm/LLMManager';
 import { PIHU_CORE_IDENTITY } from './systemPrompt';
+import { buildGeminiTools, executeTool } from './tools/index';
 
 export class ActionEngine {
   private llm: LLMManager;
@@ -37,17 +38,21 @@ export class ActionEngine {
 
       const fullSystemInstruction = PIHU_CORE_IDENTITY + this.getDynamicContext();
 
-      // Route through the primary task model
-      const response = await this.llm.generatePrimaryTask({
-        prompt: cleanText,
-        systemInstruction: fullSystemInstruction
-      });
+      // Route through the tool-capable generation pipeline
+      const response = await this.llm.generateWithTools(
+        {
+          prompt: cleanText,
+          systemInstruction: fullSystemInstruction,
+          tools: buildGeminiTools()
+        },
+        executeTool
+      );
 
       return response;
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('[ActionEngine] Error processing intent:', error);
-      return "I'm sorry, I'm having trouble connecting to my brain right now.";
+      return `Error: ${error?.message || String(error)}`;
     }
   }
 }

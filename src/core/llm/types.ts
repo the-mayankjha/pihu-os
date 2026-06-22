@@ -14,7 +14,16 @@ export interface LLMRequest {
 }
 
 export interface GeminiPart {
-  text: string;
+  text?: string;
+  // Function calling
+  functionCall?: {
+    name: string;
+    args: Record<string, any>;
+  };
+  functionResponse?: {
+    name: string;
+    response: Record<string, any>;
+  };
 }
 
 export interface GeminiContent {
@@ -31,14 +40,26 @@ export interface GeminiRequestBody {
     temperature?: number;
     maxOutputTokens?: number;
   };
+  /** Gemini Function Calling — list of tool schemas */
+  tools?: Array<{
+    functionDeclarations: Array<{
+      name: string;
+      description: string;
+      parameters?: Record<string, any>;
+    }>;
+  }>;
+  /** Forces the model to use tools (AUTO lets it decide) */
+  tool_config?: {
+    function_calling_config: {
+      mode: 'AUTO' | 'ANY' | 'NONE';
+    };
+  };
 }
 
 export interface GeminiResponse {
   candidates?: Array<{
     content: {
-      parts: Array<{
-        text: string;
-      }>;
+      parts: GeminiPart[];
     };
     finishReason: string;
   }>;
@@ -47,4 +68,15 @@ export interface GeminiResponse {
     message: string;
     status: string;
   };
+}
+
+/** Request shape for function-calling flows */
+export interface LLMToolRequest extends LLMRequest {
+  tools: Array<{
+    functionDeclarations: Array<{
+      name: string;
+      description: string;
+      parameters?: Record<string, any>;
+    }>;
+  }>;
 }

@@ -142,8 +142,7 @@ export class STTManager {
             samples[i] = inputData[src];
           }
         }
-
-        this.ws!.send(samples.buffer);
+        this.ws!.send(samples.buffer as ArrayBuffer);
 
         // ─── Browser-side Voice Activity Detection ─────────────────────────
         const rms = Math.sqrt(

@@ -5,6 +5,7 @@ import { useLayoutStore } from '../../../core/layout/LayoutStore';
 import { useMusicStore } from '../../../stores/musicStore';
 import widgetIcon from '../../../assets/widget.png';
 import ytMusicIcon from '../../../assets/ytmusic.svg';
+import taskIcon from '../../../assets/task.png';
 
 export const Dock: React.FC = () => {
   const { toggleWidgetDrawer, isWidgetDrawerOpen, toggleWidget, widgets } = useLayoutStore();
@@ -12,6 +13,8 @@ export const Dock: React.FC = () => {
 
   const isYTMusicOpen = widgets['ytmusic-plugin']?.isOpen || false;
   const isYTMusicActive = isYTMusicOpen || isPlaying;
+
+  const isTaskWindowOpen = widgets['task-window']?.isOpen || false;
 
   return (
     <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-40">
@@ -61,6 +64,27 @@ export const Dock: React.FC = () => {
               <motion.div 
                 layoutId="active-indicator-ytmusic"
                 className="w-1.5 h-1.5 rounded-full bg-[#FF0000] shadow-[0_0_8px_rgba(255,0,0,0.8)]" 
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Tasks App */}
+        <div className="relative group flex flex-col items-center">
+          <motion.button
+            onClick={() => toggleWidget('task-window')}
+            whileHover={{ scale: 1.15, y: -8 }}
+            whileTap={{ scale: 0.9 }}
+            className={`rounded-[14px] w-[52px] h-[52px] flex items-center justify-center transition-colors shadow-lg overflow-hidden ${isTaskWindowOpen ? 'bg-white/20' : 'bg-gradient-to-br from-white/10 to-transparent hover:bg-white/20'}`}
+          >
+            <img src={taskIcon} alt="Tasks" className="w-10 h-10 object-contain drop-shadow-md" />
+          </motion.button>
+          
+          <div className="h-1.5 mt-1.5 flex items-center justify-center">
+            {isTaskWindowOpen && (
+              <motion.div 
+                layoutId="active-indicator-tasks"
+                className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]" 
               />
             )}
           </div>

@@ -31,6 +31,7 @@ import { TodoWidgetTinyBar } from '../widgets/todo/TodoWidgetTinyBar';
 import { TodoWidgetHorizontal } from '../widgets/todo/TodoWidgetHorizontal';
 import { TodoWidgetFocus } from '../widgets/todo/TodoWidgetFocus';
 import { TodoWidgetMinimalBar } from '../widgets/todo/TodoWidgetMinimalBar';
+import { TaskWindow } from '../widgets/todo/TaskWindow';
 
 // System Widgets
 import { 
@@ -96,6 +97,12 @@ export default function App() {
       {(widgets['todo-widget-horizontal']?.isOpen) && <TodoWidgetHorizontal />}
       {(widgets['todo-widget-focus']?.isOpen) && <TodoWidgetFocus />}
       {(widgets['todo-widget-minimal-bar']?.isOpen) && <TodoWidgetMinimalBar />}
+      {(widgets['task-window']?.isOpen) && (
+        <TaskWindow 
+          isOpen={true} 
+          onClose={() => useLayoutStore.getState().toggleWidget('task-window')} 
+        />
+      )}
 
       <YTMusicPlugin />
 
