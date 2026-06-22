@@ -5,7 +5,8 @@ interface CircularProgressProps {
   progress: number;
   size?: number;
   strokeWidth?: number;
-  colorClass: string;
+  colorClass?: string;
+  colorHex?: string;
   glowClass?: string;
   children?: React.ReactNode;
 }
@@ -15,6 +16,7 @@ export const CircularProgress: React.FC<CircularProgressProps> = ({
   size = 120,
   strokeWidth = 10,
   colorClass,
+  colorHex,
   glowClass,
   children
 }) => {
@@ -38,7 +40,8 @@ export const CircularProgress: React.FC<CircularProgressProps> = ({
         />
         {/* Progress Ring */}
         <motion.circle
-          className={`${colorClass} ${glowClass || ''} drop-shadow-[0_0_8px_currentColor]`}
+          className={`${colorClass || ''} ${glowClass || ''} drop-shadow-[0_0_8px_currentColor]`}
+          style={{ color: colorHex }}
           strokeWidth={strokeWidth}
           strokeDasharray={circumference}
           strokeDashoffset={circumference} // initial

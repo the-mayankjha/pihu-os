@@ -8,8 +8,10 @@ export interface WidgetContainerProps {
   children: React.ReactNode;
   defaultPosition?: { x: number; y: number };
   defaultSize?: { width: number | string; height: number | string };
-  minWidth?: number;
-  minHeight?: number;
+  minWidth?: number | string;
+  minHeight?: number | string;
+  maxWidth?: number | string;
+  maxHeight?: number | string;
   isDraggable?: boolean;
   isResizable?: boolean;
   isRemovable?: boolean;
@@ -22,6 +24,8 @@ export const WidgetContainer: React.FC<WidgetContainerProps> = ({
   defaultSize = { width: 'auto', height: 'auto' },
   minWidth = 200,
   minHeight = 100,
+  maxWidth,
+  maxHeight,
   isDraggable = true,
   isResizable = true,
   isRemovable = true,
@@ -77,6 +81,8 @@ export const WidgetContainer: React.FC<WidgetContainerProps> = ({
       size={!isResizable ? { width: defaultSize.width, height: defaultSize.height } : undefined}
       minWidth={minWidth}
       minHeight={minHeight}
+      maxWidth={maxWidth}
+      maxHeight={maxHeight}
       disableDragging={!isDraggable || isEditing}
       enableResizing={
         isResizable && !isEditing

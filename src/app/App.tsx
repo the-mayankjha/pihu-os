@@ -13,6 +13,25 @@ import { WidgetDrawer } from '../shared/components/WidgetDrawer/WidgetDrawer';
 import { VoiceOverlay } from '../core/voice/VoiceOverlay';
 import { VoiceManager } from '../core/voice/VoiceManager';
 
+// Calendar Widgets
+import { CalendarWidget } from '../widgets/calendar/CalendarWidget';
+import { CalendarWidgetCompact } from '../widgets/calendar/CalendarWidgetCompact';
+
+// Weather Widgets
+import { WeatherWidgetLarge } from '../widgets/weather/WeatherWidgetLarge';
+import { WeatherWidgetCompact } from '../widgets/weather/WeatherWidgetCompact';
+import { WeatherWidgetWide } from '../widgets/weather/WeatherWidgetWide';
+import { WeatherWidgetHourly } from '../widgets/weather/WeatherWidgetHourly';
+
+// Todo Widgets
+import { TodoWidgetCompact } from '../widgets/todo/TodoWidgetCompact';
+import { TodoWidgetLarge } from '../widgets/todo/TodoWidgetLarge';
+import { TodoWidgetMiniSquare } from '../widgets/todo/TodoWidgetMiniSquare';
+import { TodoWidgetTinyBar } from '../widgets/todo/TodoWidgetTinyBar';
+import { TodoWidgetHorizontal } from '../widgets/todo/TodoWidgetHorizontal';
+import { TodoWidgetFocus } from '../widgets/todo/TodoWidgetFocus';
+import { TodoWidgetMinimalBar } from '../widgets/todo/TodoWidgetMinimalBar';
+
 // System Widgets
 import { 
   SystemCompactCpuWidget, SystemCompactMemWidget, SystemCompactDiskWidget, SystemCompactNetWidget, SystemCompactBatWidget 
@@ -58,6 +77,25 @@ export default function App() {
       {(widgets['system-large-resource']?.isOpen) && <SystemResourceMonitorWidget />}
       {(widgets['system-large-processes']?.isOpen) && <SystemTopProcessesWidget />}
       {(widgets['system-large-overview']?.isOpen) && <SystemDetailedOverviewWidget />}
+
+      {/* Calendar Widgets */}
+      {(widgets['calendar-widget']?.isOpen) && <CalendarWidget />}
+      {(widgets['calendar-widget-compact']?.isOpen) && <CalendarWidgetCompact />}
+
+      {/* Weather Widgets */}
+      {(widgets['weather-widget-large']?.isOpen) && <WeatherWidgetLarge />}
+      {(widgets['weather-widget-compact']?.isOpen) && <WeatherWidgetCompact />}
+      {(widgets['weather-widget-wide']?.isOpen) && <WeatherWidgetWide />}
+      {(widgets['weather-widget-hourly']?.isOpen) && <WeatherWidgetHourly />}
+
+      {/* Todo Widgets */}
+      {(widgets['todo-widget-large']?.isOpen) && <TodoWidgetLarge />}
+      {(widgets['todo-widget-compact']?.isOpen) && <TodoWidgetCompact />}
+      {(widgets['todo-widget-mini-square']?.isOpen) && <TodoWidgetMiniSquare />}
+      {(widgets['todo-widget-tiny-bar']?.isOpen) && <TodoWidgetTinyBar />}
+      {(widgets['todo-widget-horizontal']?.isOpen) && <TodoWidgetHorizontal />}
+      {(widgets['todo-widget-focus']?.isOpen) && <TodoWidgetFocus />}
+      {(widgets['todo-widget-minimal-bar']?.isOpen) && <TodoWidgetMinimalBar />}
 
       <YTMusicPlugin />
 

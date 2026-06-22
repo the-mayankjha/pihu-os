@@ -14,6 +14,13 @@ import { WeatherWidgetLarge } from '../../../widgets/weather/WeatherWidgetLarge'
 import { WeatherWidgetCompact } from '../../../widgets/weather/WeatherWidgetCompact';
 import { WeatherWidgetWide } from '../../../widgets/weather/WeatherWidgetWide';
 import { WeatherWidgetHourly } from '../../../widgets/weather/WeatherWidgetHourly';
+import { TodoWidgetCompact } from '../../../widgets/todo/TodoWidgetCompact';
+import { TodoWidgetLarge } from '../../../widgets/todo/TodoWidgetLarge';
+import { TodoWidgetMiniSquare } from '../../../widgets/todo/TodoWidgetMiniSquare';
+import { TodoWidgetTinyBar } from '../../../widgets/todo/TodoWidgetTinyBar';
+import { TodoWidgetHorizontal } from '../../../widgets/todo/TodoWidgetHorizontal';
+import { TodoWidgetFocus } from '../../../widgets/todo/TodoWidgetFocus';
+import { TodoWidgetMinimalBar } from '../../../widgets/todo/TodoWidgetMinimalBar';
 import { 
   SystemCompactCpuWidget, SystemCompactMemWidget, SystemCompactDiskWidget, SystemCompactNetWidget, SystemCompactBatWidget 
 } from '../../../widgets/system/SystemCompactWidgets';
@@ -129,6 +136,42 @@ export const WidgetDrawer: React.FC = () => {
                   <div className="w-full flex flex-col gap-2 items-center">
                     <span className="text-sm font-medium text-white/80">Weather (Hourly)</span>
                     <WeatherWidgetHourly preview onClick={() => handleWidgetClick('weather-widget-hourly')} />
+                  </div>
+
+                  {/* To-Do Widgets */}
+                  <div className="w-full flex flex-col gap-2 items-center">
+                    <span className="text-sm font-medium text-white/80">Tasks (Large)</span>
+                    <TodoWidgetLarge preview onClick={() => handleWidgetClick('todo-widget-large')} />
+                  </div>
+
+                  <div className="w-full flex flex-col gap-2 items-center">
+                    <span className="text-sm font-medium text-white/80">Tasks (Compact)</span>
+                    <TodoWidgetCompact preview onClick={() => handleWidgetClick('todo-widget-compact')} />
+                  </div>
+
+                  <div className="w-full flex flex-col gap-2 items-center">
+                    <span className="text-sm font-medium text-white/80">Tasks (Mini Square)</span>
+                    <TodoWidgetMiniSquare preview onClick={() => handleWidgetClick('todo-widget-mini-square')} />
+                  </div>
+
+                  <div className="w-full flex flex-col gap-2 items-center">
+                    <span className="text-sm font-medium text-white/80">Tasks (Tiny Bar)</span>
+                    <TodoWidgetTinyBar preview onClick={() => handleWidgetClick('todo-widget-tiny-bar')} />
+                  </div>
+
+                  <div className="w-full flex flex-col gap-2 items-center">
+                    <span className="text-sm font-medium text-white/80">Tasks (Horizontal)</span>
+                    <TodoWidgetHorizontal preview onClick={() => handleWidgetClick('todo-widget-horizontal')} />
+                  </div>
+
+                  <div className="w-full flex flex-col gap-2 items-center">
+                    <span className="text-sm font-medium text-white/80">Tasks (Focus)</span>
+                    <TodoWidgetFocus preview onClick={() => handleWidgetClick('todo-widget-focus')} />
+                  </div>
+
+                  <div className="w-full flex flex-col gap-2 items-center">
+                    <span className="text-sm font-medium text-white/80">Tasks (Minimal Bar)</span>
+                    <TodoWidgetMinimalBar preview onClick={() => handleWidgetClick('todo-widget-minimal-bar')} />
                   </div>
 
                   {/* Compact Widgets */}
