@@ -1,9 +1,15 @@
+import { useVoiceStore } from '../../../stores/voiceStore';
+
 export class TTSManager {
   public onSpeechStarted: (() => void) | null = null;
   public onSpeechEnded: (() => void) | null = null;
   
   private synth: SpeechSynthesis;
   private voice: SpeechSynthesisVoice | null = null;
+  
+  private currentUtterance: SpeechSynthesisUtterance | null = null;
+  private resumeInterval: NodeJS.Timeout | null = null;
+  private currentAudio: HTMLAudioElement | null = null;
 
   constructor() {
     this.synth = window.speechSynthesis;
@@ -41,12 +47,84 @@ export class TTSManager {
               || voices[0];
   }
 
-  private currentUtterance: SpeechSynthesisUtterance | null = null;
-  private resumeInterval: NodeJS.Timeout | null = null;
-
   public async speak(text: string): Promise<void> {
+    this.stop(); // Stop any ongoing speech and clear intervals
+
+    const apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY;
+    const voiceId = import.meta.env.VITE_ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM';
+
+    if (navigator.onLine && apiKey) {
+      try {
+        useVoiceStore.getState().setActiveVoiceEngine('ElevenLabs (Online)');
+        return await this.elevenLabsSpeak(text, apiKey, voiceId);
+      } catch (error) {
+        console.error('[TTSManager] ElevenLabs failed, falling back to local TTS:', error);
+        return this.localSpeak(text);
+      }
+    } else {
+      return this.localSpeak(text);
+    }
+  }
+
+  private async elevenLabsSpeak(text: string, apiKey: string, voiceId: string): Promise<void> {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'xi-api-key': apiKey,
+            'accept': 'audio/mpeg'
+          },
+          body: JSON.stringify({
+            text,
+            model_id: 'eleven_multilingual_v2',
+            voice_settings: {
+              stability: 0.5,
+              similarity_boost: 0.75,
+            }
+          })
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`ElevenLabs API error: ${response.status} ${response.statusText} - ${errorText}`);
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
+        const url = URL.createObjectURL(blob);
+
+        this.currentAudio = new Audio(url);
+        
+        this.currentAudio.onplay = () => {
+          if (this.onSpeechStarted) this.onSpeechStarted();
+        };
+
+        this.currentAudio.onended = () => {
+          URL.revokeObjectURL(url);
+          this.currentAudio = null;
+          if (this.onSpeechEnded) this.onSpeechEnded();
+          resolve();
+        };
+
+        this.currentAudio.onerror = (e) => {
+          console.error('[TTSManager] Audio playback error:', e);
+          URL.revokeObjectURL(url);
+          this.currentAudio = null;
+          reject(new Error('Audio playback failed'));
+        };
+
+        await this.currentAudio.play();
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  private async localSpeak(text: string): Promise<void> {
     return new Promise((resolve) => {
-      this.stop(); // Stop any ongoing speech and clear intervals
+      useVoiceStore.getState().setActiveVoiceEngine('Local SpeechSynthesis');
 
       // Store in class property to prevent garbage collection before onend fires
       this.currentUtterance = new SpeechSynthesisUtterance(text);
@@ -71,14 +149,14 @@ export class TTSManager {
       };
 
       this.currentUtterance.onend = () => {
-        this.cleanup();
+        this.cleanupLocal();
         if (this.onSpeechEnded) this.onSpeechEnded();
         resolve();
       };
 
       this.currentUtterance.onerror = (e) => {
         console.error('[TTSManager] Speech error:', e);
-        this.cleanup();
+        this.cleanupLocal();
         if (this.onSpeechEnded) this.onSpeechEnded();
         resolve(); // Resolve anyway so we don't block
       };
@@ -87,7 +165,7 @@ export class TTSManager {
     });
   }
 
-  private cleanup() {
+  private cleanupLocal() {
     this.currentUtterance = null;
     if (this.resumeInterval) {
       clearInterval(this.resumeInterval);
@@ -96,9 +174,20 @@ export class TTSManager {
   }
 
   public stop() {
-    this.cleanup();
+    this.cleanupLocal();
+    
+    // Stop local TTS
     if (this.synth.speaking) {
       this.synth.cancel();
+      if (this.onSpeechEnded) this.onSpeechEnded();
+    }
+
+    // Stop ElevenLabs Audio
+    if (this.currentAudio) {
+      this.currentAudio.pause();
+      this.currentAudio.currentTime = 0;
+      // Note: onended event doesn't fire when pause() is called
+      this.currentAudio = null;
       if (this.onSpeechEnded) this.onSpeechEnded();
     }
   }

@@ -3,6 +3,7 @@ import { Orb } from '../../shared/components/Orb/Orb';
 import { Waveform } from '../../shared/components/Orb/Waveform';
 import { OrbState } from '../../shared/components/Orb/states';
 import { useOrbStore } from '../../core/orb/OrbStore';
+import { useVoiceStore } from '../../stores/voiceStore';
 import { WidgetContainer } from '../../shared/components/WidgetContainer/WidgetContainer';
 
 export interface OrbWidgetProps {
@@ -12,6 +13,7 @@ export interface OrbWidgetProps {
 
 export const OrbWidget: React.FC<OrbWidgetProps> = ({ preview = false, onClick }) => {
   const { currentState, setState, size } = useOrbStore();
+  const activeVoiceEngine = useVoiceStore((state) => state.activeVoiceEngine);
 
   const getHeaderText = () => {
     switch (currentState) {
@@ -56,6 +58,9 @@ export const OrbWidget: React.FC<OrbWidgetProps> = ({ preview = false, onClick }
           <p className="text-[14px] font-medium transition-all" style={{ color: '#e3005b', opacity: 1, textShadow: '0 0 10px rgba(227, 0, 91, 0.4)' }}>
             {getSubText()}
           </p>
+          <div className="mt-2 text-[10px] text-white/40 tracking-wider uppercase font-semibold">
+            Engine: {activeVoiceEngine}
+          </div>
         </div>
       </div>
 

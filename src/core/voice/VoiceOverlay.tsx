@@ -5,6 +5,7 @@ import { useOrbStore } from '../orb/OrbStore';
 import { OrbState } from '../../shared/components/Orb/states';
 import { GlassCard } from '../../shared/components/GlassCard/GlassCard';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+import loadingLottieUrl from '../../assets/lotties/loading.lottie?url';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
@@ -90,7 +91,7 @@ export const VoiceOverlay: React.FC = () => {
                     {!isListening && (orbState === OrbState.THINKING || orbState === OrbState.SPEAKING) && (
                       <div className="w-full h-full flex items-center justify-center scale-150">
                         <DotLottieReact
-                          src="/assets/lotties/loading.lottie"
+                          src={loadingLottieUrl}
                           loop
                           autoplay
                         />
