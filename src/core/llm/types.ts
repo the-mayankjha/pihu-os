@@ -6,15 +6,36 @@ export const GeminiModel = {
 
 export type GeminiModel = typeof GeminiModel[keyof typeof GeminiModel];
 
+export interface FunctionDeclaration {
+  name: string;
+  description: string;
+  parameters?: {
+    type: string;
+    properties?: Record<string, any>;
+    required?: string[];
+  };
+}
+
+export interface Tool {
+  functionDeclarations: FunctionDeclaration[];
+}
+
 export interface LLMRequest {
   prompt: string;
   systemInstruction?: string;
   temperature?: number;
   maxOutputTokens?: number;
+  tools?: Tool[];
+}
+
+export interface FunctionCall {
+  name: string;
+  args: Record<string, any>;
 }
 
 export interface GeminiPart {
-  text: string;
+  text?: string;
+  functionCall?: FunctionCall;
 }
 
 export interface GeminiContent {
@@ -31,14 +52,13 @@ export interface GeminiRequestBody {
     temperature?: number;
     maxOutputTokens?: number;
   };
+  tools?: Tool[];
 }
 
 export interface GeminiResponse {
   candidates?: Array<{
     content: {
-      parts: Array<{
-        text: string;
-      }>;
+      parts: GeminiPart[];
     };
     finishReason: string;
   }>;
@@ -47,4 +67,9 @@ export interface GeminiResponse {
     message: string;
     status: string;
   };
+}
+
+export interface LLMResponse {
+  text: string;
+  functionCalls: FunctionCall[];
 }

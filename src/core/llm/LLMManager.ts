@@ -1,5 +1,5 @@
 import { GeminiModel } from './types';
-import type { GeminiRequestBody, GeminiResponse, LLMRequest } from './types';
+import type { GeminiRequestBody, GeminiResponse, LLMRequest, LLMResponse, FunctionCall } from './types';
 
 export class LLMManager {
   private static instance: LLMManager;
@@ -46,7 +46,7 @@ export class LLMManager {
   /**
    * Internal fetch method with retry and fallback logic.
    */
-  private async executeFetchWithFailover(model: GeminiModel, body: GeminiRequestBody, maxRetries: number = 2): Promise<string> {
+  private async executeFetchWithFailover(model: GeminiModel, body: GeminiRequestBody, maxRetries: number = 2): Promise<LLMResponse> {
     if (!this.currentApiKey) {
       throw new Error("No Gemini API Keys configured.");
     }
@@ -66,7 +66,20 @@ export class LLMManager {
         if (response.ok) {
           const data: GeminiResponse = await response.json();
           if (data.candidates && data.candidates.length > 0) {
-            return data.candidates[0].content.parts[0].text;
+            const parts = data.candidates[0].content.parts;
+            let text = '';
+            const functionCalls: FunctionCall[] = [];
+
+            for (const part of parts) {
+              if (part.text) {
+                text += part.text;
+              }
+              if (part.functionCall) {
+                functionCalls.push(part.functionCall);
+              }
+            }
+
+            return { text, functionCalls };
           }
           throw new Error("No candidates returned from Gemini");
         }
@@ -124,6 +137,10 @@ export class LLMManager {
       if (req.maxOutputTokens !== undefined) body.generationConfig.maxOutputTokens = req.maxOutputTokens;
     }
 
+    if (req.tools) {
+      body.tools = req.tools;
+    }
+
     return body;
   }
 
@@ -131,7 +148,7 @@ export class LLMManager {
    * Generates content using the Primary Model (Gemini 3.1 Flash Lite)
    * Ideal for quick, conversational tasks.
    */
-  public async generatePrimaryTask(request: LLMRequest): Promise<string> {
+  public async generatePrimaryTask(request: LLMRequest): Promise<LLMResponse> {
     const body = this.buildRequestBody(request);
     return this.executeFetchWithFailover(GeminiModel.PRIMARY, body);
   }
@@ -140,7 +157,7 @@ export class LLMManager {
    * Generates content using the Secondary Model (Gemini 2.5 Flash)
    * Ideal for more complex reasoning or fallback.
    */
-  public async generateSecondaryTask(request: LLMRequest): Promise<string> {
+  public async generateSecondaryTask(request: LLMRequest): Promise<LLMResponse> {
     const body = this.buildRequestBody(request);
     return this.executeFetchWithFailover(GeminiModel.SECONDARY, body);
   }
@@ -149,7 +166,7 @@ export class LLMManager {
    * Generates content using the Tertiary Model (Gemini 3 Flash)
    * Ideal for heaviest lifting if 2.5 is not sufficient.
    */
-  public async generateTertiaryTask(request: LLMRequest): Promise<string> {
+  public async generateTertiaryTask(request: LLMRequest): Promise<LLMResponse> {
     const body = this.buildRequestBody(request);
     return this.executeFetchWithFailover(GeminiModel.TERTIARY, body);
   }
