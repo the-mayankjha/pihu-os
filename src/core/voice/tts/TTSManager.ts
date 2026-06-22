@@ -41,40 +41,62 @@ export class TTSManager {
               || voices[0];
   }
 
+  private currentUtterance: SpeechSynthesisUtterance | null = null;
+  private resumeInterval: NodeJS.Timeout | null = null;
+
   public async speak(text: string): Promise<void> {
     return new Promise((resolve) => {
-      // Cancel any ongoing speech
-      this.synth.cancel();
+      this.stop(); // Stop any ongoing speech and clear intervals
 
-      const utterance = new SpeechSynthesisUtterance(text);
+      // Store in class property to prevent garbage collection before onend fires
+      this.currentUtterance = new SpeechSynthesisUtterance(text);
       if (this.voice) {
-        utterance.voice = this.voice;
+        this.currentUtterance.voice = this.voice;
       }
       
-      utterance.rate = 1.0;
-      utterance.pitch = 1.1; // Slightly higher pitch for Pihu
-      utterance.volume = 1.0;
+      this.currentUtterance.rate = 1.0;
+      this.currentUtterance.pitch = 1.1; // Slightly higher pitch for Pihu
+      this.currentUtterance.volume = 1.0;
 
-      utterance.onstart = () => {
+      this.currentUtterance.onstart = () => {
         if (this.onSpeechStarted) this.onSpeechStarted();
+        
+        // Chromium bug workaround: pause/resume every 14 seconds so long texts don't hang
+        this.resumeInterval = setInterval(() => {
+          if (this.synth.speaking) {
+            this.synth.pause();
+            this.synth.resume();
+          }
+        }, 14000);
       };
 
-      utterance.onend = () => {
+      this.currentUtterance.onend = () => {
+        this.cleanup();
         if (this.onSpeechEnded) this.onSpeechEnded();
         resolve();
       };
 
-      utterance.onerror = (e) => {
+      this.currentUtterance.onerror = (e) => {
         console.error('[TTSManager] Speech error:', e);
+        this.cleanup();
         if (this.onSpeechEnded) this.onSpeechEnded();
         resolve(); // Resolve anyway so we don't block
       };
 
-      this.synth.speak(utterance);
+      this.synth.speak(this.currentUtterance);
     });
   }
 
+  private cleanup() {
+    this.currentUtterance = null;
+    if (this.resumeInterval) {
+      clearInterval(this.resumeInterval);
+      this.resumeInterval = null;
+    }
+  }
+
   public stop() {
+    this.cleanup();
     if (this.synth.speaking) {
       this.synth.cancel();
       if (this.onSpeechEnded) this.onSpeechEnded();
