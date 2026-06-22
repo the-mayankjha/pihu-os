@@ -38,70 +38,77 @@ export class VoiceManager {
   private setupListeners() {
     this.sttManager.onTranscription = async (text) => {
       console.log(`[VOICE MANAGER] Received transcription from STT: "${text}"`);
-      // Don't process empty transcriptions
       if (!text || text === '[BLANK_AUDIO]') {
-        console.log('[VOICE MANAGER] Transcription is empty or BLANK_AUDIO. Aborting processing and resetting state.');
+        console.log('[VOICE MANAGER] Transcription empty or blank. Resetting.');
         this.setOrbState(OrbState.IDLE);
         useVoiceStore.getState().reset();
         this.isProcessing = false;
         return;
       }
 
-      console.log('[VOICE MANAGER] Valid transcription received. Transitioning to THINKING state.');
-
+      console.log('[VOICE MANAGER] Valid transcription. Processing intent...');
       useVoiceStore.getState().setTranscription(text);
-      // isListening is already set to false by speech-ended
-      // isProcessing is already set to true by speech-ended
-      // OrbState is already THINKING
 
-      
       const response = await this.actionEngine.processIntent(text);
-      
-      console.log(`[VOICE MANAGER] ActionEngine returned response: "${response}"`);
+      console.log(`[VOICE MANAGER] Response: "${response}"`);
       useVoiceStore.getState().setResponse(response);
-      
-      console.log('[VOICE MANAGER] Transitioning to SPEAKING state.');
+
       this.setOrbState(OrbState.SPEAKING);
       await this.ttsManager.speak(response);
-      
-      // If we are still processing, it means speech finished naturally (wasn't cancelled)
+
       if (this.isProcessing) {
-        console.log('[VOICE MANAGER] TTS finished speaking naturally. Starting follow-up conversation.');
+        console.log('[VOICE MANAGER] TTS done. Starting follow-up conversation.');
         this.isProcessing = false;
         this.startListening(true);
       } else {
-        console.log('[VOICE MANAGER] Processing was cancelled during speech.');
+        console.log('[VOICE MANAGER] Processing cancelled during speech.');
       }
     };
 
-    // Listen to Tauri wake word event
-    listen('wake-word-detected', (event) => {
-      console.log('[VOICE MANAGER] ⏰ Wake word detected by Tauri!', event);
+    // ── Browser VAD path (primary) ────────────────────────────────────────
+    // STTManager detects silence itself and fires this callback.
+    this.sttManager.onSpeechEnded = () => {
+      console.log('[VOICE MANAGER] 🛑 Browser VAD: speech ended!');
       if (!this.isProcessing) {
-        console.log('[VOICE MANAGER] Triggering startListening()');
+        this.isProcessing = true;
+        this.setOrbState(OrbState.THINKING);
+        useVoiceStore.getState().setIsListening(false);
+        // STTManager already called stopListening() + processAudio() internally
+        // Signal wakeword.py to resume its PyAudio stream
+        invoke('speech_done').catch(e =>
+          console.warn('[VOICE MANAGER] speech_done invoke failed:', e)
+        );
+      }
+    };
+
+    // ── Tauri wakeword event ──────────────────────────────────────────────
+    listen('wake-word-detected', (event) => {
+      console.log('[VOICE MANAGER] ⏰ Wake word detected!', event);
+      if (!this.isProcessing) {
         this.startListening();
       } else {
-        console.log('[VOICE MANAGER] Ignored Wake word because system is currently processing.');
+        console.log('[VOICE MANAGER] Ignored wake word — currently processing.');
       }
     });
 
-    // Listen to Tauri speech ended event (VAD from backend)
+    // ── Tauri speech-ended event (FALLBACK only) ──────────────────────────
+    // Fires if wakeword.py's 8-second timeout expires before browser VAD fires.
     listen('speech-ended', () => {
-      console.log('[VOICE MANAGER] 🛑 Speech ended detected by Tauri VAD!');
-      if (useVoiceStore.getState().isListening) {
-         console.log('[VOICE MANAGER] Instructing STT to process accumulated audio');
-         // We are now processing
-         this.isProcessing = true;
-         this.setOrbState(OrbState.THINKING);
-         useVoiceStore.getState().setIsListening(false);
-         
-         this.sttManager.stopListening();
-         this.sttManager.processAudio();
+      console.log('[VOICE MANAGER] 🛑 Tauri fallback: speech-ended received.');
+      if (useVoiceStore.getState().isListening && !this.isProcessing) {
+        this.isProcessing = true;
+        this.setOrbState(OrbState.THINKING);
+        useVoiceStore.getState().setIsListening(false);
+        this.sttManager.stopListening();
+        this.sttManager.processAudio();
+        invoke('speech_done').catch(e =>
+          console.warn('[VOICE MANAGER] speech_done invoke failed:', e)
+        );
       }
     });
 
     this.sttManager.onError = (error) => {
-      console.error('[VOICE MANAGER] ❌ STT Error caught:', error);
+      console.error('[VOICE MANAGER] ❌ STT Error:', error);
       this.setOrbState(OrbState.IDLE);
       useVoiceStore.getState().reset();
       this.isProcessing = false;
@@ -130,13 +137,14 @@ export class VoiceManager {
       }
     }
     
-    // Slight delay to allow the Wake animation before listening
-    setTimeout(async () => {
-      console.log('[VOICE MANAGER] Entering LISTENING state. Instructing STTManager to listen.');
-      this.setOrbState(OrbState.LISTENING);
-      useVoiceStore.getState().setIsListening(true);
-      await this.sttManager.startListening();
-    }, 400);
+    // Start mic capture immediately — do NOT wait for the WAKE animation.
+    // The 400ms delay caused SPEECH_ENDED to fire before we even opened the mic,
+    // resulting in blank audio being sent to Whisper.
+    // We transition to LISTENING state in parallel so the animation still plays.
+    console.log('[VOICE MANAGER] Entering LISTENING state and capturing mic immediately.');
+    this.setOrbState(OrbState.LISTENING);
+    useVoiceStore.getState().setIsListening(true);
+    await this.sttManager.startListening();
   }
 
   public stopListening() {

@@ -1,8 +1,14 @@
-use std::process::{Command, Stdio};
+use std::process::{ChildStdin, Command, Stdio};
 use std::io::{BufRead, BufReader};
 use std::thread;
+use std::sync::Mutex;
+use tauri::{AppHandle, Manager};
 
-pub fn start_stt_server() {
+pub struct STTState {
+    pub stdin: Mutex<Option<ChildStdin>>,
+}
+
+pub fn start_stt_server(app: AppHandle) {
     println!("Starting STT WebSocket Server...");
     
     // Spawn the Python process
@@ -19,6 +25,10 @@ pub fn start_stt_server() {
             return;
         }
     };
+
+    let stdin = child.stdin.take().expect("Failed to capture python stdin");
+    let state: tauri::State<STTState> = app.state();
+    *state.stdin.lock().unwrap() = Some(stdin);
 
     let stdout = child.stdout.take().expect("Failed to capture python stdout");
     let stderr = child.stderr.take().expect("Failed to capture python stderr");

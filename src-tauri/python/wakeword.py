@@ -62,7 +62,7 @@ sys.stdout.flush()
 
 # Start background thread to listen for manual trigger commands
 def listen_stdin():
-    global mode, silence_frames, total_listening_frames, vad_state
+    global mode, silence_frames, total_listening_frames, vad_state, speech_detected_in_session
     while True:
         line = sys.stdin.readline()
         if not line:
@@ -77,6 +77,20 @@ def listen_stdin():
             total_listening_frames = 0
             speech_detected_in_session = False
             vad_state = np.zeros((2, 1, 128), dtype=np.float32)
+            # Ensure stream is paused so browser can capture the mic
+            try:
+                stream.stop_stream()
+            except Exception:
+                pass
+        elif line == "SPEECH_DONE":
+            # Frontend signals that STT has finished capturing — resume PyAudio
+            print("WAKEWORD_INFO: SPEECH_DONE received. Resuming wake word detection.")
+            sys.stdout.flush()
+            mode = "WAKEWORD"
+            try:
+                stream.start_stream()
+            except Exception:
+                pass
 
 threading.Thread(target=listen_stdin, daemon=True).start()
 
@@ -105,10 +119,9 @@ speech_detected_in_session = False
 
 while True:
     try:
-        data = stream.read(CHUNK, exception_on_overflow=False)
-        np_data = np.frombuffer(data, dtype=np.int16)
-        
         if mode == "WAKEWORD":
+            data = stream.read(CHUNK, exception_on_overflow=False)
+            np_data = np.frombuffer(data, dtype=np.int16)
             prediction = owwModel.predict(np_data)
             for model_name, score in prediction.items():
                 if score > 0.8:
@@ -121,56 +134,35 @@ while True:
                     silence_frames = 0
                     total_listening_frames = 0
                     speech_detected_in_session = False
-                    vad_state = np.zeros((2, 1, 128), dtype=np.float32) # Reset VAD RNN state
-                    
-                    # Instead of sleeping and skipping audio, we want to clear the buffer 
-                    # so the VAD starts fresh after the wake word is spoken.
-                    # We will read and discard frames for 1.0 seconds
-                    frames_to_discard = int((16000 / CHUNK) * 1.0)
-                    for _ in range(frames_to_discard):
-                        try:
-                            stream.read(CHUNK, exception_on_overflow=False)
-                        except:
-                            pass
-                            
+                    vad_state = np.zeros((2, 1, 128), dtype=np.float32)
+
+                    # CRITICAL: Stop the PyAudio stream so the browser's getUserMedia
+                    # can exclusively capture the microphone for STT.
+                    # If both compete for the mic simultaneously, the browser gets silence.
+                    stream.stop_stream()
                     break
 
         elif mode == "LISTENING":
-            # Silero VAD inference
-            audio_float = np_data.astype(np.float32) / 32768.0
-            audio_input = np.expand_dims(audio_float, axis=0)
-            
-            out = vad_sess.run(None, {
-                'input': audio_input,
-                'state': vad_state,
-                'sr': vad_sr
-            })
-            
-            prob = out[0][0][0]
-            vad_state = out[1] # Update RNN state
-            
-            if prob < SILENCE_PROB_THRESHOLD:
-                silence_frames += 1
-            else:
-                silence_frames = 0
-                speech_detected_in_session = True
-                
-            total_listening_frames += 1
-            
-            timeout_limit = FRAMES_FOR_SILENCE_AFTER_SPEECH if speech_detected_in_session else FRAMES_FOR_IDLE_TIMEOUT
-            
-            if silence_frames > timeout_limit or total_listening_frames > MAX_LISTENING_FRAMES:
-                print("SPEECH_ENDED")
-                sys.stdout.flush()
-                # Reset to WAKEWORD mode
-                mode = "WAKEWORD"
-                
+            # The browser's STTManager exclusively captures the mic and runs its own VAD.
+            # We simply idle here until the frontend sends SPEECH_DONE via stdin,
+            # which causes the listen_stdin thread to call stream.start_stream() and
+            # set mode = "WAKEWORD".
+            import time as _time
+            _time.sleep(0.05)  # 50ms idle poll — no CPU burn
+
+                    
     except KeyboardInterrupt:
         break
     except Exception as e:
         print(f"WAKEWORD_ERROR: {e}", file=sys.stderr)
+        # Try to recover the stream
+        try:
+            stream.start_stream()
+        except Exception:
+            pass
         break
 
 stream.stop_stream()
 stream.close()
 audio.terminate()
+
