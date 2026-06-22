@@ -31,7 +31,7 @@ const ExpandIcon = ({ expanded }: { expanded: boolean }) => (
 
 export const VoiceOverlay: React.FC = () => {
   const { isActive, isListening, transcription, response } = useVoiceStore();
-  const orbState = useOrbStore(state => state.state);
+  const orbState = useOrbStore(state => state.currentState);
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Auto-collapse when listening starts

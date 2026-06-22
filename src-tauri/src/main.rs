@@ -3,13 +3,18 @@
 mod wakeword;
 mod ytmusic;
 mod stt;
+mod system_monitor;
 
 fn main() {
     tauri::Builder::default()
         .manage(wakeword::WakewordState {
             stdin: std::sync::Mutex::new(None),
         })
-        .invoke_handler(tauri::generate_handler![wakeword::trigger_listening])
+        .manage(system_monitor::SystemMonitorState::new())
+        .invoke_handler(tauri::generate_handler![
+            wakeword::trigger_listening,
+            system_monitor::get_system_info
+        ])
         .setup(|app| {
             let app_handle = app.handle().clone();
             wakeword::start_wakeword_engine(app_handle);

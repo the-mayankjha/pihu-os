@@ -8,6 +8,15 @@ import { MusicWidget } from '../../../widgets/music/MusicWidget';
 import { MusicWidgetHorizontal } from '../../../widgets/music/MusicWidgetHorizontal';
 import { MusicWidgetCircle } from '../../../widgets/music/MusicWidgetCircle';
 import { MusicWidgetFolder } from '../../../widgets/music/MusicWidgetFolder';
+import { CalendarWidget } from '../../../widgets/calendar/CalendarWidget';
+import { CalendarWidgetCompact } from '../../../widgets/calendar/CalendarWidgetCompact';
+import { WeatherWidgetLarge } from '../../../widgets/weather/WeatherWidgetLarge';
+import { WeatherWidgetCompact } from '../../../widgets/weather/WeatherWidgetCompact';
+import { WeatherWidgetWide } from '../../../widgets/weather/WeatherWidgetWide';
+import { WeatherWidgetHourly } from '../../../widgets/weather/WeatherWidgetHourly';
+import { SystemWidgetCompact } from '../../../widgets/system/SystemWidgetCompact';
+import { SystemWidgetLarge } from '../../../widgets/system/SystemWidgetLarge';
+import { SystemWidgetWide } from '../../../widgets/system/SystemWidgetWide';
 
 export const WidgetDrawer: React.FC = () => {
   const { isWidgetDrawerOpen, toggleWidgetDrawer, spawnWidget } = useLayoutStore();
@@ -84,6 +93,51 @@ export const WidgetDrawer: React.FC = () => {
                   <div className="w-full flex flex-col gap-2 items-center">
                     <span className="text-sm font-medium text-white/80">Clock</span>
                     <ClockWidget preview onClick={() => handleWidgetClick('clock-widget')} />
+                  </div>
+
+                  <div className="w-full flex flex-col gap-2 items-center">
+                    <span className="text-sm font-medium text-white/80">Calendar (Grid)</span>
+                    <CalendarWidget preview onClick={() => handleWidgetClick('calendar-widget')} />
+                  </div>
+
+                  <div className="w-full flex flex-col gap-2 items-center">
+                    <span className="text-sm font-medium text-white/80">Calendar (Compact)</span>
+                    <CalendarWidgetCompact preview onClick={() => handleWidgetClick('calendar-widget-compact')} />
+                  </div>
+
+                  <div className="w-full flex flex-col gap-2 items-center">
+                    <span className="text-sm font-medium text-white/80">Weather (Large)</span>
+                    <WeatherWidgetLarge preview onClick={() => handleWidgetClick('weather-widget-large')} />
+                  </div>
+
+                  <div className="w-full flex flex-col gap-2 items-center">
+                    <span className="text-sm font-medium text-white/80">Weather (Compact)</span>
+                    <WeatherWidgetCompact preview onClick={() => handleWidgetClick('weather-widget-compact')} />
+                  </div>
+
+                  <div className="w-full flex flex-col gap-2 items-center">
+                    <span className="text-sm font-medium text-white/80">Weather (Wide)</span>
+                    <WeatherWidgetWide preview onClick={() => handleWidgetClick('weather-widget-wide')} />
+                  </div>
+
+                  <div className="w-full flex flex-col gap-2 items-center">
+                    <span className="text-sm font-medium text-white/80">Weather (Hourly)</span>
+                    <WeatherWidgetHourly preview onClick={() => handleWidgetClick('weather-widget-hourly')} />
+                  </div>
+
+                  <div className="w-full flex flex-col gap-2 items-center">
+                    <span className="text-sm font-medium text-white/80">System Monitor (Compact)</span>
+                    <SystemWidgetCompact preview onClick={() => handleWidgetClick('system-widget-compact')} />
+                  </div>
+
+                  <div className="w-full flex flex-col gap-2 items-center">
+                    <span className="text-sm font-medium text-white/80">System Monitor (Large)</span>
+                    <SystemWidgetLarge preview onClick={() => handleWidgetClick('system-widget-large')} />
+                  </div>
+
+                  <div className="w-full flex flex-col gap-2 items-center">
+                    <span className="text-sm font-medium text-white/80">System Monitor (Wide)</span>
+                    <SystemWidgetWide preview onClick={() => handleWidgetClick('system-widget-wide')} />
                   </div>
                 </div>
               </div>

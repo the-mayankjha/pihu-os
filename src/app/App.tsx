@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { ClockWidget } from '../widgets/clock/ClockWidget';
 import { OrbWidget } from '../widgets/orb/OrbWidget';
 import { MusicWidget } from '../widgets/music/MusicWidget';

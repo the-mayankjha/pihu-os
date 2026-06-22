@@ -8,7 +8,7 @@ export class TTSManager {
   private voice: SpeechSynthesisVoice | null = null;
   
   private currentUtterance: SpeechSynthesisUtterance | null = null;
-  private resumeInterval: NodeJS.Timeout | null = null;
+  private resumeInterval: ReturnType<typeof setTimeout> | null = null;
   private currentAudio: HTMLAudioElement | null = null;
 
   constructor() {
