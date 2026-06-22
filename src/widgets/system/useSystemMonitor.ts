@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 
 export interface ProcessInfo {
@@ -37,42 +37,77 @@ export interface SystemStats {
   battery: BatteryInfo | null;
 }
 
-export const useSystemMonitor = (intervalMs: number = 1000) => {
-  const [stats, setStats] = useState<SystemStats | null>(null);
-  const [history, setHistory] = useState<SystemStats[]>([]);
-  const MAX_HISTORY = 30; // Keep last 30 data points
+const MAX_HISTORY = 30; // Keep last 30 data points
 
-  const fetchStats = useCallback(async () => {
+let globalStats: SystemStats | null = null;
+let globalHistory: SystemStats[] = [];
+let listeners: Set<(stats: SystemStats | null, history: SystemStats[]) => void> = new Set();
+let isPolling = false;
+
+const startGlobalPolling = () => {
+  if (isPolling) return;
+  isPolling = true;
+
+  const fetchStats = async () => {
     try {
       const data = await invoke<SystemStats>('get_system_info');
-      setStats(data);
-      setHistory((prev) => {
-        const newHistory = [...prev, data];
-        if (newHistory.length > MAX_HISTORY) {
-          return newHistory.slice(newHistory.length - MAX_HISTORY);
-        }
-        return newHistory;
-      });
+      globalStats = data;
+      globalHistory = [...globalHistory, data];
+      if (globalHistory.length > MAX_HISTORY) {
+        globalHistory = globalHistory.slice(globalHistory.length - MAX_HISTORY);
+      }
+      listeners.forEach(listener => listener(globalStats, globalHistory));
     } catch (error) {
       console.error('Failed to fetch system info:', error);
     }
-  }, []);
+  };
+
+  fetchStats();
+  // We use a global 1.5 second tick rate so all widgets update perfectly in sync
+  setInterval(fetchStats, 1500);
+};
+
+export const useSystemMonitor = (_intervalMs?: number) => {
+  const [stats, setStats] = useState<SystemStats | null>(globalStats);
+  const [history, setHistory] = useState<SystemStats[]>(globalHistory);
 
   useEffect(() => {
-    // Initial fetch
-    fetchStats();
-
-    // Setup polling
-    const intervalId = setInterval(fetchStats, intervalMs);
-
-    return () => clearInterval(intervalId);
-  }, [fetchStats, intervalMs]);
+    startGlobalPolling();
+    
+    const listener = (newStats: SystemStats | null, newHistory: SystemStats[]) => {
+      setStats(newStats);
+      setHistory(newHistory);
+    };
+    
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  }, []);
 
   // Derived values for easy consumption
   const cpuPercent = stats ? stats.cpu_usage : 0;
   const memPercent = stats ? (stats.mem_used / stats.mem_total) * 100 : 0;
   const diskPercent = stats && stats.disk_total > 0 ? (stats.disk_used / stats.disk_total) * 100 : 0;
   const batteryPercent = stats?.battery?.percentage ?? 0;
+
+  // Normalize speeds to per-second (since we poll every 1.5s)
+  const TIME_FACTOR = 1.5;
+  const normalizedStats = stats ? {
+    ...stats,
+    net_rx: stats.net_rx / TIME_FACTOR,
+    net_tx: stats.net_tx / TIME_FACTOR,
+    disk_read: stats.disk_read / TIME_FACTOR,
+    disk_write: stats.disk_write / TIME_FACTOR,
+  } : null;
+
+  const normalizedHistory = history.map(h => ({
+    ...h,
+    net_rx: h.net_rx / TIME_FACTOR,
+    net_tx: h.net_tx / TIME_FACTOR,
+    disk_read: h.disk_read / TIME_FACTOR,
+    disk_write: h.disk_write / TIME_FACTOR,
+  }));
   
   const formatBytes = (bytes: number, decimals = 1) => {
     if (!+bytes) return '0 B';
@@ -108,8 +143,8 @@ export const useSystemMonitor = (intervalMs: number = 1000) => {
   };
 
   return {
-    stats,
-    history,
+    stats: normalizedStats,
+    history: normalizedHistory,
     cpuPercent,
     memPercent,
     diskPercent,

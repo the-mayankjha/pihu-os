@@ -20,7 +20,7 @@ export const CircularProgress: React.FC<CircularProgressProps> = ({
 }) => {
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
-  const safeProgress = Math.min(100, Math.max(0, progress));
+  const safeProgress = Math.min(100, Math.max(0, progress || 0));
   const offset = circumference - (safeProgress / 100) * circumference;
 
   return (

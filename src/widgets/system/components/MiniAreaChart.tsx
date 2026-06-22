@@ -25,11 +25,14 @@ export const MiniAreaChart: React.FC<MiniAreaChartProps> = ({
   const { pathData, fillPathData } = useMemo(() => {
     if (paddedData.length === 0) return { pathData: '', fillPathData: '' };
 
-    const max = 100;
+    // Calculate dynamic max value, with a minimum of 10 to avoid division by zero and tiny noise spikes
+    const rawMax = Math.max(...paddedData);
+    const max = Math.max(10, rawMax * 1.2); // Add 20% headroom
+
     const points = paddedData.map((val, i) => {
       const x = (i / (paddedData.length - 1)) * 100;
       // Y is inverted (0 is top, 40 is bottom in viewBox)
-      const y = 40 - (Math.min(100, Math.max(0, val)) / max) * 40;
+      const y = 40 - (Math.min(max, Math.max(0, val)) / max) * 40;
       return { x, y };
     });
 

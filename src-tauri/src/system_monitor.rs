@@ -116,9 +116,14 @@ pub fn get_system_info(state: State<'_, SystemMonitorState>) -> SystemStats {
     // Disk Stats
     let mut disk_used = 0;
     let mut disk_total = 0;
-    for disk in disks.list() {
-        disk_total += disk.total_space();
-        disk_used += disk.total_space() - disk.available_space();
+    
+    // Find the primary disk (usually mounted at "/") to prevent double counting 
+    // APFS volumes on macOS (like / and /System/Volumes/Data)
+    let primary_disk = disks.list().iter().find(|d| d.mount_point().to_string_lossy() == "/" || d.mount_point().to_string_lossy() == "C:\\");
+    
+    if let Some(disk) = primary_disk.or_else(|| disks.list().first()) {
+        disk_total = disk.total_space();
+        disk_used = disk.total_space() - disk.available_space();
     }
 
     // Process Stats & Disk I/O from processes
@@ -155,7 +160,6 @@ pub fn get_system_info(state: State<'_, SystemMonitorState>) -> SystemStats {
                     BatteryState::Empty => "Empty",
                     BatteryState::Full => "Full",
                     BatteryState::Unknown => "Unknown",
-                    _ => "Unknown",
                 }.to_string();
 
                 battery_info = Some(BatteryInfo {
