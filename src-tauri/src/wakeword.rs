@@ -1,8 +1,24 @@
-use std::process::{Command, Stdio};
-use std::io::{BufRead, BufReader};
+use std::process::{ChildStdin, Command, Stdio};
+use std::io::{BufRead, BufReader, Write};
 use std::thread;
-use tauri::{AppHandle, Emitter};
+use std::sync::Mutex;
+use tauri::{AppHandle, Emitter, State, Manager};
 use serde::Serialize;
+
+pub struct WakewordState {
+    pub stdin: Mutex<Option<ChildStdin>>,
+}
+
+#[tauri::command]
+pub fn trigger_listening(state: State<'_, WakewordState>) -> Result<(), String> {
+    if let Some(stdin) = state.stdin.lock().unwrap().as_mut() {
+        if let Err(e) = writeln!(stdin, "START_LISTENING") {
+            return Err(e.to_string());
+        }
+        let _ = stdin.flush();
+    }
+    Ok(())
+}
 
 #[derive(Serialize, Clone)]
 struct WakeWordPayload {
@@ -15,6 +31,7 @@ pub fn start_wakeword_engine(app: AppHandle) {
     // Spawn the Python process
     let mut child = match Command::new("python3")
         .arg("python/wakeword.py")
+        .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn() 
@@ -25,6 +42,10 @@ pub fn start_wakeword_engine(app: AppHandle) {
             return;
         }
     };
+
+    let stdin = child.stdin.take().expect("Failed to capture python stdin");
+    let state: tauri::State<WakewordState> = app.state();
+    *state.stdin.lock().unwrap() = Some(stdin);
 
     let stdout = child.stdout.take().expect("Failed to capture python stdout");
     let stderr = child.stderr.take().expect("Failed to capture python stderr");

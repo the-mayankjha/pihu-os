@@ -1,14 +1,9 @@
-import React, { useEffect } from 'react';
-import { listen } from '@tauri-apps/api/event';
+import React from 'react';
 import { Orb } from '../../shared/components/Orb/Orb';
 import { Waveform } from '../../shared/components/Orb/Waveform';
 import { OrbState } from '../../shared/components/Orb/states';
 import { useOrbStore } from '../../core/orb/OrbStore';
 import { WidgetContainer } from '../../shared/components/WidgetContainer/WidgetContainer';
-
-interface WakeWordPayload {
-  model: string;
-}
 
 export interface OrbWidgetProps {
   preview?: boolean;
@@ -17,43 +12,6 @@ export interface OrbWidgetProps {
 
 export const OrbWidget: React.FC<OrbWidgetProps> = ({ preview = false, onClick }) => {
   const { currentState, setState, size } = useOrbStore();
-
-  useEffect(() => {
-    if (preview) return; // Don't listen to events if in preview mode
-    const unlistenWake = listen<WakeWordPayload>('wake-word-detected', (event) => {
-      console.log('REACT GOT EVENT: Wake word detected:', event.payload.model);
-      
-      // Force wake up the orb!
-      setState(OrbState.WAKE);
-      
-      // After waking up, transition to LISTENING state so the user can speak
-      setTimeout(() => {
-        setState(OrbState.LISTENING);
-      }, 1500);
-    });
-
-    const unlistenSpeechEnded = listen('speech-ended', () => {
-      console.log('REACT GOT EVENT: Speech ended, processing...');
-      // Force transition to THINKING state
-      setState(OrbState.THINKING);
-      
-      // Mock API Processing time
-      setTimeout(() => {
-        setState(OrbState.SPEAKING);
-        
-        // Mock Speaking time
-        setTimeout(() => {
-          setState(OrbState.IDLE);
-        }, 4000);
-        
-      }, 2500);
-    });
-
-    return () => {
-      unlistenWake.then(f => f());
-      unlistenSpeechEnded.then(f => f());
-    };
-  }, [setState, preview]);
 
   const getHeaderText = () => {
     switch (currentState) {

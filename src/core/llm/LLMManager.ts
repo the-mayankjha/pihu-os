@@ -1,4 +1,5 @@
-import { GeminiModel, GeminiRequestBody, GeminiResponse, LLMRequest } from './types';
+import { GeminiModel } from './types';
+import type { GeminiRequestBody, GeminiResponse, LLMRequest } from './types';
 
 export class LLMManager {
   private static instance: LLMManager;
@@ -19,7 +20,7 @@ export class LLMManager {
   private initializeKeys() {
     // Expecting comma separated keys: key1,key2,key3
     const keysStr = import.meta.env.VITE_GEMINI_API_KEYS || '';
-    this.apiKeys = keysStr.split(',').map(k => k.trim()).filter(k => k.length > 0);
+    this.apiKeys = keysStr.split(',').map((k: string) => k.trim()).filter((k: string) => k.length > 0);
     
     if (this.apiKeys.length === 0) {
       console.error('[LLMManager] No API keys found in VITE_GEMINI_API_KEYS');

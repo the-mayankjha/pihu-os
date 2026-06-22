@@ -4,3 +4,5 @@ openwakeword
 ytmusicapi
 flask
 flask-cors
+websockets
+pywhispercpp
