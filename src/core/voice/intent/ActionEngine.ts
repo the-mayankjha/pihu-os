@@ -1,6 +1,9 @@
 import { LLMManager } from '../../llm/LLMManager';
 import { PIHU_CORE_IDENTITY } from './systemPrompt';
 import { buildGeminiTools, executeTool } from './tools/index';
+import { useLayoutStore } from '../../layout/LayoutStore';
+import { useMusicStore } from '../../../stores/musicStore';
+import { getGlobalSystemStats } from '../../../widgets/system/useSystemMonitor';
 
 export class ActionEngine {
   private llm: LLMManager;
@@ -10,16 +13,39 @@ export class ActionEngine {
   }
 
   private getDynamicContext(): string {
-    // In a real implementation, these would be fetched from OS state managers dynamically
+    const layoutState = useLayoutStore.getState();
+    const musicState = useMusicStore.getState();
+    const systemStats = getGlobalSystemStats();
+
+    // Map open widgets/apps
+    const openApps = Object.entries(layoutState.widgets)
+      .filter(([_, state]) => state.isOpen)
+      .map(([id]) => id);
+
+    let sysInfo: any = { status: "Unknown" };
+    if (systemStats) {
+      const memUsedGB = (systemStats.mem_used / (1024 ** 3)).toFixed(1);
+      const memTotalGB = (systemStats.mem_total / (1024 ** 3)).toFixed(1);
+      sysInfo = {
+        cpu_usage: `${systemStats.cpu_usage.toFixed(0)}%`,
+        ram: `${memUsedGB} / ${memTotalGB} GB`,
+        battery: systemStats.battery ? `${systemStats.battery.percentage}%` : "Desktop/Unknown",
+        cpu_frequency: `${(systemStats.cpu_frequency / 1000).toFixed(2)} GHz`,
+        active_processes: systemStats.total_processes
+      };
+    }
+
     const context = {
       os: "PIHU OS",
-      workspace: "Development",
-      theme: "Dark Frost",
       user: "Mayank",
-      active_app: "YT Music",
-      focused_window: "Current Player",
-      open_apps: ["YT Music", "FKVim", "Terminal"],
-      available_mcps: ["filesystem", "semantic-search", "workspace", "browser", "calendar", "automation"],
+      theme: "Dark Frost",
+      system_performance: sysInfo,
+      open_apps: openApps.length > 0 ? openApps : ["None"],
+      focused_app: openApps.length > 0 ? openApps[openApps.length - 1] : "None",
+      currently_playing_music: musicState.isPlaying 
+        ? `${musicState.trackInfo.title} by ${musicState.trackInfo.artist}` 
+        : "Nothing playing",
+      available_mcps: ["filesystem", "semantic-search", "browser"],
       capabilities: ["File Actions", "Semantic Search", "Automation", "Workspace Control", "Application Control"]
     };
     

@@ -44,6 +44,8 @@ let globalHistory: SystemStats[] = [];
 let listeners: Set<(stats: SystemStats | null, history: SystemStats[]) => void> = new Set();
 let isPolling = false;
 
+export const getGlobalSystemStats = () => globalStats;
+
 const startGlobalPolling = () => {
   if (isPolling) return;
   isPolling = true;
