@@ -137,6 +137,18 @@ export const VoiceOverlay: React.FC = () => {
                         )}
 
                         {/* Response */}
+                        {!response && !isListening && (orbState === OrbState.THINKING || orbState === OrbState.SPEAKING) && (
+                          <div className="flex justify-center items-center py-4">
+                            <div className="w-16 h-16 opacity-80">
+                              <DotLottieReact
+                                src={loadingLottieUrl}
+                                loop
+                                autoplay
+                              />
+                            </div>
+                          </div>
+                        )}
+                        
                         {response && !isListening && (
                           <div className="text-white/90 text-base md:text-lg font-normal tracking-wide flex flex-col gap-3 text-left leading-relaxed">
                             <ReactMarkdown

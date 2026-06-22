@@ -131,6 +131,10 @@ export const musicTools: ActionTool[] = [
             type: 'STRING',
             description: 'Search query or playlist name, e.g. "lofi beats", "Canon in D", "Bollywood hits"',
           },
+          type: {
+            type: 'STRING',
+            description: 'The type of music to search for. Can be "song", "playlist", "album", "artist". Defaults to "song" if not specified.',
+          },
           playlist_id: {
             type: 'STRING',
             description: 'Direct YouTube playlist ID if known. Leave empty to search by query.',
@@ -159,14 +163,31 @@ export const musicTools: ActionTool[] = [
 
       // 3. Fall back to YouTube search via the backend
       try {
+        const searchType = args.type || 'song';
         const res = await fetch(
-          `http://127.0.0.1:48123/search?query=${encodeURIComponent(args.query)}&type=playlist&limit=1`
+          `http://127.0.0.1:48123/search?query=${encodeURIComponent(args.query)}&type=${searchType}&limit=1`
         );
         const data = await res.json();
         if (data?.results?.length > 0) {
           const result = data.results[0];
-          useMusicStore.getState().setPlaylistId(result.browseId, 'playlist');
-          return { success: true, data: { loaded: result.title, id: result.browseId, source: 'search' } };
+          let targetId = '';
+          if (result.videoId) {
+            targetId = `RD${result.videoId}`; // radio playlist for the song
+          } else if (result.radioId) {
+            targetId = result.radioId;
+          } else if (result.browseId) {
+            targetId = result.browseId;
+          }
+          
+          if (targetId) {
+            useMusicStore.getState().setPlaylistId(targetId, 'playlist');
+            // Force layout toggle to open music plugin so user sees it
+            import('../../../layout/LayoutStore').then(m => {
+              const store = m.useLayoutStore.getState();
+              if (!store.widgets['ytmusic-plugin']?.isOpen) store.toggleWidget('ytmusic-plugin');
+            });
+            return { success: true, data: { loaded: result.title || args.query, id: targetId, source: 'search' } };
+          }
         }
       } catch (e) {
         console.warn('[musicTools] Backend search failed, using YouTube search fallback:', e);
@@ -174,6 +195,10 @@ export const musicTools: ActionTool[] = [
 
       // 4. YouTube search fallback — use listType 'search' with the query as ID
       useMusicStore.getState().setPlaylistId(args.query, 'search');
+      import('../../../layout/LayoutStore').then(m => {
+        const store = m.useLayoutStore.getState();
+        if (!store.widgets['ytmusic-plugin']?.isOpen) store.toggleWidget('ytmusic-plugin');
+      });
       return { success: true, data: { loaded: args.query, source: 'yt-search' } };
     },
   },

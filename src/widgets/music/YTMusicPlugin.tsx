@@ -83,11 +83,14 @@ export const YTMusicPlugin: React.FC = () => {
           .then(data => {
             // Format to match old structure for compatibility
             const formatted = (data.results || []).map((r: any) => ({
-              trackName: r.title,
-              artistName: r.artists?.[0]?.name || 'Unknown',
-              collectionName: r.album?.name || '',
-              artworkUrl100: r.thumbnails?.[0]?.url || '',
-              videoId: r.videoId
+              trackName: r.title || r.artist,
+              artistName: (r.artists?.[0]?.name) || r.author || (r.resultType === 'artist' ? 'Artist' : 'Unknown'),
+              collectionName: r.album?.name || r.resultType || '',
+              artworkUrl100: r.thumbnails?.[0]?.url || r.thumbnails?.[r.thumbnails?.length - 1]?.url || '',
+              videoId: r.videoId,
+              browseId: r.browseId,
+              radioId: r.radioId,
+              resultType: r.resultType
             }));
             setSearchResults(formatted);
             setIsSearching(false);
@@ -188,14 +191,21 @@ export const YTMusicPlugin: React.FC = () => {
   };
 
   const handlePlaySearchResult = async (result: any) => {
-    const query = `${result.trackName} ${result.artistName}`;
     setInputValue('');
     
     // If we already have the videoId from our ytmusicapi backend
     if (result.videoId) {
       setPlaylistId(`RD${result.videoId}`, 'playlist');
       return;
+    } else if (result.radioId) {
+      setPlaylistId(result.radioId, 'playlist');
+      return;
+    } else if (result.browseId) {
+      setPlaylistId(result.browseId, 'playlist');
+      return;
     }
+
+    const query = `${result.trackName} ${result.artistName}`;
 
     setPlaylistId(query, 'search'); // Set loading state initially
     setCurrentView('playlist');

@@ -94,15 +94,28 @@ def auth_logout():
 
 @app.route('/search', methods=['GET'])
 def search():
-    query = request.args.get('q')
+    query = request.args.get('q') or request.args.get('query')
     if not query:
         return jsonify({"error": "No query provided"}), 400
     
+    filter_type = request.args.get('filter') or request.args.get('type')
+    # Valid filters: "songs", "videos", "albums", "artists", "playlists", "community_playlists", "featured_playlists", "uploads"
+    # Map "playlist" to "playlists", "song" to "songs" etc.
+    if filter_type == 'playlist': filter_type = 'playlists'
+    if filter_type == 'song': filter_type = 'songs'
+    if filter_type == 'artist': filter_type = 'artists'
+    if filter_type == 'album': filter_type = 'albums'
+    if filter_type not in ["songs", "videos", "albums", "artists", "playlists", "community_playlists", "featured_playlists", "uploads"]:
+        filter_type = "songs" # default
+    
+    limit = int(request.args.get('limit', 10))
+    
     yt = get_ytmusic()
     try:
-        results = yt.search(query, filter="songs", limit=10)
+        results = yt.search(query.strip(), filter=filter_type, limit=limit)
         return jsonify({"results": results})
     except Exception as e:
+        print(f"Search error: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/playlists', methods=['GET'])
