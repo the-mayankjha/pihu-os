@@ -1,16 +1,26 @@
 import React, { useState } from 'react';
 import { PluginWindow } from '../../core/windows/components/PluginWindow';
 import { useTodoStore } from './useTodoStore';
+import { TaskAddView } from './TaskAddView';
+import { TaskEditableDetails } from './TaskEditableDetails';
+import { CircularProgress } from '../system/components/CircularProgress';
 import {
   CheckCircle2, Plus, Inbox, Calendar, CalendarDays, Search, Check, 
-  MoreHorizontal, Clock, Flag, Star, Bell, Paperclip, Tag, CircleDashed, X, LayoutGrid, CalendarPlus, AlignLeft, CheckSquare
+  MoreHorizontal, Clock, Flag, Star, Bell, Paperclip, CircleDashed, X, LayoutGrid, CalendarPlus
 } from 'lucide-react';
+import taskIcon from '../../assets/task.png';
 
 export const TaskWindow: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
-  const { todos, projects, focusedTaskId, setFocusedTaskId, toggleTodo, addTodo, updateTodo } = useTodoStore();
+  const { todos, projects, focusedTaskId, setFocusedTaskId, toggleTodo, updateTodo } = useTodoStore();
   const [activeFilter, setActiveFilter] = useState('Today');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isAdding, setIsAdding] = useState(false);
   
+  const completedCount = todos.filter(t => t.completed).length;
+  const totalCount = todos.length;
+  const progress = totalCount === 0 ? 0 : (completedCount / totalCount) * 100;
+
   const filteredTodos = todos.filter(todo => {
     if (searchQuery && !todo.text.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     
@@ -39,25 +49,60 @@ export const TaskWindow: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
       defaultSize={{ width: 1100, height: 700 }}
       minWidth={800}
       minHeight={500}
+      borderless
+      frostui
     >
-      <div className="flex h-full w-full bg-[#0d0d0d] text-white font-sans overflow-hidden">
+      <div className="flex flex-col h-full w-full bg-transparent text-white font-sans overflow-hidden">
         
-        {/* Sidebar Panel */}
-        <div className="w-64 border-r border-[#222] bg-[#111] flex flex-col flex-shrink-0">
-          <div className="p-4 flex items-center gap-3 font-semibold text-lg border-b border-[#222]">
-            <CheckCircle2 className="text-purple-500" size={24} />
-            <span>Tasks</span>
+        {/* Global Top Header */}
+        <div className="plugin-drag-handle flex items-center gap-4 pl-4 md:pl-6 pr-24 py-3 shrink-0 z-20 relative border-b border-white/5 cursor-grab active:cursor-grabbing">
+          {/* Hamburger & Logo */}
+          <div className="flex items-center gap-4 w-[200px] shrink-0">
+            <button 
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors shrink-0"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="text-white"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+            </button>
+            <div className="flex items-center gap-3">
+              <img src={taskIcon} className="w-10 h-8 drop-shadow-lg" alt="Tasks" />
+              <div>
+                <div className="text-[10px] text-white/50 font-bold tracking-widest leading-none mb-0.5">PIHU OS</div>
+                <div className="text-base font-bold tracking-wide leading-none">TASKS</div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Search Bar */}
+          <div className="flex-1 max-w-2xl bg-white/5 rounded-full flex items-center px-4 border border-white/5 transition-colors focus-within:border-white/20 focus-within:bg-white/10 relative ml-2">
+            <Search className="text-gray-500" size={16} />
+            <input 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search tasks..."
+              className="w-full bg-transparent border-none outline-none text-white px-4 py-2 text-sm placeholder-gray-500"
+            />
           </div>
 
-          <div className="p-4">
+          {/* Right Area for Window Controls */}
+          <div className="flex items-center gap-4 ml-auto pl-4 shrink-0 relative"></div>
+        </div>
+
+        {/* Body Container */}
+        <div className="flex flex-1 overflow-hidden relative z-10">
+          
+          {/* Sidebar Panel */}
+          <div className={`${isSidebarOpen ? 'w-[240px] opacity-100' : 'w-0 opacity-0 border-transparent'} transition-all duration-300 overflow-hidden border-r border-white/5 bg-transparent flex flex-col shrink-0 h-full`}>
+            <div className="px-4 pt-6 pb-4">
             <button 
-              className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 transition-colors text-white py-2 px-4 rounded-lg font-medium"
-              onClick={() => {
-                addTodo({ text: 'New Task', time: 'Today', project: 'Inbox' });
-              }}
+              className="w-full flex items-center justify-between bg-[#ff2a6d]/20 text-[#ff2a6d] border border-[#ff2a6d]/30 rounded-xl px-4 py-3 hover:bg-[#ff2a6d]/30 transition-colors"
+              onClick={() => setIsAdding(true)}
             >
-              <Plus size={18} />
-              New Task
+              <div className="flex items-center gap-2">
+                <Plus size={18} />
+                New Task
+              </div>
+              <span className="opacity-60 text-xs">⌄</span>
             </button>
           </div>
 
@@ -65,98 +110,111 @@ export const TaskWindow: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
             <div className="px-3 space-y-1">
               <SidebarItem icon={<Inbox size={18} />} label="Inbox" count={todos.length} active={activeFilter === 'Inbox'} onClick={() => setActiveFilter('Inbox')} />
               <SidebarItem icon={<Calendar size={18} />} label="Today" count={todos.filter(t => !t.completed).length} active={activeFilter === 'Today'} onClick={() => setActiveFilter('Today')} />
-              <SidebarItem icon={<CalendarDays size={18} />} label="Upcoming" active={activeFilter === 'Upcoming'} onClick={() => setActiveFilter('Upcoming')} />
-              <SidebarItem icon={<LayoutGrid size={18} />} label="Filters & Labels" active={activeFilter === 'Filters'} onClick={() => setActiveFilter('Filters')} />
+              <SidebarItem icon={<CalendarDays size={18} />} label="Upcoming" count={5} active={activeFilter === 'Upcoming'} onClick={() => setActiveFilter('Upcoming')} />
+              <SidebarItem icon={<Calendar size={18} />} label="Calendar" active={activeFilter === 'Calendar'} onClick={() => setActiveFilter('Calendar')} />
+              <SidebarItem icon={<CheckCircle2 size={18} />} label="Completed" active={activeFilter === 'Completed'} onClick={() => setActiveFilter('Completed')} />
+              <SidebarItem icon={<LayoutGrid size={18} />} label="All Tasks" count={32} active={activeFilter === 'All Tasks'} onClick={() => setActiveFilter('All Tasks')} />
             </div>
 
             <div className="mt-8 px-3">
               <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-3">Projects</div>
               <div className="space-y-1">
-                {projects.map(project => (
-                  <SidebarItem 
-                    key={project} 
-                    icon={<div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div>} 
-                    label={project} 
-                    active={activeFilter === project} 
-                    onClick={() => setActiveFilter(project)} 
-                  />
-                ))}
+                {projects.map((project, idx) => {
+                  const colors = ['bg-[#ff2a6d]', 'bg-[#8b5cf6]', 'bg-[#0ea5e9]', 'bg-[#10b981]', 'bg-[#f59e0b]'];
+                  return (
+                    <SidebarItem 
+                      key={project} 
+                      icon={<div className={`w-2.5 h-2.5 rounded-full ${colors[idx % colors.length]}`}></div>} 
+                      label={project} 
+                      active={activeFilter === project} 
+                      onClick={() => setActiveFilter(project)} 
+                    />
+                  );
+                })}
               </div>
             </div>
           </div>
 
-          <div className="p-4 border-t border-[#222]">
-            <div className="flex items-center gap-3 p-3 bg-[#1a1a1a] rounded-xl">
-              <div className="relative flex items-center justify-center">
-                <CircleDashed size={32} className="text-purple-500" />
-                <span className="absolute text-[10px] font-bold">80%</span>
-              </div>
+          <div className="p-4 border-t border-white/5">
+            <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors cursor-pointer">
+              <CircularProgress 
+                progress={progress} 
+                size={46} 
+                strokeWidth={4} 
+                colorHex="#ff2a6d"
+              >
+                <div className="flex flex-col items-center justify-center">
+                   <span className="text-xs font-bold tracking-tight text-white">
+                     {Math.round(progress)}<span className="text-[9px] text-gray-300 ml-0.5">%</span>
+                   </span>
+                </div>
+              </CircularProgress>
               <div>
-                <div className="text-sm font-semibold">Daily Progress</div>
-                <div className="text-xs text-gray-400">4 of 5 tasks done</div>
+                <div className="text-sm font-bold text-white mb-0.5">Daily Progress</div>
+                <div className="text-xs text-gray-400 font-medium">{completedCount} of {totalCount} tasks completed</div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Main Task List Panel */}
-        <div className="flex-1 flex flex-col bg-[#0a0a0a] min-w-0">
-          <div className="p-6 pb-2 border-b border-[#222]">
-            <div className="flex justify-between items-center mb-6">
-              <h1 className="text-3xl font-bold">{activeFilter} <span className="text-gray-500 text-xl font-medium">{filteredTodos.length}</span></h1>
-              <div className="flex items-center gap-2">
-                <button className="p-2 hover:bg-[#222] rounded-md text-gray-400 transition-colors"><MoreHorizontal size={20} /></button>
+        {isAdding ? (
+          <TaskAddView onCancel={() => setIsAdding(false)} />
+        ) : (
+          <>
+            {/* Main Task List Panel */}
+            <div className="flex-1 flex flex-col bg-transparent min-w-0">
+          <div className="px-8 pt-6 pb-4 border-b border-white/5">
+            <div className="flex justify-between items-start">
+              <div>
+                <h1 className="text-4xl font-bold flex items-center gap-3">
+                  {activeFilter} 
+                  <span className="bg-[#ff2a6d]/20 text-[#ff2a6d] text-base font-semibold w-7 h-7 rounded-full flex items-center justify-center">{filteredTodos.length}</span>
+                </h1>
+                <div className="text-gray-400 text-sm mt-2">June 22, Monday</div>
               </div>
-            </div>
-            
-            <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
-              <input 
-                type="text" 
-                placeholder="Search tasks..." 
-                className="w-full bg-[#111] border border-[#222] text-sm rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:border-purple-500 transition-colors"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+              <div className="flex items-center gap-2 mt-2">
+                <button className="p-1.5 hover:bg-white/10 rounded-full text-gray-400 transition-colors"><LayoutGrid size={18} /></button>
+                <button className="p-1.5 hover:bg-white/10 rounded-full text-gray-400 transition-colors"><MoreHorizontal size={18} /></button>
+              </div>
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-2 custom-scrollbar">
-            <div className="space-y-1">
+          <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+            <div className="space-y-3">
               {filteredTodos.map(todo => (
                 <div 
                   key={todo.id} 
-                  className={`group flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${focusedTaskId === todo.id ? 'bg-[#222]' : 'hover:bg-[#1a1a1a]'}`}
+                  className={`group flex items-center gap-4 p-4 rounded-2xl border transition-all cursor-pointer ${focusedTaskId === todo.id ? 'bg-white/10 border-white/10 shadow-lg' : 'bg-transparent border-white/5 hover:bg-white/5'}`}
                   onClick={() => setFocusedTaskId(todo.id)}
                 >
                   <button 
-                    className={`flex-shrink-0 w-5 h-5 rounded border ${todo.completed ? 'bg-purple-500 border-purple-500 text-white' : 'border-gray-500 hover:border-purple-400'} flex items-center justify-center transition-colors`}
+                    className={`flex-shrink-0 w-6 h-6 rounded-full border-2 ${todo.completed ? 'bg-[#ff2a6d] border-[#ff2a6d] text-white' : 'border-gray-500 hover:border-[#ff2a6d]'} flex items-center justify-center transition-colors`}
                     onClick={(e) => { e.stopPropagation(); toggleTodo(todo.id); }}
                   >
                     {todo.completed && <Check size={14} strokeWidth={3} />}
                   </button>
                   
                   <div className="flex-1 min-w-0">
-                    <div className={`text-sm font-medium truncate ${todo.completed ? 'text-gray-500 line-through' : 'text-gray-200'}`}>
+                    <div className={`text-base font-medium truncate ${todo.completed ? 'text-gray-500 line-through' : 'text-gray-200'}`}>
                       {todo.text}
                     </div>
                     {todo.project && (
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-[#222] text-gray-400 border border-[#333] flex items-center gap-1">
+                        <span className="text-xs px-2 py-0.5 rounded-md bg-[#3b82f6]/10 text-[#3b82f6]">
                            {todo.project}
                         </span>
                       </div>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button className="text-gray-500 hover:text-white"><Clock size={16} /></button>
-                    <button className={`hover:text-yellow-400 ${todo.isStarred ? 'text-yellow-400' : 'text-gray-500'}`}><Star size={16} fill={todo.isStarred ? 'currentColor' : 'none'} /></button>
+                  <div className="flex items-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button className="text-gray-500 hover:text-white"><Clock size={18} /></button>
+                    <button className={`hover:text-yellow-400 ${todo.isStarred ? 'text-yellow-400' : 'text-gray-500'}`}><Star size={18} fill={todo.isStarred ? 'currentColor' : 'none'} /></button>
                   </div>
 
-                  <div className="flex items-center gap-3 text-xs text-gray-500">
-                    {todo.time && <span className="flex items-center gap-1"><Calendar size={12}/> {todo.time}</span>}
-                    {todo.priority === 'High' && <Flag size={14} className="text-red-500" fill="currentColor" />}
+                  <div className="flex items-center gap-4 text-sm text-gray-400 min-w-[120px] justify-end">
+                    {todo.time && <span>{todo.time}</span>}
+                    {todo.priority === 'High' ? <Flag size={16} className="text-[#ff2a6d]" fill="none" strokeWidth={2.5}/> : <Flag size={16} className="text-gray-500" />}
                   </div>
                 </div>
               ))}
@@ -168,16 +226,22 @@ export const TaskWindow: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
                 </div>
               )}
             </div>
+            
+            <button 
+              className="mt-6 flex items-center gap-2 text-[#ff2a6d] font-medium px-4 py-2 hover:bg-[#ff2a6d]/10 rounded-lg transition-colors"
+              onClick={() => setIsAdding(true)}
+            >
+              <Plus size={18} /> Add Task
+            </button>
           </div>
         </div>
 
         {/* Task Details Panel */}
         {focusedTodo && (
-          <div className="w-80 border-l border-[#222] bg-[#111] flex flex-col flex-shrink-0">
-            <div className="p-4 border-b border-[#222] flex justify-between items-center">
-              <h3 className="font-semibold text-gray-200">Task Details</h3>
-              <button className="text-gray-400 hover:text-white p-1" onClick={() => setFocusedTaskId(null)}>
-                <X size={20} />
+          <div className="w-[340px] border-l border-white/5 bg-transparent flex flex-col shrink-0 relative">
+            <div className="h-[68px] flex items-center justify-start px-4 border-b border-white/5">
+              <button className="text-gray-400 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors z-10" onClick={() => setFocusedTaskId(null)}>
+                <X size={18} />
               </button>
             </div>
 
@@ -186,74 +250,83 @@ export const TaskWindow: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
               <div>
                 <div className="flex items-start gap-3 mb-4">
                   <button 
-                    className={`mt-1 flex-shrink-0 w-6 h-6 rounded border ${focusedTodo.completed ? 'bg-purple-500 border-purple-500 text-white' : 'border-gray-500'} flex items-center justify-center`}
+                    className={`mt-1 flex-shrink-0 w-6 h-6 rounded-full border-2 ${focusedTodo.completed ? 'bg-[#ff2a6d] border-[#ff2a6d] text-white' : 'border-gray-500'} flex items-center justify-center`}
                     onClick={() => toggleTodo(focusedTodo.id)}
                   >
-                    {focusedTodo.completed && <Check size={16} strokeWidth={3} />}
+                    {focusedTodo.completed && <Check size={14} strokeWidth={3} />}
                   </button>
                   <textarea 
-                    className="w-full bg-transparent text-lg font-semibold text-white resize-none focus:outline-none placeholder-gray-600 min-h-[60px]" 
+                    className="w-full bg-transparent text-lg font-bold text-white resize-none focus:outline-none placeholder-gray-600 min-h-[60px]" 
                     value={focusedTodo.text}
                     onChange={(e) => updateTodo(focusedTodo.id, { text: e.target.value })}
                     placeholder="Task title"
                   />
                 </div>
 
-                <div className="flex gap-2 mb-6">
-                  <ActionButton icon={<CalendarPlus size={16} />} label="Add Date" />
-                  <ActionButton icon={<Bell size={16} />} label="Remind" />
-                  <ActionButton icon={<Paperclip size={16} />} label="Attach" />
-                  <ActionButton icon={<MoreHorizontal size={16} />} />
+                <div className="flex gap-2 mb-6 text-[#ff2a6d]">
+                  <span className="text-xs px-2 py-0.5 rounded-md bg-[#8b5cf6]/10 text-[#8b5cf6]">
+                     PIHU OS
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-4 gap-2 mb-6">
+                  <ActionButton icon={<CalendarPlus size={16} />} label="Add to Calendar" />
+                  <ActionButton icon={<Bell size={16} />} label="Set Reminder" />
+                  <ActionButton icon={<Paperclip size={16} />} label="Attach Files" />
+                  <ActionButton icon={<MoreHorizontal size={16} />} label="More" />
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <DetailRow icon={<AlignLeft size={16} />} label="Description">
-                  <textarea 
-                    className="w-full bg-[#1a1a1a] rounded-md p-2 text-sm text-gray-300 focus:outline-none focus:ring-1 focus:ring-purple-500 resize-none min-h-[80px]"
-                    placeholder="Add description..."
-                    defaultValue={""}
-                  />
-                </DetailRow>
+              <div className="space-y-6">
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-200 mb-2">Description</h4>
+                  <p className="text-sm text-gray-400 leading-relaxed">
+                    Create a clean and modern task widget UI that matches the PIHU OS aesthetic. It should show progress, upcoming tasks and quick actions.
+                  </p>
+                </div>
 
-                <DetailRow icon={<CheckSquare size={16} />} label="Subtasks">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-gray-400">
-                       <Plus size={14} className="text-purple-500" /> Add subtask
-                    </div>
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="text-sm font-semibold text-gray-200 flex items-center gap-2">Subtasks <span className="text-xs text-gray-500 font-normal">3/6</span></h4>
+                    <span className="text-xs text-gray-400">50%</span>
                   </div>
-                </DetailRow>
-
-                <div className="pt-4 border-t border-[#222] space-y-3">
-                  <PropertyRow label="Due Date" value={focusedTodo.time || 'None'} icon={<Calendar size={14} />} />
-                  <PropertyRow label="Project" value={focusedTodo.project || 'Inbox'} icon={<Inbox size={14} />} />
-                  <PropertyRow label="Priority" value={focusedTodo.priority || 'None'} icon={<Flag size={14} />} 
-                    valueClass={focusedTodo.priority === 'High' ? 'text-red-400' : ''} />
-                  
-                  <div className="flex items-start justify-between text-sm py-1">
-                    <span className="text-gray-500 flex items-center gap-2 w-24"><Tag size={14} /> Tags</span>
-                    <div className="flex-1 flex flex-wrap gap-1 justify-end">
-                      {focusedTodo.tags?.map(tag => (
-                        <span key={tag} className="px-2 py-0.5 rounded text-[10px] bg-[#2a2a2a] text-gray-300">
-                          {tag}
-                        </span>
-                      ))}
-                      <button className="px-2 py-0.5 rounded text-[10px] border border-dashed border-gray-600 text-gray-500 hover:text-gray-300">
-                        + Add Tag
-                      </button>
+                  <div className="h-1 bg-white/10 rounded-full mb-4">
+                    <div className="h-full bg-[#ff2a6d] rounded-full" style={{width: '50%'}}></div>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 text-sm text-gray-300">
+                      <CheckCircle2 size={16} className="text-[#ff2a6d]" fill="currentColor" stroke="black"/> Create wireframes
+                    </div>
+                    <div className="flex items-center gap-3 text-sm text-gray-300">
+                      <CheckCircle2 size={16} className="text-[#ff2a6d]" fill="currentColor" stroke="black"/> Design light & dark variants
+                    </div>
+                    <div className="flex items-center gap-3 text-sm text-gray-300">
+                      <CheckCircle2 size={16} className="text-[#ff2a6d]" fill="currentColor" stroke="black"/> Add progress visualization
+                    </div>
+                    <div className="flex items-center gap-3 text-sm text-gray-500">
+                      <CircleDashed size={16} /> Implement interactions
+                    </div>
+                    <div className="flex items-center gap-3 text-sm text-gray-500">
+                      <CircleDashed size={16} /> Test responsiveness
                     </div>
                   </div>
                 </div>
+
+                <TaskEditableDetails todo={focusedTodo} />
 
               </div>
             </div>
 
-            <div className="p-4 border-t border-[#222] text-xs text-gray-500 text-center">
-              Created {new Date(focusedTodo.createdAt).toLocaleDateString()}
+            <div className="p-5 border-t border-white/5 flex justify-between items-center text-xs text-gray-500">
+              <span>Created by Mayank ✨</span>
+              <span>June 20, 2026</span>
             </div>
           </div>
         )}
+          </>
+        )}
 
+        </div>
       </div>
     </PluginWindow>
   );
@@ -264,15 +337,15 @@ export const TaskWindow: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
 function SidebarItem({ icon, label, count, active, onClick }: { icon: React.ReactNode, label: string, count?: number, active?: boolean, onClick?: () => void }) {
   return (
     <div 
-      className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors ${active ? 'bg-[#222] text-white' : 'text-gray-400 hover:bg-[#1a1a1a] hover:text-gray-200'}`}
+      className={`flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-all ${active ? 'bg-[#ff2a6d]/10 text-[#ff2a6d] font-semibold' : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'}`}
       onClick={onClick}
     >
       <div className="flex items-center gap-3">
         {icon}
-        <span className="text-sm font-medium">{label}</span>
+        <span className="text-sm">{label}</span>
       </div>
       {count !== undefined && count > 0 && (
-        <span className="text-xs font-semibold bg-[#2a2a2a] px-2 py-0.5 rounded-full">{count}</span>
+        <span className={`text-xs font-semibold ${active ? 'text-[#ff2a6d]' : 'text-gray-500'}`}>{count}</span>
       )}
     </div>
   );
@@ -280,29 +353,11 @@ function SidebarItem({ icon, label, count, active, onClick }: { icon: React.Reac
 
 function ActionButton({ icon, label }: { icon: React.ReactNode, label?: string }) {
   return (
-    <button className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-[#222] hover:bg-[#2a2a2a] text-gray-300 text-xs font-medium transition-colors">
-      {icon}
-      {label && <span>{label}</span>}
+    <button className="flex flex-col items-center justify-center gap-2 p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 text-gray-300 text-xs transition-colors">
+      <div className="text-gray-400">{icon}</div>
+      {label && <span className="text-center leading-tight">{label}</span>}
     </button>
   );
 }
 
-function DetailRow({ icon, label, children }: { icon: React.ReactNode, label: string, children: React.ReactNode }) {
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2 text-gray-400 font-medium text-sm">
-        {icon} {label}
-      </div>
-      {children}
-    </div>
-  );
-}
 
-function PropertyRow({ label, value, icon, valueClass }: { label: string, value: string, icon: React.ReactNode, valueClass?: string }) {
-  return (
-    <div className="flex items-center justify-between text-sm py-1">
-      <span className="text-gray-500 flex items-center gap-2 w-24">{icon} {label}</span>
-      <span className={`text-gray-200 text-right ${valueClass || ''}`}>{value}</span>
-    </div>
-  );
-}
