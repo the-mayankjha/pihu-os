@@ -50,6 +50,7 @@ export class TTSManager {
   public stop(): void {
     if (this.synth.speaking) {
       this.synth.cancel();
+      if (this.onSpeechEnded) this.onSpeechEnded();
     }
     if (this.resumeInterval) {
       clearInterval(this.resumeInterval);
@@ -59,6 +60,7 @@ export class TTSManager {
       this.currentAudio.pause();
       this.currentAudio.src = '';
       this.currentAudio = null;
+      if (this.onSpeechEnded) this.onSpeechEnded();
     }
     this.isKokoroSpeaking = false;
   }
@@ -187,27 +189,29 @@ export class TTSManager {
   public async speak(text: string): Promise<void> {
     this.stop(); // Stop any ongoing speech and clear intervals
 
-    const apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY;
-    const voiceId = import.meta.env.VITE_ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM';
+    // We prioritize Kokoro TTS (Local AI) as the default engine.
+    try {
+      await this.kokoroSpeak(text);
+    } catch (e) {
+      console.warn('[TTSManager] Kokoro failed, falling back to ElevenLabs/Native', e);
+      
+      const apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY;
+      const voiceId = import.meta.env.VITE_ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM';
 
-    if (navigator.onLine && apiKey) {
-      try {
-        useVoiceStore.getState().setActiveVoiceEngine('ElevenLabs (Online)');
-        useVoiceStore.getState().setActiveVoiceName(voiceId);
-        useVoiceStore.getState().setLastTTSError(null);
-        return await this.elevenLabsSpeak(text, apiKey, voiceId);
-      } catch (error: any) {
-        console.error('[TTSManager] ElevenLabs failed, falling back to local TTS:', error);
-        useVoiceStore.getState().setLastTTSError(error.message || String(error));
-        return this.kokoroSpeak(text);
+      if (navigator.onLine && apiKey) {
+        try {
+          useVoiceStore.getState().setActiveVoiceEngine('ElevenLabs (Online)');
+          useVoiceStore.getState().setActiveVoiceName(voiceId);
+          useVoiceStore.getState().setLastTTSError(null);
+          await this.elevenLabsSpeak(text, apiKey, voiceId);
+        } catch (error: any) {
+          console.error('[TTSManager] ElevenLabs failed, falling back to local TTS:', error);
+          useVoiceStore.getState().setLastTTSError(error.message || String(error));
+          await this.localSpeak(text);
+        }
+      } else {
+        await this.localSpeak(text);
       }
-    } else {
-      if (!navigator.onLine) {
-        useVoiceStore.getState().setLastTTSError("No internet connection.");
-      } else if (!apiKey) {
-        useVoiceStore.getState().setLastTTSError("ElevenLabs API key is missing in environment variables (.env).");
-      }
-      return this.kokoroSpeak(text);
     }
   }
 
@@ -319,29 +323,4 @@ export class TTSManager {
     }
   }
 
-  public stop() {
-    this.cleanupLocal();
-    
-    // Stop local TTS
-    if (this.synth.speaking) {
-      this.synth.cancel();
-      if (this.onSpeechEnded) this.onSpeechEnded();
-    }
-
-    // Stop ElevenLabs Audio
-    if (this.currentAudio) {
-      this.currentAudio.pause();
-      this.currentAudio.currentTime = 0;
-      // Note: onended event doesn't fire when pause() is called
-      this.currentAudio = null;
-      if (this.onSpeechEnded) this.onSpeechEnded();
-    }
-    
-    // Stop Kokoro Audio
-    if (this.kokoroSource) {
-      this.kokoroSource.stop();
-      this.kokoroSource.disconnect();
-      this.kokoroSource = null;
-    }
-  }
 }
