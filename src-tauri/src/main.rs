@@ -4,6 +4,7 @@ mod wakeword;
 mod ytmusic;
 mod stt;
 mod system_monitor;
+mod tts;
 
 fn main() {
     tauri::Builder::default()
@@ -24,6 +25,7 @@ fn main() {
             wakeword::start_wakeword_engine(app_handle.clone());
             ytmusic::start_ytmusic_engine();
             stt::start_stt_server(app_handle);
+            tts::start_tts_server();
             Ok(())
         })
         .run(tauri::generate_context!())

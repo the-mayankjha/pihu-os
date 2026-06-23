@@ -10,10 +10,10 @@ export class TTSManager {
   private currentUtterance: SpeechSynthesisUtterance | null = null;
   private resumeInterval: ReturnType<typeof setTimeout> | null = null;
   private currentAudio: HTMLAudioElement | null = null;
+  private isKokoroSpeaking: boolean = false;
 
   constructor() {
     this.synth = window.speechSynthesis;
-    // Voices might be loaded asynchronously in some browsers
     if (this.synth.onvoiceschanged !== undefined) {
       this.synth.onvoiceschanged = this.initVoice.bind(this);
     }
@@ -47,6 +47,143 @@ export class TTSManager {
               || voices[0];
   }
 
+  public stop(): void {
+    if (this.synth.speaking) {
+      this.synth.cancel();
+    }
+    if (this.resumeInterval) {
+      clearInterval(this.resumeInterval);
+      this.resumeInterval = null;
+    }
+    if (this.currentAudio) {
+      this.currentAudio.pause();
+      this.currentAudio.src = '';
+      this.currentAudio = null;
+    }
+    this.isKokoroSpeaking = false;
+  }
+
+  private async fetchKokoroChunk(text: string): Promise<string | null> {
+    try {
+      const response = await fetch('http://127.0.0.1:48126/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text,
+          voice: 'af_bella',
+          speed: 1.0
+        })
+      });
+
+      if (!response.ok) return null;
+      
+      const arrayBuffer = await response.arrayBuffer();
+      const blob = new Blob([arrayBuffer], { type: 'audio/wav' });
+      return URL.createObjectURL(blob);
+    } catch (e) {
+      console.error("[TTSManager] Error fetching chunk:", e);
+      return null;
+    }
+  }
+
+  private async kokoroSpeak(text: string): Promise<void> {
+    this.isKokoroSpeaking = true;
+    return new Promise(async (resolve) => {
+      try {
+        useVoiceStore.getState().setActiveVoiceEngine('Kokoro TTS (Local AI)');
+        useVoiceStore.getState().setActiveVoiceName('af_bella');
+        
+        // Clean markdown characters so Kokoro doesn't read asterisks
+        const cleanText = text
+            .replace(/\*\*/g, '')
+            .replace(/\*/g, '')
+            .replace(/#/g, '')
+            .replace(/_/g, '')
+            .replace(/`/g, '')
+            .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1') // Keep link text, remove URL
+            .replace(/>/g, '')
+            .replace(/---/g, '');
+
+        // Split text into raw sentences
+        const rawSentences = cleanText.replace(/([.!?\n])\s+/g, "$1|").split("|").map(s => s.trim()).filter(s => s.length > 0);
+        
+        // Group sentences to ensure each chunk is long enough to cover generation time of the NEXT chunk
+        // If a chunk is just 2 words, it plays instantly, causing a pause while the next chunk generates.
+        const minChunkLength = 50;
+        const sentences: string[] = [];
+        let currentChunk = "";
+        
+        for (const s of rawSentences) {
+            currentChunk += (currentChunk ? " " : "") + s;
+            if (currentChunk.length >= minChunkLength) {
+                sentences.push(currentChunk);
+                currentChunk = "";
+            }
+        }
+        if (currentChunk.length > 0) {
+            sentences.push(currentChunk);
+        }
+        
+        if (sentences.length === 0) {
+            resolve();
+            return;
+        }
+
+        let nextFetchPromise = this.fetchKokoroChunk(sentences[0]);
+
+        for (let i = 0; i < sentences.length; i++) {
+           if (!this.isKokoroSpeaking) break; // Stop if interrupted
+           
+           const audioUrl = await nextFetchPromise;
+           
+           // Prefetch the next chunk while this one is about to play
+           if (i + 1 < sentences.length) {
+               nextFetchPromise = this.fetchKokoroChunk(sentences[i + 1]);
+           }
+
+           if (audioUrl) {
+               await new Promise((res) => {
+                   this.currentAudio = new Audio(audioUrl);
+                   
+                   this.currentAudio.onplay = () => {
+                       if (i === 0 && this.onSpeechStarted) this.onSpeechStarted();
+                   };
+                   
+                   this.currentAudio.onended = () => {
+                       URL.revokeObjectURL(audioUrl);
+                       res(null);
+                   };
+                   
+                   this.currentAudio.onerror = (e) => {
+                       console.error('[TTSManager] Chunk playback error:', e);
+                       URL.revokeObjectURL(audioUrl);
+                       res(null);
+                   };
+                   
+                   this.currentAudio.play().catch(res);
+               });
+           } else {
+               // If fetch failed, fallback to native for the rest
+               console.warn("[TTSManager] Kokoro chunk failed, falling back to native TTS");
+               await this.localSpeak(sentences.slice(i).join(" "));
+               break;
+           }
+        }
+
+        this.currentAudio = null;
+        if (this.onSpeechEnded && this.isKokoroSpeaking) {
+            this.onSpeechEnded();
+        }
+        this.isKokoroSpeaking = false;
+        resolve();
+      } catch (err: any) {
+        console.error("[TTSManager] Kokoro speech failed:", err);
+        await this.localSpeak(text);
+        resolve();
+      }
+    });
+  }
+
   public async speak(text: string): Promise<void> {
     this.stop(); // Stop any ongoing speech and clear intervals
 
@@ -56,13 +193,21 @@ export class TTSManager {
     if (navigator.onLine && apiKey) {
       try {
         useVoiceStore.getState().setActiveVoiceEngine('ElevenLabs (Online)');
+        useVoiceStore.getState().setActiveVoiceName(voiceId);
+        useVoiceStore.getState().setLastTTSError(null);
         return await this.elevenLabsSpeak(text, apiKey, voiceId);
-      } catch (error) {
+      } catch (error: any) {
         console.error('[TTSManager] ElevenLabs failed, falling back to local TTS:', error);
-        return this.localSpeak(text);
+        useVoiceStore.getState().setLastTTSError(error.message || String(error));
+        return this.kokoroSpeak(text);
       }
     } else {
-      return this.localSpeak(text);
+      if (!navigator.onLine) {
+        useVoiceStore.getState().setLastTTSError("No internet connection.");
+      } else if (!apiKey) {
+        useVoiceStore.getState().setLastTTSError("ElevenLabs API key is missing in environment variables (.env).");
+      }
+      return this.kokoroSpeak(text);
     }
   }
 
@@ -125,6 +270,7 @@ export class TTSManager {
   private async localSpeak(text: string): Promise<void> {
     return new Promise((resolve) => {
       useVoiceStore.getState().setActiveVoiceEngine('Local SpeechSynthesis');
+      useVoiceStore.getState().setActiveVoiceName(this.voice ? this.voice.name : 'Unknown Native Voice');
 
       // Store in class property to prevent garbage collection before onend fires
       this.currentUtterance = new SpeechSynthesisUtterance(text);
@@ -189,6 +335,13 @@ export class TTSManager {
       // Note: onended event doesn't fire when pause() is called
       this.currentAudio = null;
       if (this.onSpeechEnded) this.onSpeechEnded();
+    }
+    
+    // Stop Kokoro Audio
+    if (this.kokoroSource) {
+      this.kokoroSource.stop();
+      this.kokoroSource.disconnect();
+      this.kokoroSource = null;
     }
   }
 }

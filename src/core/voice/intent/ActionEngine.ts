@@ -3,6 +3,7 @@ import { PIHU_CORE_IDENTITY } from './systemPrompt';
 import { buildGeminiTools, executeTool } from './tools/index';
 import { useLayoutStore } from '../../layout/LayoutStore';
 import { useMusicStore } from '../../../stores/musicStore';
+import { useVoiceStore } from '../../../stores/voiceStore';
 import { getGlobalSystemStats } from '../../../widgets/system/useSystemMonitor';
 
 export class ActionEngine {
@@ -15,6 +16,7 @@ export class ActionEngine {
   private getDynamicContext(): string {
     const layoutState = useLayoutStore.getState();
     const musicState = useMusicStore.getState();
+    const voiceState = useVoiceStore.getState();
     const systemStats = getGlobalSystemStats();
 
     // Map open widgets/apps
@@ -45,6 +47,12 @@ export class ActionEngine {
       currently_playing_music: musicState.isPlaying 
         ? `${musicState.trackInfo.title} by ${musicState.trackInfo.artist}` 
         : "Nothing playing",
+      voice_engine: {
+        active: voiceState.activeVoiceEngine,
+        voice_name: voiceState.activeVoiceName || "Unknown",
+        last_error: voiceState.lastTTSError || "No error recorded yet.",
+        is_api_key_configured: !!import.meta.env.VITE_ELEVENLABS_API_KEY
+      },
       available_mcps: ["filesystem", "semantic-search", "browser"],
       capabilities: ["File Actions", "Semantic Search", "Automation", "Workspace Control", "Application Control"]
     };

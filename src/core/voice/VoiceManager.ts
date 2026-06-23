@@ -53,7 +53,8 @@ export class VoiceManager {
       console.log(`[VOICE MANAGER] Response: "${response}"`);
       useVoiceStore.getState().setResponse(response);
 
-      this.setOrbState(OrbState.SPEAKING);
+      // State remains THINKING until the audio actually starts playing.
+      // TTSManager will trigger onSpeechStarted which sets the state to SPEAKING.
       await this.ttsManager.speak(response);
 
       if (this.isProcessing) {
