@@ -54,13 +54,23 @@ export const fileMcpTools: ActionTool[] = [
         console.log(`[fileMcpTools] Opening target directory via pihu-system-mcp: ${targetPath}`);
 
         const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-        const cmd = isMac ? `open "${targetPath}"` : `explorer "${targetPath}"`;
+        let cmd = '';
+
+        if (isMac) {
+          // Use osascript so Finder navigates inside the EXISTING frontmost window if open,
+          // instead of spawning a new separate window.
+          cmd = `osascript -e 'tell application "Finder" to if (count of Finder windows) > 0 then set target of front Finder window to (POSIX file "${targetPath}" as alias) else open (POSIX file "${targetPath}" as alias) end if' -e 'tell application "Finder" to activate'`;
+        } else {
+          cmd = `explorer "${targetPath}"`;
+        }
 
         try {
           await invoke('execute_shell_command', { command: cmd });
-        } catch {
-          console.log(`[fileMcpTools] Executed open command fallback: ${cmd}`);
+        } catch (err) {
+          console.warn(`[fileMcpTools] Window reuse command failed, falling back to open:`, err);
+          await invoke('execute_shell_command', { command: isMac ? `open "${targetPath}"` : `explorer "${targetPath}"` });
         }
+
 
         return {
           success: true,
