@@ -143,7 +143,11 @@ export const systemTools: ActionTool[] = [
         const entry = appMap[normName];
 
         let cmd = '';
-        if (entry) {
+        if (normName === 'finder' || normName === 'explorer') {
+          cmd = isMac
+            ? `osascript -e 'tell application "Finder" to activate'`
+            : `explorer`;
+        } else if (entry) {
           cmd = isMac ? `open -a "${entry.mac}"` : `start "" "${entry.win}"`;
         } else {
           cmd = isMac ? `open -a "${rawAppName}"` : `start "" "${rawAppName}"`;
@@ -151,6 +155,7 @@ export const systemTools: ActionTool[] = [
 
         console.log(`[systemTools] Launching app command: ${cmd}`);
         await invoke('execute_shell_command', { command: cmd });
+
 
         return {
           success: true,
