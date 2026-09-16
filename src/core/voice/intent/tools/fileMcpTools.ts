@@ -25,11 +25,24 @@ export const fileMcpTools: ActionTool[] = [
         const folderName = args.folder_name;
 
         const workspaceKnownPaths: Record<string, string> = {
-          'pihu_mcp': '/Users/mayankjha/Documents/projects/pihu-os/src-tauri/pihu_mcps',
-          'pihu_mcps': '/Users/mayankjha/Documents/projects/pihu-os/src-tauri/pihu_mcps',
-          'src-tauri': '/Users/mayankjha/Documents/projects/pihu-os/src-tauri',
+          'pihumcp': '/Users/mayankjha/Documents/projects/pihu-os/src-tauri/pihu_mcps',
+          'pihumcps': '/Users/mayankjha/Documents/projects/pihu-os/src-tauri/pihu_mcps',
+          'pihumcpfolder': '/Users/mayankjha/Documents/projects/pihu-os/src-tauri/pihu_mcps',
+          'srctauri': '/Users/mayankjha/Documents/projects/pihu-os/src-tauri',
           'src': '/Users/mayankjha/Documents/projects/pihu-os/src',
           'models': '/Users/mayankjha/Documents/projects/pihu-os/models',
+          'downloads': '/Users/mayankjha/Downloads',
+          'download': '/Users/mayankjha/Downloads',
+          'documents': '/Users/mayankjha/Documents',
+          'document': '/Users/mayankjha/Documents',
+          'desktop': '/Users/mayankjha/Desktop',
+          'projects': '/Users/mayankjha/Documents/projects',
+          'project': '/Users/mayankjha/Documents/projects',
+          'pihu': '/Users/mayankjha/Documents/projects/pihu-os',
+          'pihuos': '/Users/mayankjha/Documents/projects/pihu-os',
+          'home': '/Users/mayankjha',
+          'user': '/Users/mayankjha',
+          'pictures': '/Users/mayankjha/Pictures',
         };
 
         let targetPath = workspaceKnownPaths[folderName.toLowerCase().replace(/[-_ ]/g, '')] || folderName;
@@ -65,6 +78,55 @@ export const fileMcpTools: ActionTool[] = [
       }
     },
   },
+
+  {
+    declaration: {
+      name: 'file_mcp_open_file',
+      description: 'Opens a file with its default system app or reveals it in Finder/Explorer using pihu-file-mcp & pihu-system-mcp. Use when user says "open file [name]", "view document [path]", "open image [name]", "reveal [file] in finder".',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          path: {
+            type: 'STRING',
+            description: 'File path or filename to open.',
+          },
+          reveal: {
+            type: 'BOOLEAN',
+            description: 'If true, reveals the file in Finder/Explorer instead of opening it.',
+          },
+        },
+        required: ['path'],
+      },
+    },
+    execute: async (args): Promise<ToolResult> => {
+      try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        let filePath = args.path.trim();
+        if (!filePath.startsWith('/')) {
+          filePath = `/Users/mayankjha/Documents/projects/pihu-os/${filePath}`;
+        }
+
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+        const cmd = args.reveal
+          ? (isMac ? `open -R "${filePath}"` : `explorer /select,"${filePath}"`)
+          : (isMac ? `open "${filePath}"` : `explorer "${filePath}"`);
+
+        await invoke('execute_shell_command', { command: cmd });
+
+        return {
+          success: true,
+          data: {
+            action: args.reveal ? 'revealed_file' : 'opened_file',
+            path: filePath,
+            message: `Successfully ${args.reveal ? 'revealed' : 'opened'} ${args.path}.`,
+          },
+        };
+      } catch (e: any) {
+        return { success: false, error: `Failed to open file: ${e?.message || String(e)}` };
+      }
+    },
+  },
+
 
   {
     declaration: {

@@ -96,4 +96,136 @@ export const systemTools: ActionTool[] = [
       }
     },
   },
+
+  {
+    declaration: {
+      name: 'system_open_application',
+      description: 'Opens an OS application like Brave, Chrome, Safari, Firefox, VS Code, Terminal, Spotify, Finder, Calculator, Notes, Slack, Discord. Use when user says "open brave", "launch chrome", "open vscode", "start terminal", "open spotify", "launch calculator".',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          app_name: {
+            type: 'STRING',
+            description: 'Name of the application to open, e.g. "Brave", "Chrome", "VS Code", "Terminal", "Spotify", "Safari", "Finder"',
+          },
+        },
+        required: ['app_name'],
+      },
+    },
+    execute: async (args): Promise<ToolResult> => {
+      try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        const rawAppName = args.app_name.trim();
+        const normName = rawAppName.toLowerCase().replace(/[-_ ]/g, '');
+
+        const appMap: Record<string, { mac: string; win: string }> = {
+          brave: { mac: 'Brave Browser', win: 'brave' },
+          bravebrowser: { mac: 'Brave Browser', win: 'brave' },
+          chrome: { mac: 'Google Chrome', win: 'chrome' },
+          googlechrome: { mac: 'Google Chrome', win: 'chrome' },
+          safari: { mac: 'Safari', win: 'safari' },
+          firefox: { mac: 'Firefox', win: 'firefox' },
+          code: { mac: 'Visual Studio Code', win: 'code' },
+          vscode: { mac: 'Visual Studio Code', win: 'code' },
+          visualstudiocode: { mac: 'Visual Studio Code', win: 'code' },
+          spotify: { mac: 'Spotify', win: 'spotify' },
+          terminal: { mac: 'Terminal', win: 'cmd' },
+          iterm: { mac: 'iTerm', win: 'wt' },
+          finder: { mac: 'Finder', win: 'explorer' },
+          explorer: { mac: 'Finder', win: 'explorer' },
+          calculator: { mac: 'Calculator', win: 'calc' },
+          notes: { mac: 'Notes', win: 'notepad' },
+          slack: { mac: 'Slack', win: 'slack' },
+          discord: { mac: 'Discord', win: 'discord' },
+        };
+
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+        const entry = appMap[normName];
+
+        let cmd = '';
+        if (entry) {
+          cmd = isMac ? `open -a "${entry.mac}"` : `start "" "${entry.win}"`;
+        } else {
+          cmd = isMac ? `open -a "${rawAppName}"` : `start "" "${rawAppName}"`;
+        }
+
+        console.log(`[systemTools] Launching app command: ${cmd}`);
+        await invoke('execute_shell_command', { command: cmd });
+
+        return {
+          success: true,
+          data: {
+            action: 'opened_application',
+            app_name: rawAppName,
+            command: cmd,
+            message: `Successfully opened ${rawAppName}.`,
+          },
+        };
+      } catch (e: any) {
+        return { success: false, error: `Failed to open app "${args.app_name}": ${e?.message || String(e)}` };
+      }
+    },
+  },
+
+  {
+    declaration: {
+      name: 'system_search_web_browser',
+      description: 'Opens a browser and searches the web for a query. Supports specific browsers like Brave, Chrome, Safari, Firefox. Use when user says "search [query] on brave", "search [query] on chrome", "look up [query] in brave", "search [query] on google", "open brave and search [query]".',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          query: {
+            type: 'STRING',
+            description: 'Search terms or question to look up, e.g. "pihu os", "latest news", "best rust frameworks"',
+          },
+          browser: {
+            type: 'STRING',
+            description: 'Target browser name if specified, e.g. "Brave", "Chrome", "Safari", "Firefox". Defaults to Brave if user mentions brave, or default OS browser.',
+          },
+        },
+        required: ['query'],
+      },
+    },
+    execute: async (args): Promise<ToolResult> => {
+      try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        const query = args.query.trim();
+        const rawBrowser = (args.browser || '').trim().toLowerCase();
+
+        const searchUrl = `https://search.brave.com/search?q=${encodeURIComponent(query)}`;
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+
+        let cmd = '';
+        if (rawBrowser.includes('brave')) {
+          cmd = isMac ? `open -a "Brave Browser" "${searchUrl}"` : `start brave "${searchUrl}"`;
+        } else if (rawBrowser.includes('chrome')) {
+          cmd = isMac ? `open -a "Google Chrome" "${searchUrl}"` : `start chrome "${searchUrl}"`;
+        } else if (rawBrowser.includes('safari')) {
+          cmd = isMac ? `open -a "Safari" "${searchUrl}"` : `start safari "${searchUrl}"`;
+        } else if (rawBrowser.includes('firefox')) {
+          cmd = isMac ? `open -a "Firefox" "${searchUrl}"` : `start firefox "${searchUrl}"`;
+        } else {
+          // Default browser
+          cmd = isMac ? `open "${searchUrl}"` : `start "" "${searchUrl}"`;
+        }
+
+        console.log(`[systemTools] Executing browser search command: ${cmd}`);
+        await invoke('execute_shell_command', { command: cmd });
+
+        return {
+          success: true,
+          data: {
+            action: 'searched_web',
+            query,
+            browser: rawBrowser || 'default',
+            search_url: searchUrl,
+            message: `Searching "${query}" on ${rawBrowser || 'browser'}.`,
+          },
+        };
+      } catch (e: any) {
+        return { success: false, error: `Failed to execute search: ${e?.message || String(e)}` };
+      }
+    },
+  },
 ];
+
