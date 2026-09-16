@@ -6,6 +6,23 @@ mod stt;
 mod system_monitor;
 mod tts;
 
+pub fn get_python_cmd() -> String {
+    let relative_paths = [
+        "python/venv/bin/python",
+        "python/venv/Scripts/python.exe",
+        "src-tauri/python/venv/bin/python",
+        "src-tauri/python/venv/Scripts/python.exe",
+    ];
+
+    for path in &relative_paths {
+        if std::path::Path::new(path).exists() {
+            return path.to_string();
+        }
+    }
+
+    "python3".to_string()
+}
+
 fn main() {
     tauri::Builder::default()
         .manage(wakeword::WakewordState {
@@ -18,7 +35,8 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             wakeword::trigger_listening,
             wakeword::speech_done,
-            system_monitor::get_system_info
+            system_monitor::get_system_info,
+            system_monitor::execute_shell_command
         ])
         .setup(|app| {
             let app_handle = app.handle().clone();

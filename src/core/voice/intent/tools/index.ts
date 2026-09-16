@@ -2,6 +2,7 @@ import { musicTools } from './musicTools';
 import { widgetTools } from './widgetTools';
 import { todoTools } from './todoTools';
 import { systemTools } from './systemTools';
+import { fileMcpTools } from './fileMcpTools';
 import type { ActionTool, GeminiTool, ToolResult } from './types';
 
 // ─── Master Tool Registry ─────────────────────────────────────────────────────
@@ -12,6 +13,7 @@ export const ALL_TOOLS: ActionTool[] = [
   ...widgetTools,
   ...todoTools,
   ...systemTools,
+  ...fileMcpTools,
 ];
 
 /** Executor map: tool name → executor function */

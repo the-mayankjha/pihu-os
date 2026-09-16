@@ -44,6 +44,8 @@ import {
   SystemResourceMonitorWidget, SystemTopProcessesWidget, SystemDetailedOverviewWidget 
 } from '../widgets/system/SystemLargeWidgets';
 
+import { SettingsWindow } from '../widgets/settings/SettingsWindow';
+
 export default function App() {
   const { widgets } = useLayoutStore();
 
@@ -103,6 +105,8 @@ export default function App() {
           onClose={() => useLayoutStore.getState().toggleWidget('task-window')} 
         />
       )}
+
+      {(widgets['settings-window']?.isOpen) && <SettingsWindow />}
 
       <YTMusicPlugin />
 

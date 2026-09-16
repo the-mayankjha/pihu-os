@@ -14,7 +14,10 @@ impl TtsServer {
     pub fn start(&mut self) -> Result<(), String> {
         println!("Starting TTS Server...");
         
-        let mut command = Command::new("python3");
+        let python_cmd = crate::get_python_cmd();
+        println!("TTS Server using python binary: {}", python_cmd);
+
+        let mut command = Command::new(&python_cmd);
         command.arg("python/tts_server.py");
 
         match command.spawn() {

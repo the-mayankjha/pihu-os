@@ -5,8 +5,11 @@ use std::thread;
 pub fn start_ytmusic_engine() {
     println!("Starting YTMusic Engine...");
     
+    let python_cmd = crate::get_python_cmd();
+    println!("YTMusic Engine using python binary: {}", python_cmd);
+
     // Spawn the Python process for YTMusic API Server
-    let mut child = match Command::new("python3")
+    let mut child = match Command::new(&python_cmd)
         .arg("python/ytmusic_server.py")
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

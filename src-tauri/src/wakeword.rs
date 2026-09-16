@@ -39,8 +39,11 @@ struct WakeWordPayload {
 pub fn start_wakeword_engine(app: AppHandle) {
     println!("Starting Wakeword Engine...");
     
+    let python_cmd = crate::get_python_cmd();
+    println!("Wakeword Engine using python binary: {}", python_cmd);
+
     // Spawn the Python process
-    let mut child = match Command::new("python3")
+    let mut child = match Command::new(&python_cmd)
         .arg("python/wakeword.py")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

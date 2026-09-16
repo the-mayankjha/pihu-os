@@ -195,3 +195,29 @@ pub fn get_system_info(state: State<'_, SystemMonitorState>) -> SystemStats {
         battery: battery_info,
     }
 }
+
+#[tauri::command]
+pub fn execute_shell_command(command: String) -> Result<String, String> {
+    println!("Executing OS command via Tauri: {}", command);
+    let output = if cfg!(target_os = "windows") {
+        std::process::Command::new("cmd")
+            .args(&["/C", &command])
+            .output()
+    } else {
+        std::process::Command::new("sh")
+            .arg("-c")
+            .arg(&command)
+            .output()
+    };
+
+    match output {
+        Ok(out) => {
+            if out.status.success() {
+                Ok(String::from_utf8_lossy(&out.stdout).to_string())
+            } else {
+                Err(String::from_utf8_lossy(&out.stderr).to_string())
+            }
+        }
+        Err(e) => Err(e.to_string()),
+    }
+}

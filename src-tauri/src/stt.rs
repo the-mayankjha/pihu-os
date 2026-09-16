@@ -11,8 +11,11 @@ pub struct STTState {
 pub fn start_stt_server(app: AppHandle) {
     println!("Starting STT WebSocket Server...");
     
+    let python_cmd = crate::get_python_cmd();
+    println!("STT Server using python binary: {}", python_cmd);
+
     // Spawn the Python process
-    let mut child = match Command::new("python3")
+    let mut child = match Command::new(&python_cmd)
         .arg("python/stt_server.py")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

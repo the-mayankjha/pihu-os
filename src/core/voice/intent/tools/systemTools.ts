@@ -71,4 +71,29 @@ export const systemTools: ActionTool[] = [
       };
     },
   },
+
+  {
+    declaration: {
+      name: 'system_open_settings',
+      description: 'Opens the Settings / PIHU Context Protocol Window to configure API keys, token rotation, and view engine health diagnostics. Use when user says "Initialize Pihu Context Protocol", "open settings", "configure API keys", "manage keys", "show protocol".',
+    },
+    execute: async (): Promise<ToolResult> => {
+      try {
+        const { useLayoutStore } = await import('../../../layout/LayoutStore');
+        const store = useLayoutStore.getState();
+        if (!store.widgets['settings-window']?.isOpen) {
+          store.toggleWidget('settings-window');
+        }
+        return {
+          success: true,
+          data: {
+            action: 'opened_settings',
+            message: 'Opened PIHU Context Protocol Settings Window.',
+          },
+        };
+      } catch (e: any) {
+        return { success: false, error: e?.message || String(e) };
+      }
+    },
+  },
 ];

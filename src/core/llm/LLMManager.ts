@@ -1,10 +1,10 @@
 import { GeminiModel } from './types';
 import type { GeminiRequestBody, GeminiResponse, GeminiContent, LLMRequest, LLMToolRequest } from './types';
 
+import { useSettingsStore } from '../../stores/settingsStore';
+
 export class LLMManager {
   private static instance: LLMManager;
-  private apiKeys: string[] = [];
-  private currentKeyIndex: number = 0;
 
   private constructor() {
     this.initializeKeys();
@@ -18,28 +18,48 @@ export class LLMManager {
   }
 
   private initializeKeys() {
-    // Expecting comma separated keys: key1,key2,key3
-    const keysStr = import.meta.env.VITE_GEMINI_API_KEYS || '';
-    this.apiKeys = keysStr.split(',').map((k: string) => k.trim()).filter((k: string) => k.length > 0);
-    
-    if (this.apiKeys.length === 0) {
-      console.error('[LLMManager] No API keys found in VITE_GEMINI_API_KEYS');
+    // If settingsStore has keys, ensure initial seed from VITE_GEMINI_API_KEYS if store is empty
+    const envKeysStr = import.meta.env.VITE_GEMINI_API_KEYS || '';
+    const envKeys = envKeysStr.split(',').map((k: string) => k.trim()).filter((k: string) => k.length > 0);
+
+    const store = useSettingsStore.getState();
+    if (store.geminiApiKeys.length === 0 && envKeys.length > 0) {
+      envKeys.forEach((k: string) => store.addGeminiKey(k));
     }
+  }
+
+  private get apiKeys(): string[] {
+    const storeKeys = useSettingsStore.getState().geminiApiKeys;
+    if (storeKeys.length > 0) return storeKeys;
+    const envKeysStr = import.meta.env.VITE_GEMINI_API_KEYS || '';
+    return envKeysStr.split(',').map((k: string) => k.trim()).filter((k: string) => k.length > 0);
   }
 
   private get currentApiKey(): string {
-    if (this.apiKeys.length === 0) return '';
-    return this.apiKeys[this.currentKeyIndex];
+    const keys = this.apiKeys;
+    if (keys.length === 0) return '';
+    const activeIndex = useSettingsStore.getState().activeKeyIndex;
+    const safeIndex = activeIndex < keys.length ? activeIndex : 0;
+    return keys[safeIndex];
   }
 
   private rotateKey() {
-    if (this.apiKeys.length <= 1) {
-      console.warn('[LLMManager] Cannot rotate keys: only 1 (or 0) key provided.');
+    const keys = this.apiKeys;
+    if (keys.length <= 1) {
+      console.warn('[LLMManager] Cannot rotate keys: only 1 (or 0) key provided in PIHU Token Protocol.');
       return false;
     }
     
-    this.currentKeyIndex = (this.currentKeyIndex + 1) % this.apiKeys.length;
-    console.log(`[LLMManager] Switched to API key index ${this.currentKeyIndex}`);
+    const currentIndex = useSettingsStore.getState().activeKeyIndex;
+    useSettingsStore.getState().markKeyExhausted(currentIndex);
+    const newIndex = useSettingsStore.getState().activeKeyIndex;
+
+    if (newIndex === currentIndex) {
+      console.warn('[LLMManager] All configured Gemini API keys are currently exhausted.');
+      return false;
+    }
+
+    console.log(`[LLMManager] PIHU Token Protocol rotated key to index ${newIndex}`);
     return true;
   }
 
@@ -107,9 +127,11 @@ export class LLMManager {
           throw new Error("No candidates returned from Gemini");
         }
 
+        const activeIndex = useSettingsStore.getState().activeKeyIndex;
+
         // Handle specific errors (e.g. 429 Rate Limit)
         if (response.status === 429) {
-          console.warn(`[LLMManager] Rate limit hit for model ${model} with key index ${this.currentKeyIndex}.`);
+          console.warn(`[LLMManager] Rate limit hit for model ${model} with key index ${activeIndex}.`);
           if (this.rotateKey()) {
             attempts++;
             continue; // Retry with new key
@@ -118,7 +140,7 @@ export class LLMManager {
         
         // 403 could mean invalid key or quota exceeded
         if (response.status === 403) {
-           console.warn(`[LLMManager] Auth/Quota error (${response.status}) on key index ${this.currentKeyIndex}.`);
+           console.warn(`[LLMManager] Auth/Quota error (${response.status}) on key index ${activeIndex}.`);
            if (this.rotateKey()) {
              attempts++;
              continue; // Retry with new key

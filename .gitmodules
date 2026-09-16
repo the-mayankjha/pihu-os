@@ -1,0 +1,3 @@
+[submodule "src-tauri/pihu_mcps"]
+	path = src-tauri/pihu_mcps
+	url = https://github.com/the-mayankjha/pihu_mcp.git
