@@ -3,6 +3,7 @@ import { widgetTools } from './widgetTools';
 import { todoTools } from './todoTools';
 import { systemTools } from './systemTools';
 import { fileMcpTools } from './fileMcpTools';
+import { googleWorkspaceTools } from './googleWorkspaceTools';
 import type { ActionTool, GeminiTool, ToolResult } from './types';
 
 // ─── Master Tool Registry ─────────────────────────────────────────────────────
@@ -14,7 +15,9 @@ export const ALL_TOOLS: ActionTool[] = [
   ...todoTools,
   ...systemTools,
   ...fileMcpTools,
+  ...googleWorkspaceTools,
 ];
+
 
 /** Executor map: tool name → executor function */
 const EXECUTOR_MAP = new Map<string, ActionTool['execute']>(

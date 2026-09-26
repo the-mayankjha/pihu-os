@@ -39,10 +39,13 @@ export class VoiceManager {
     this.sttManager.onTranscription = async (text) => {
       console.log(`[VOICE MANAGER] Received transcription from STT: "${text}"`);
       if (!text || text === '[BLANK_AUDIO]') {
-        console.log('[VOICE MANAGER] Transcription empty or blank. Resetting.');
+        console.log('[VOICE MANAGER] Transcription empty or blank. Resetting and resuming wakeword.');
         this.setOrbState(OrbState.IDLE);
         useVoiceStore.getState().reset();
         this.isProcessing = false;
+        invoke('speech_done').catch(e =>
+          console.warn('[VOICE MANAGER] speech_done invoke failed:', e)
+        );
         return;
       }
 
@@ -58,11 +61,17 @@ export class VoiceManager {
       await this.ttsManager.speak(response);
 
       if (this.isProcessing) {
-        console.log('[VOICE MANAGER] TTS done. Starting follow-up conversation.');
+        console.log('[VOICE MANAGER] TTS done. Resetting processing state and resuming wakeword.');
         this.isProcessing = false;
-        this.startListening(true);
+        this.setOrbState(OrbState.IDLE);
+        invoke('speech_done').catch(e =>
+          console.warn('[VOICE MANAGER] speech_done invoke failed:', e)
+        );
       } else {
         console.log('[VOICE MANAGER] Processing cancelled during speech.');
+        invoke('speech_done').catch(e =>
+          console.warn('[VOICE MANAGER] speech_done invoke failed:', e)
+        );
       }
     };
 
@@ -113,6 +122,9 @@ export class VoiceManager {
       this.setOrbState(OrbState.IDLE);
       useVoiceStore.getState().reset();
       this.isProcessing = false;
+      invoke('speech_done').catch(e =>
+        console.warn('[VOICE MANAGER] speech_done invoke failed:', e)
+      );
     };
 
     this.ttsManager.onSpeechStarted = () => {

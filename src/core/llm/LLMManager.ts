@@ -227,8 +227,11 @@ export class LLMManager {
     request: LLMToolRequest,
     toolExecutor: (name: string, args: Record<string, any>) => Promise<{ success: boolean; data?: any; error?: string }>
   ): Promise<string> {
+    const historyTurns = request.history || [];
+    const userTurn: GeminiContent = { role: 'user', parts: [{ text: request.prompt }] };
+
     const body: GeminiRequestBody = {
-      contents: [{ role: 'user', parts: [{ text: request.prompt }] }],
+      contents: [...historyTurns, userTurn],
       tools: request.tools,
       tool_config: { function_calling_config: { mode: 'AUTO' } },
     };
@@ -283,7 +286,8 @@ export class LLMManager {
     const body2: GeminiRequestBody = {
       ...body,
       contents: [
-        { role: 'user', parts: [{ text: request.prompt }] },
+        ...historyTurns,
+        userTurn,
         modelTurn,
         toolTurn,
       ],

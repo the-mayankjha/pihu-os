@@ -72,6 +72,7 @@ export interface GeminiResponse {
 
 /** Request shape for function-calling flows */
 export interface LLMToolRequest extends LLMRequest {
+  history?: GeminiContent[];
   tools: Array<{
     functionDeclarations: Array<{
       name: string;

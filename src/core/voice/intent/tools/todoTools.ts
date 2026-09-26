@@ -38,21 +38,48 @@ export const todoTools: ActionTool[] = [
         required: ['text'],
       },
     },
-    execute: (args): ToolResult => {
+    execute: async (args): Promise<ToolResult> => {
       const tagsArray = args.tags ? args.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : undefined;
       useTodoStore.getState().addTodo({
         text: args.text,
         description: args.description,
         dueDate: args.dueDate,
         priority: args.priority ?? 'Medium',
-        project: args.project,
+        project: args.project || 'PIHU Tasks',
         workspace: args.workspace,
         tags: tagsArray,
         isStarred: args.starred === 'true',
         reminder: args.reminder,
         repeat: args.repeat,
       });
-      return { success: true, data: { added: args.text, priority: args.priority ?? 'Medium' } };
+
+      // Synchronize to Google Tasks if connected
+      let googleTaskSynced = false;
+      try {
+        const { useSettingsStore } = await import('../../../../stores/settingsStore');
+        const settings = useSettingsStore.getState();
+        if (settings.googleAccountConnected || (settings.connectedGoogleAccounts && settings.connectedGoogleAccounts.length > 0)) {
+          const { runGoogleApiClient } = await import('./googleWorkspaceTools');
+          const syncRes = await runGoogleApiClient('create_task', args.text, args.dueDate || '', args.description || '');
+          if (syncRes && !syncRes.error) {
+            googleTaskSynced = true;
+          }
+        }
+      } catch (err) {
+        console.warn('[todoTools] Google Tasks sync error:', err);
+      }
+
+      return {
+        success: true,
+        data: {
+          added: args.text,
+          priority: args.priority ?? 'Medium',
+          syncedToGoogleTasks: googleTaskSynced,
+          message: googleTaskSynced
+            ? `Created task "${args.text}" in PIHU Tasks and synced to Google Tasks, Sir.`
+            : `Created task "${args.text}" in PIHU Tasks, Sir.`
+        }
+      };
     },
   },
 

@@ -120,6 +120,11 @@ speech_detected_in_session = False
 while True:
     try:
         if mode == "WAKEWORD":
+            if not stream.is_active():
+                try:
+                    stream.start_stream()
+                except Exception:
+                    pass
             data = stream.read(CHUNK, exception_on_overflow=False)
             np_data = np.frombuffer(data, dtype=np.int16)
             prediction = owwModel.predict(np_data)
@@ -136,33 +141,34 @@ while True:
                     speech_detected_in_session = False
                     vad_state = np.zeros((2, 1, 128), dtype=np.float32)
 
-                    # CRITICAL: Stop the PyAudio stream so the browser's getUserMedia
-                    # can exclusively capture the microphone for STT.
-                    # If both compete for the mic simultaneously, the browser gets silence.
-                    stream.stop_stream()
+                    try:
+                        stream.stop_stream()
+                    except Exception:
+                        pass
                     break
 
         elif mode == "LISTENING":
-            # The browser's STTManager exclusively captures the mic and runs its own VAD.
-            # We simply idle here until the frontend sends SPEECH_DONE via stdin,
-            # which causes the listen_stdin thread to call stream.start_stream() and
-            # set mode = "WAKEWORD".
             import time as _time
-            _time.sleep(0.05)  # 50ms idle poll — no CPU burn
-
+            _time.sleep(0.05)
                     
     except KeyboardInterrupt:
         break
     except Exception as e:
         print(f"WAKEWORD_ERROR: {e}", file=sys.stderr)
-        # Try to recover the stream
+        sys.stderr.flush()
+        import time as _time
+        _time.sleep(0.5)
         try:
-            stream.start_stream()
+            if mode == "WAKEWORD" and not stream.is_active():
+                stream.start_stream()
         except Exception:
             pass
-        break
+        continue
 
-stream.stop_stream()
-stream.close()
-audio.terminate()
+try:
+    stream.stop_stream()
+    stream.close()
+    audio.terminate()
+except Exception:
+    pass
 

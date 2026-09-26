@@ -1,6 +1,14 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+export interface GoogleAccount {
+  email: string;
+  name: string;
+  picture?: string;
+  isPrimary?: boolean;
+  connectedAt: string;
+}
+
 export interface SettingsState {
   // PIHU Token Protocol (Gemini Keys)
   geminiApiKeys: string[];
@@ -11,6 +19,12 @@ export interface SettingsState {
   elevenLabsApiKey: string;
   elevenLabsVoiceId: string;
 
+  // Google Workspace Settings
+  googleClientId: string;
+  googleClientSecret: string;
+  googleAccountConnected: boolean;
+  connectedGoogleAccounts: GoogleAccount[];
+
   // Actions
   addGeminiKey: (key: string) => void;
   removeGeminiKey: (index: number) => void;
@@ -18,7 +32,12 @@ export interface SettingsState {
   markKeyExhausted: (index: number) => void;
   resetExhaustedKeys: () => void;
   setElevenLabsConfig: (apiKey: string, voiceId: string) => void;
+  setGoogleWorkspaceConfig: (clientId: string, clientSecret: string, connected?: boolean) => void;
+  addConnectedGoogleAccount: (account: GoogleAccount) => void;
+  removeConnectedGoogleAccount: (email: string) => void;
+  setPrimaryGoogleAccount: (email: string) => void;
 }
+
 
 export const useSettingsStore = create<SettingsState>()(
   persist(
@@ -28,6 +47,10 @@ export const useSettingsStore = create<SettingsState>()(
       exhaustedKeyIndices: [],
       elevenLabsApiKey: '',
       elevenLabsVoiceId: 'MmQVkVZnQ0dUbfWzcW6f',
+      googleClientId: '',
+      googleClientSecret: '',
+      googleAccountConnected: false,
+      connectedGoogleAccounts: [],
 
       addGeminiKey: (key: string) => {
         const trimmed = key.trim();
@@ -80,9 +103,53 @@ export const useSettingsStore = create<SettingsState>()(
         elevenLabsApiKey: apiKey.trim(),
         elevenLabsVoiceId: voiceId.trim() || 'MmQVkVZnQ0dUbfWzcW6f'
       }),
+
+      setGoogleWorkspaceConfig: (clientId: string, clientSecret: string, connected: boolean = true) => set({
+        googleClientId: clientId.trim(),
+        googleClientSecret: clientSecret.trim(),
+        googleAccountConnected: connected
+      }),
+
+      addConnectedGoogleAccount: (account: GoogleAccount) => {
+        const current = get().connectedGoogleAccounts;
+        const existingIdx = current.findIndex(a => a.email.toLowerCase() === account.email.toLowerCase());
+        let updated: GoogleAccount[];
+        if (existingIdx >= 0) {
+          updated = current.map((a, i) => i === existingIdx ? { ...a, ...account } : a);
+        } else {
+          const isFirst = current.length === 0;
+          updated = [...current, { ...account, isPrimary: isFirst || account.isPrimary }];
+        }
+        set({
+          connectedGoogleAccounts: updated,
+          googleAccountConnected: updated.length > 0
+        });
+      },
+
+      removeConnectedGoogleAccount: (email: string) => {
+        const current = get().connectedGoogleAccounts;
+        const updated = current.filter(a => a.email.toLowerCase() !== email.toLowerCase());
+        if (updated.length > 0 && !updated.some(a => a.isPrimary)) {
+          updated[0].isPrimary = true;
+        }
+        set({
+          connectedGoogleAccounts: updated,
+          googleAccountConnected: updated.length > 0
+        });
+      },
+
+      setPrimaryGoogleAccount: (email: string) => {
+        const current = get().connectedGoogleAccounts;
+        const updated = current.map(a => ({
+          ...a,
+          isPrimary: a.email.toLowerCase() === email.toLowerCase()
+        }));
+        set({ connectedGoogleAccounts: updated });
+      }
+
     }),
     {
-      name: 'pihu-settings-store',
+      name: 'pihu-settings-storage',
     }
   )
 );
