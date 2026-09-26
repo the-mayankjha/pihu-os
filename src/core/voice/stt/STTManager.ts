@@ -1,7 +1,7 @@
 // VAD thresholds (tuned for typical speech at 16kHz or native rate)
 const SPEECH_RMS_THRESHOLD = 0.015;          // RMS above this = speaking
 const SILENCE_AFTER_SPEECH_MS  = 1500;       // 1.5s of quiet after speech → end session
-const IDLE_TIMEOUT_MS          = 6000;       // 6s with no speech at all → end session
+const DEFAULT_IDLE_TIMEOUT_MS  = 6000;       // 6s with no speech at all → end session
 
 export class STTManager {
   private ws: WebSocket | null = null;
@@ -17,9 +17,13 @@ export class STTManager {
   private sessionStart: number = 0;       // timestamp when recording began
   private vadTriggered: boolean = false;  // guard: only fire once per session
 
+  /** Configurable idle timeout per session (default 6s, set longer for follow-up). */
+  public idleTimeoutMs: number = DEFAULT_IDLE_TIMEOUT_MS;
+
   public onTranscription: ((text: string) => void) | null = null;
   public onError: ((error: string) => void) | null = null;
   public onSpeechEnded: (() => void) | null = null;  // fired when browser VAD detects end-of-speech
+  public onSpeechStarted: (() => void) | null = null; // fired as soon as user starts speaking
 
   constructor() {
     // Pre-connect so there is zero latency when the wake word fires
@@ -86,6 +90,13 @@ export class STTManager {
       this.ws.onclose = () => {
         this.isConnecting = false;
         console.log('[SPEECH ENGINE - STT] 🔴 WebSocket closed. Will reconnect on next session.');
+        // If we were recording when the socket dropped, notify VoiceManager
+        // so isProcessing doesn't get stuck permanently.
+        if (this.isRecording) {
+          console.error('[SPEECH ENGINE - STT] ❌ WebSocket closed while recording! Firing error.');
+          this.stopListening();
+          if (this.onError) this.onError('WebSocket closed unexpectedly during recording');
+        }
         this.ws = null;
       };
     });
@@ -108,9 +119,15 @@ export class STTManager {
     await this.ensureConnected();
 
     try {
-      console.log('[SPEECH ENGINE - STT] 🎤 Requesting microphone access...');
-      this.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      console.log('[SPEECH ENGINE - STT] ✅ Microphone access granted!');
+      console.log('[SPEECH ENGINE - STT] 🎤 Requesting microphone access with AEC...');
+      this.mediaStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
+      console.log('[SPEECH ENGINE - STT] ✅ Microphone access granted (AEC active)!');
 
       // Don't force 16kHz — most devices can't honour it and produce garbage.
       // We resample in the processing callback instead.
@@ -154,6 +171,7 @@ export class STTManager {
           // User is speaking
           if (!this.speechDetected) {
             console.log('[SPEECH ENGINE - STT] 🗣️ Speech detected (RMS:', rms.toFixed(4), ')');
+            if (this.onSpeechStarted) this.onSpeechStarted();
           }
           this.speechDetected = true;
           this.silenceStart = 0; // reset silence clock
@@ -170,7 +188,7 @@ export class STTManager {
           } else {
             // No speech yet — check idle timeout
             const idleDuration = now - this.sessionStart;
-            if (idleDuration >= IDLE_TIMEOUT_MS) {
+            if (idleDuration >= this.idleTimeoutMs) {
               console.log('[SPEECH ENGINE - STT] ⏳ Idle timeout — no speech detected, aborting session');
               this.triggerVADEnd();
             }

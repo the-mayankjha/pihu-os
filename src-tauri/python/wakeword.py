@@ -77,20 +77,25 @@ def listen_stdin():
             total_listening_frames = 0
             speech_detected_in_session = False
             vad_state = np.zeros((2, 1, 128), dtype=np.float32)
-            # Ensure stream is paused so browser can capture the mic
+            for m in owwModel.models.keys():
+                owwModel.prediction_buffer[m].clear()
             try:
-                stream.stop_stream()
+                if stream.is_active():
+                    stream.stop_stream()
             except Exception:
                 pass
-        elif line == "SPEECH_DONE":
-            # Frontend signals that STT has finished capturing — resume PyAudio
-            print("WAKEWORD_INFO: SPEECH_DONE received. Resuming wake word detection.")
+        elif line == "SPEECH_DONE" or line == "RESUME_WAKEWORD":
+            print(f"WAKEWORD_INFO: {line} received. Resuming wake word detection.")
             sys.stdout.flush()
             mode = "WAKEWORD"
+            for m in owwModel.models.keys():
+                owwModel.prediction_buffer[m].clear()
             try:
-                stream.start_stream()
-            except Exception:
-                pass
+                if not stream.is_active():
+                    stream.start_stream()
+            except Exception as e:
+                print(f"WAKEWORD_ERROR restarting stream: {e}", file=sys.stderr)
+                sys.stderr.flush()
 
 threading.Thread(target=listen_stdin, daemon=True).start()
 
@@ -132,7 +137,8 @@ while True:
                 if score > 0.8:
                     print(f"WAKEWORD_DETECTED: {model_name}")
                     sys.stdout.flush()
-                    owwModel.prediction_buffer[model_name].clear()
+                    for m in owwModel.models.keys():
+                        owwModel.prediction_buffer[m].clear()
                     
                     # Switch to LISTENING mode
                     mode = "LISTENING"
@@ -142,7 +148,8 @@ while True:
                     vad_state = np.zeros((2, 1, 128), dtype=np.float32)
 
                     try:
-                        stream.stop_stream()
+                        if stream.is_active():
+                            stream.stop_stream()
                     except Exception:
                         pass
                     break

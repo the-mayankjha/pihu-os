@@ -137,4 +137,13 @@ export class ActionEngine {
   public clearHistory(): void {
     this.conversationHistory = [];
   }
+
+  /** Inject a system-level note into conversation history (e.g., interruption context). */
+  public addSystemNote(note: string): void {
+    this.conversationHistory.push({ role: 'user', parts: [{ text: note }] });
+    // Trim if needed
+    if (this.conversationHistory.length > 20) {
+      this.conversationHistory = this.conversationHistory.slice(-20);
+    }
+  }
 }

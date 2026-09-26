@@ -99,6 +99,17 @@ export const VoiceOverlay: React.FC = () => {
                     )}
                   </div>
 
+                  {/* Interrupt Hint — shown only during SPEAKING */}
+                  {orbState === OrbState.SPEAKING && !isListening && (
+                    <motion.span
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 0.5 }}
+                      className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] text-white/40 whitespace-nowrap pointer-events-none"
+                    >
+                      Say "Hey Pihu" to interrupt
+                    </motion.span>
+                  )}
+
                   {/* Middle Text Area */}
                   <div className="flex-1 min-w-0 flex items-center pr-2">
                     <p className="text-white/90 text-sm md:text-base truncate font-medium">

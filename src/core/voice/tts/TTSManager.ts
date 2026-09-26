@@ -10,7 +10,10 @@ export class TTSManager {
   private currentUtterance: SpeechSynthesisUtterance | null = null;
   private resumeInterval: ReturnType<typeof setTimeout> | null = null;
   private currentAudio: HTMLAudioElement | null = null;
-  private isKokoroSpeaking: boolean = false;
+  private _isKokoroSpeaking: boolean = false;
+
+  /** True if stop() was called (barge-in interrupt), false if speech ended naturally. */
+  public wasInterrupted: boolean = false;
 
   constructor() {
     this.synth = window.speechSynthesis;
@@ -18,6 +21,11 @@ export class TTSManager {
       this.synth.onvoiceschanged = this.initVoice.bind(this);
     }
     this.initVoice();
+  }
+
+  /** Returns true if any TTS engine is currently producing audio. */
+  public get isSpeaking(): boolean {
+    return this._isKokoroSpeaking || this.synth.speaking || this.currentAudio !== null;
   }
 
   private initVoice() {
@@ -48,21 +56,26 @@ export class TTSManager {
   }
 
   public stop(): void {
+    this.wasInterrupted = true;
+
     if (this.synth.speaking) {
       this.synth.cancel();
-      if (this.onSpeechEnded) this.onSpeechEnded();
     }
     if (this.resumeInterval) {
       clearInterval(this.resumeInterval);
       this.resumeInterval = null;
     }
     if (this.currentAudio) {
-      this.currentAudio.pause();
-      this.currentAudio.src = '';
+      // Trigger onerror/onended so pending promises resolve instead of hanging.
+      // Setting src to '' after pause fires the error event on most browsers.
+      const audio = this.currentAudio;
       this.currentAudio = null;
-      if (this.onSpeechEnded) this.onSpeechEnded();
+      audio.pause();
+      audio.src = '';
+      audio.load(); // Forces error event to fire, resolving the promise
     }
-    this.isKokoroSpeaking = false;
+    this._isKokoroSpeaking = false;
+    this.currentUtterance = null;
   }
 
   private async fetchKokoroChunk(text: string): Promise<string | null> {
@@ -74,7 +87,9 @@ export class TTSManager {
           text,
           voice: 'af_bella',
           speed: 1.0
-        })
+        }),
+        // Prevent infinite hang if Kokoro server stalls
+        signal: AbortSignal.timeout(15000)
       });
 
       if (!response.ok) return null;
@@ -89,105 +104,123 @@ export class TTSManager {
   }
 
   private async kokoroSpeak(text: string): Promise<void> {
-    this.isKokoroSpeaking = true;
-    return new Promise(async (resolve) => {
-      try {
-        useVoiceStore.getState().setActiveVoiceEngine('Kokoro TTS (Local AI)');
-        useVoiceStore.getState().setActiveVoiceName('af_bella');
-        
-        // Clean markdown characters so Kokoro doesn't read asterisks
-        const cleanText = text
-            .replace(/\*\*/g, '')
-            .replace(/\*/g, '')
-            .replace(/#/g, '')
-            .replace(/_/g, '')
-            .replace(/`/g, '')
-            .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1') // Keep link text, remove URL
-            .replace(/>/g, '')
-            .replace(/---/g, '');
+    this._isKokoroSpeaking = true;
+    this.wasInterrupted = false;
 
-        // Split text into raw sentences
-        const rawSentences = cleanText.replace(/([.!?\n])\s+/g, "$1|").split("|").map(s => s.trim()).filter(s => s.length > 0);
-        
-        // Group sentences to ensure each chunk is long enough to cover generation time of the NEXT chunk
-        // If a chunk is just 2 words, it plays instantly, causing a pause while the next chunk generates.
-        const minChunkLength = 50;
-        const sentences: string[] = [];
-        let currentChunk = "";
-        
-        for (const s of rawSentences) {
-            currentChunk += (currentChunk ? " " : "") + s;
-            if (currentChunk.length >= minChunkLength) {
-                sentences.push(currentChunk);
-                currentChunk = "";
-            }
-        }
-        if (currentChunk.length > 0) {
-            sentences.push(currentChunk);
-        }
-        
-        if (sentences.length === 0) {
-            resolve();
-            return;
-        }
+    try {
+      useVoiceStore.getState().setActiveVoiceEngine('Kokoro TTS (Local AI)');
+      useVoiceStore.getState().setActiveVoiceName('af_bella');
+      
+      // Clean markdown characters so Kokoro doesn't read asterisks
+      const cleanText = text
+          .replace(/\*\*/g, '')
+          .replace(/\*/g, '')
+          .replace(/#/g, '')
+          .replace(/_/g, '')
+          .replace(/`/g, '')
+          .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1') // Keep link text, remove URL
+          .replace(/>/g, '')
+          .replace(/---/g, '');
 
-        let nextFetchPromise = this.fetchKokoroChunk(sentences[0]);
-
-        for (let i = 0; i < sentences.length; i++) {
-           if (!this.isKokoroSpeaking) break; // Stop if interrupted
-           
-           const audioUrl = await nextFetchPromise;
-           
-           // Prefetch the next chunk while this one is about to play
-           if (i + 1 < sentences.length) {
-               nextFetchPromise = this.fetchKokoroChunk(sentences[i + 1]);
-           }
-
-           if (audioUrl) {
-               await new Promise((res) => {
-                   this.currentAudio = new Audio(audioUrl);
-                   
-                   this.currentAudio.onplay = () => {
-                       if (i === 0 && this.onSpeechStarted) this.onSpeechStarted();
-                   };
-                   
-                   this.currentAudio.onended = () => {
-                       URL.revokeObjectURL(audioUrl);
-                       res(null);
-                   };
-                   
-                   this.currentAudio.onerror = (e) => {
-                       console.error('[TTSManager] Chunk playback error:', e);
-                       URL.revokeObjectURL(audioUrl);
-                       res(null);
-                   };
-                   
-                   this.currentAudio.play().catch(res);
-               });
-           } else {
-               // If fetch failed, fallback to native for the rest
-               console.warn("[TTSManager] Kokoro chunk failed, falling back to native TTS");
-               await this.localSpeak(sentences.slice(i).join(" "));
-               break;
-           }
-        }
-
-        this.currentAudio = null;
-        if (this.onSpeechEnded && this.isKokoroSpeaking) {
-            this.onSpeechEnded();
-        }
-        this.isKokoroSpeaking = false;
-        resolve();
-      } catch (err: any) {
-        console.error("[TTSManager] Kokoro speech failed:", err);
-        await this.localSpeak(text);
-        resolve();
+      // Split text into raw sentences
+      const rawSentences = cleanText.replace(/([.!?\n])\s+/g, "$1|").split("|").map(s => s.trim()).filter(s => s.length > 0);
+      
+      // Group sentences to ensure each chunk is long enough to cover generation time of the NEXT chunk
+      const minChunkLength = 50;
+      const sentences: string[] = [];
+      let currentChunk = "";
+      
+      for (const s of rawSentences) {
+          currentChunk += (currentChunk ? " " : "") + s;
+          if (currentChunk.length >= minChunkLength) {
+              sentences.push(currentChunk);
+              currentChunk = "";
+          }
       }
-    });
+      if (currentChunk.length > 0) {
+          sentences.push(currentChunk);
+      }
+      
+      if (sentences.length === 0) {
+          this._isKokoroSpeaking = false;
+          return;
+      }
+
+      let nextFetchPromise = this.fetchKokoroChunk(sentences[0]);
+
+      for (let i = 0; i < sentences.length; i++) {
+         if (!this._isKokoroSpeaking) break; // Stop if interrupted
+         
+         const audioUrl = await nextFetchPromise;
+         
+         if (!this._isKokoroSpeaking) {
+           // Interrupted while fetching — clean up and exit
+           if (audioUrl) URL.revokeObjectURL(audioUrl);
+           break;
+         }
+
+         // Prefetch the next chunk while this one is about to play
+         if (i + 1 < sentences.length) {
+             nextFetchPromise = this.fetchKokoroChunk(sentences[i + 1]);
+         }
+
+         if (audioUrl) {
+             await new Promise<void>((res) => {
+                 if (!this._isKokoroSpeaking) {
+                   URL.revokeObjectURL(audioUrl);
+                   res();
+                   return;
+                 }
+                 
+                 const audio = new Audio(audioUrl);
+                 this.currentAudio = audio;
+                 
+                 const cleanup = () => {
+                     URL.revokeObjectURL(audioUrl);
+                     if (this.currentAudio === audio) {
+                       this.currentAudio = null;
+                     }
+                     res();
+                 };
+                 
+                 audio.onplay = () => {
+                     if (i === 0 && this.onSpeechStarted) this.onSpeechStarted();
+                 };
+                 
+                 audio.onended = cleanup;
+                 audio.onerror = cleanup;
+                 
+                 audio.play().catch(cleanup);
+             });
+         } else {
+             // If fetch failed, fallback to native for the rest
+             console.warn("[TTSManager] Kokoro chunk failed, falling back to native TTS");
+             await this.localSpeak(sentences.slice(i).join(" "));
+             break;
+         }
+      }
+
+      this.currentAudio = null;
+      const wasNatural = this._isKokoroSpeaking; // true = ended naturally
+      this._isKokoroSpeaking = false;
+
+      if (wasNatural && this.onSpeechEnded) {
+          this.onSpeechEnded();
+      }
+    } catch (err: any) {
+      console.error("[TTSManager] Kokoro speech failed:", err);
+      this._isKokoroSpeaking = false;
+      try {
+        await this.localSpeak(text);
+      } catch (e2) {
+        console.error("[TTSManager] Local fallback also failed:", e2);
+      }
+    }
   }
 
   public async speak(text: string): Promise<void> {
     this.stop(); // Stop any ongoing speech and clear intervals
+    this.wasInterrupted = false; // Reset for this new speech
 
     // We prioritize Kokoro TTS (Local AI) as the default engine.
     try {
@@ -216,6 +249,7 @@ export class TTSManager {
   }
 
   private async elevenLabsSpeak(text: string, apiKey: string, voiceId: string): Promise<void> {
+    this.wasInterrupted = false;
     return new Promise(async (resolve, reject) => {
       try {
         const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
@@ -244,34 +278,45 @@ export class TTSManager {
         const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
         const url = URL.createObjectURL(blob);
 
-        this.currentAudio = new Audio(url);
+        const audio = new Audio(url);
+        this.currentAudio = audio;
         
-        this.currentAudio.onplay = () => {
+        audio.onplay = () => {
           if (this.onSpeechStarted) this.onSpeechStarted();
         };
 
-        this.currentAudio.onended = () => {
+        audio.onended = () => {
           URL.revokeObjectURL(url);
-          this.currentAudio = null;
+          if (this.currentAudio === audio) this.currentAudio = null;
           if (this.onSpeechEnded) this.onSpeechEnded();
           resolve();
         };
 
-        this.currentAudio.onerror = (e) => {
+        audio.onerror = (e) => {
           console.error('[TTSManager] Audio playback error:', e);
           URL.revokeObjectURL(url);
-          this.currentAudio = null;
-          reject(new Error('Audio playback failed'));
+          if (this.currentAudio === audio) this.currentAudio = null;
+          // If interrupted, resolve instead of reject to avoid error propagation
+          if (this.wasInterrupted) {
+            resolve();
+          } else {
+            reject(new Error('Audio playback failed'));
+          }
         };
 
-        await this.currentAudio.play();
+        await audio.play();
       } catch (error) {
-        reject(error);
+        if (this.wasInterrupted) {
+          resolve();
+        } else {
+          reject(error);
+        }
       }
     });
   }
 
   private async localSpeak(text: string): Promise<void> {
+    this.wasInterrupted = false;
     return new Promise((resolve) => {
       useVoiceStore.getState().setActiveVoiceEngine('Local SpeechSynthesis');
       useVoiceStore.getState().setActiveVoiceName(this.voice ? this.voice.name : 'Unknown Native Voice');
@@ -307,7 +352,7 @@ export class TTSManager {
       this.currentUtterance.onerror = (e) => {
         console.error('[TTSManager] Speech error:', e);
         this.cleanupLocal();
-        if (this.onSpeechEnded) this.onSpeechEnded();
+        if (!this.wasInterrupted && this.onSpeechEnded) this.onSpeechEnded();
         resolve(); // Resolve anyway so we don't block
       };
 

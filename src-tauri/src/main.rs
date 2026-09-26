@@ -35,6 +35,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             wakeword::trigger_listening,
             wakeword::speech_done,
+            wakeword::resume_wakeword,
             system_monitor::get_system_info,
             system_monitor::execute_shell_command
         ])

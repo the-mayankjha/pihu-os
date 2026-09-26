@@ -31,6 +31,17 @@ pub fn speech_done(state: State<'_, WakewordState>) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+pub fn resume_wakeword(state: State<'_, WakewordState>) -> Result<(), String> {
+    if let Some(stdin) = state.stdin.lock().unwrap().as_mut() {
+        if let Err(e) = writeln!(stdin, "RESUME_WAKEWORD") {
+            return Err(e.to_string());
+        }
+        let _ = stdin.flush();
+    }
+    Ok(())
+}
+
 #[derive(Serialize, Clone)]
 struct WakeWordPayload {
     model: String,
