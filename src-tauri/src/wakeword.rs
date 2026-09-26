@@ -53,8 +53,9 @@ pub fn start_wakeword_engine(app: AppHandle) {
     let python_cmd = crate::get_python_cmd();
     println!("Wakeword Engine using python binary: {}", python_cmd);
 
-    // Spawn the Python process
+    // Spawn the Python process with unbuffered stdout (-u)
     let mut child = match Command::new(&python_cmd)
+        .arg("-u")
         .arg("python/wakeword.py")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

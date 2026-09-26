@@ -62,7 +62,7 @@ export const ClockWidget: React.FC<ClockWidgetProps> = ({ preview = false, onCli
           </span>
         </div>
         <span className="text-sm mt-2 font-medium truncate" style={{ color: theme.colors.textSecondary }}>
-          {greeting}, Mayank ✨
+          {greeting}, Sir Mayank ✨
         </span>
       </div>
       

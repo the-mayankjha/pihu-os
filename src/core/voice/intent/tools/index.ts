@@ -4,6 +4,8 @@ import { todoTools } from './todoTools';
 import { systemTools } from './systemTools';
 import { fileMcpTools } from './fileMcpTools';
 import { googleWorkspaceTools } from './googleWorkspaceTools';
+import { projectTools } from './projectTools';
+import { memplaceTools } from './memplaceTools';
 import type { ActionTool, GeminiTool, ToolResult } from './types';
 
 // ─── Master Tool Registry ─────────────────────────────────────────────────────
@@ -16,6 +18,8 @@ export const ALL_TOOLS: ActionTool[] = [
   ...systemTools,
   ...fileMcpTools,
   ...googleWorkspaceTools,
+  ...projectTools,
+  ...memplaceTools,
 ];
 
 

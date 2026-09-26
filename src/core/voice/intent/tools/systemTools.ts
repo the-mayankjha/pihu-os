@@ -56,6 +56,66 @@ export const systemTools: ActionTool[] = [
 
   {
     declaration: {
+      name: 'system_get_running_servers',
+      description: 'Lists all active TCP listening servers on the host machine, identifying their ports, PIDs, process names, bound projects, and system consequences (CPU/RAM load, port conflicts, security exposure, orphaned processes). Use when user asks "what servers are running?", "check running ports", "server impact".',
+    },
+    execute: async (): Promise<ToolResult> => {
+      try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+        const cmd = isMac
+          ? `lsof -iTCP -sTCP:LISTEN -P -n 2>/dev/null`
+          : `netstat -ano | findstr LISTENING`;
+
+        const rawOutput: string = await invoke('execute_shell_command', { command: cmd });
+        const lines = rawOutput.split('\n').filter(Boolean);
+        const servers: Array<{ port: number; process: string; pid: string; address: string; consequence: string }> = [];
+
+        for (const line of lines) {
+          if (line.includes('LISTEN')) {
+            const parts = line.trim().split(/\s+/);
+            const procName = parts[0] || 'unknown';
+            const pid = parts[1] || '0';
+            const addr = parts[8] || parts[3] || '';
+            const portMatch = addr.match(/:(\d+)$/);
+            if (portMatch) {
+              const port = parseInt(portMatch[1], 10);
+              let consequence = 'Active listening server on host network.';
+              if (port === 5173) {
+                consequence = 'PIHU OS Desktop UI (Vite dev server). Essential for desktop interface.';
+              } else if (port === 48126) {
+                consequence = 'PIHU Kokoro TTS Engine (Python/PyTorch). Handles local AI voice synthesis, consumes ~450MB RAM.';
+              } else if (port === 48125) {
+                consequence = 'PIHU STT Whisper Engine. Speech-to-text transcription service.';
+              } else if (port >= 5180 && port <= 5200) {
+                consequence = `Project Dev Server on port ${port}. Active web app preview server with HMR.`;
+              } else if (port === 3000 || port === 8000 || port === 8080) {
+                consequence = `Web Application / API server on port ${port}.`;
+              } else if (port === 5432 || port === 27017 || port === 6379) {
+                consequence = `Database service listening on port ${port}.`;
+              }
+
+              servers.push({ port, process: procName, pid, address: addr, consequence });
+            }
+          }
+        }
+
+        return {
+          success: true,
+          data: {
+            total_servers: servers.length,
+            servers,
+            summary: `Found ${servers.length} active server(s) running on host system.`,
+          },
+        };
+      } catch (e: any) {
+        return { success: false, error: `Failed to inspect running servers: ${e?.message || String(e)}` };
+      }
+    },
+  },
+
+  {
+    declaration: {
       name: 'system_get_time',
       description: 'Returns the current date and time. Use when user says "what time is it?", "what day is it?", "current date?".',
     },

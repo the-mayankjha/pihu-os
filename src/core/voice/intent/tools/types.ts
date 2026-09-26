@@ -7,7 +7,9 @@ export interface FunctionParameter {
   type: string;
   description?: string;
   enum?: string[];
-  items?: { type: string };
+  items?: FunctionParameter;
+  properties?: Record<string, FunctionParameter>;
+  required?: string[];
 }
 
 export interface FunctionDeclaration {

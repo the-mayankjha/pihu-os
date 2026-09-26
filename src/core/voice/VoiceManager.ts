@@ -21,6 +21,7 @@ export class VoiceManager {
   private isProcessing: boolean = false;
   private safetyTimer: ReturnType<typeof setTimeout> | null = null;
   private lastVadTimestamp: number = 0;  // Dedup guard for VAD events
+  private hasGreeted: boolean = false;
 
   private constructor() {
     this.sttManager = new STTManager();
@@ -35,6 +36,31 @@ export class VoiceManager {
       VoiceManager.instance = new VoiceManager();
     }
     return VoiceManager.instance;
+  }
+
+  public async triggerStartupGreeting() {
+    if (this.hasGreeted || this.isProcessing) return;
+    this.hasGreeted = true;
+
+    try {
+      console.log('[VOICE MANAGER] 🌅 Generating opening startup greeting...');
+      this.isProcessing = true;
+      this.setOrbState(OrbState.THINKING);
+
+      const response = await this.actionEngine.processIntent(
+        "Greet Sir Mayank warmly on opening PIHU OS. Acknowledge time of day, active project from RUNTIME CONTEXT, and session resumption state or health warnings if applicable. Keep response elegant, concise, and natural (max 2 sentences)."
+      );
+
+      if (response && response.trim()) {
+        useVoiceStore.getState().setIsActive(true);
+        useVoiceStore.getState().setResponse(response);
+        await this.ttsManager.speak(response);
+      }
+    } catch (err) {
+      console.warn('[VOICE MANAGER] Startup greeting error:', err);
+    } finally {
+      this.resetToIdle();
+    }
   }
 
   private setOrbState(state: OrbState) {
@@ -79,8 +105,24 @@ export class VoiceManager {
       console.log(`[VOICE MANAGER] 📝 Received transcription from STT: "${text}"`);
       
       if (!text || text === '[BLANK_AUDIO]') {
-        console.log('[VOICE MANAGER] Transcription empty or blank. Resetting to IDLE.');
-        this.resetToIdle();
+        console.log('[VOICE MANAGER] Transcription empty or blank. Preserving active response overlay.');
+        this.isProcessing = false;
+        this.clearSafetyTimer();
+        this.sttManager.stopListening();
+        this.setOrbState(OrbState.IDLE);
+        useVoiceStore.getState().setIsListening(false);
+        invoke('speech_done').catch(() => {});
+
+        // Auto-hide response overlay after 8 seconds of idle time if no new voice interaction
+        if (useVoiceStore.getState().response) {
+          setTimeout(() => {
+            if (useOrbStore.getState().currentState === OrbState.IDLE && !this.isProcessing) {
+              useVoiceStore.getState().reset();
+            }
+          }, 8000);
+        } else {
+          useVoiceStore.getState().reset();
+        }
         return;
       }
 

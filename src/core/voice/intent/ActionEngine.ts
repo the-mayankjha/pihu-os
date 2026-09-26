@@ -5,6 +5,7 @@ import { useLayoutStore } from '../../layout/LayoutStore';
 import { useMusicStore } from '../../../stores/musicStore';
 import { useVoiceStore } from '../../../stores/voiceStore';
 import { useSettingsStore } from '../../../stores/settingsStore';
+import { useMemplaceStore } from '../../memory/MemplaceStore';
 import { getGlobalSystemStats } from '../../../widgets/system/useSystemMonitor';
 import type { GeminiContent } from '../../llm/types';
 
@@ -21,6 +22,7 @@ export class ActionEngine {
     const musicState = useMusicStore.getState();
     const voiceState = useVoiceStore.getState();
     const settingsState = useSettingsStore.getState();
+    const memplaceState = useMemplaceStore.getState();
     const systemStats = getGlobalSystemStats();
 
     // Map open widgets/apps
@@ -59,9 +61,22 @@ export class ActionEngine {
         : "Google Workspace is connected and ready."
     };
 
+    const continuousWorkHours = memplaceState.getContinuousWorkHours();
+    const healthWarning = memplaceState.getHealthWarning();
+    const session = memplaceState.sessionContext;
+
+    const activeProj = memplaceState.activeProject || (voiceState.activeProject ? {
+      name: voiceState.activeProject.name,
+      dir: voiceState.activeProject.dir,
+      url: voiceState.activeProject.url,
+      port: voiceState.activeProject.port,
+      status: 'active' as const,
+      lastActive: new Date().toISOString()
+    } : null);
+
     const context = {
       os: "PIHU OS",
-      user: primaryAccount?.name || "Mayank",
+      user: primaryAccount?.name ? `Sir ${primaryAccount.name}` : "Sir Mayank",
       theme: "Dark Frost",
       system_performance: sysInfo,
       open_apps: openApps.length > 0 ? openApps : ["None"],
@@ -82,8 +97,32 @@ export class ActionEngine {
         last_error: voiceState.lastTTSError || "No error recorded yet.",
         is_elevenlabs_configured: !!settingsState.elevenLabsApiKey || !!import.meta.env.VITE_ELEVENLABS_API_KEY
       },
-      available_mcps: ["pihu-file-mcp", "pihu-system-mcp", "pihu-google-workspace-mcp", "web-search-mcp", "memory", "fetch"],
-      capabilities: ["File Actions", "Real-time Folder Opening", "Google Workspace Integration (Gmail, Calendar, Docs, Drive)", "Token Key Rotation", "Semantic Search", "Automation", "Workspace Control"]
+      active_project: activeProj ? {
+        name: activeProj.name,
+        directory: activeProj.dir,
+        dev_server_url: activeProj.url || `http://localhost:${activeProj.port || 5180}`,
+        dev_server_port: activeProj.port || 5180,
+        status: "Active"
+      } : {
+        name: "None",
+        directory: "/Users/mayankjha/Documents/projects",
+        dev_server_url: "None",
+        dev_server_port: null
+      },
+      memplace_memory: {
+        active_project: activeProj,
+        recent_projects: memplaceState.projectHistory.slice(0, 10),
+        session_context: {
+          continuous_work_hours: continuousWorkHours,
+          health_warning: healthWarning,
+          open_files: session.openFiles,
+          crashed_files: session.crashedFiles,
+          clean_shutdown: session.cleanShutdown,
+          session_start_time: new Date(session.startTime).toLocaleTimeString()
+        }
+      },
+      available_mcps: ["pihu-file-mcp", "pihu-system-mcp", "pihu-google-workspace-mcp", "web-search-mcp", "memplace-mcp", "memory", "fetch"],
+      capabilities: ["Complex React Project Scaffolding", "File Actions", "Real-time Folder Opening", "Google Workspace Integration", "Token Key Rotation", "Semantic Search", "MemPalace Memory & Session Resumption", "Host Server & Consequence Awareness", "Automation", "Workspace Control"]
     };
 
     return `\n\nRUNTIME CONTEXT:\n${JSON.stringify(context, null, 2)}`;
@@ -98,6 +137,8 @@ export class ActionEngine {
       }
 
       console.log('[ActionEngine] Processing intent:', cleanText);
+
+      useVoiceStore.getState().setProcessingStatus("Analyzing request & planning actions...");
 
       const fullSystemInstruction = PIHU_CORE_IDENTITY + this.getDynamicContext();
 

@@ -4,9 +4,15 @@ import pyaudio
 import numpy as np
 from openwakeword.model import Model
 
-# Resolve absolute paths to the custom ONNX models
+# Resolve absolute paths to the custom ONNX models with fallback discovery
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODELS_DIR = os.path.abspath(os.path.join(BASE_DIR, '../../models/wakeWord'))
+candidate_dirs = [
+    os.path.abspath(os.path.join(BASE_DIR, '../../models/wakeWord')),
+    os.path.abspath(os.path.join(BASE_DIR, '../models/wakeWord')),
+    os.path.abspath('models/wakeWord'),
+]
+
+MODELS_DIR = next((d for d in candidate_dirs if os.path.isdir(d)), candidate_dirs[0])
 
 MODEL_FILES = [
     'pihu.onnx',
@@ -22,11 +28,11 @@ for f in MODEL_FILES:
         model_paths.append(p)
 
 if not model_paths:
-    print("WAKEWORD_ERROR: No models found!")
+    print(f"WAKEWORD_ERROR: No models found in {MODELS_DIR}!")
     sys.stdout.flush()
     sys.exit(1)
 
-print(f"WAKEWORD_INFO: Loading {len(model_paths)} models...")
+print(f"WAKEWORD_INFO: Loading {len(model_paths)} models from {MODELS_DIR}...")
 sys.stdout.flush()
 
 try:
@@ -134,7 +140,7 @@ while True:
             np_data = np.frombuffer(data, dtype=np.int16)
             prediction = owwModel.predict(np_data)
             for model_name, score in prediction.items():
-                if score > 0.8:
+                if score > 0.45:
                     print(f"WAKEWORD_DETECTED: {model_name}")
                     sys.stdout.flush()
                     for m in owwModel.models.keys():

@@ -51,7 +51,14 @@ export default function App() {
 
   useEffect(() => {
     // Initialize VoiceManager so it can listen to Tauri events
-    VoiceManager.getInstance();
+    const voiceMgr = VoiceManager.getInstance();
+
+    // Trigger warm opening greeting on app startup
+    const timer = setTimeout(() => {
+      voiceMgr.triggerStartupGreeting();
+    }, 1500);
+
+    return () => clearTimeout(timer);
   }, []);
 
   return (
