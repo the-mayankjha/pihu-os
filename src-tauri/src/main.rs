@@ -7,6 +7,14 @@ mod system_monitor;
 mod tts;
 
 pub fn get_python_cmd() -> String {
+    // 1. Check ~/.pihu-os/venv (installed app)
+    let home = std::env::var("HOME").unwrap_or_else(|_| "/Users/mayankjha".to_string());
+    let installed_venv = format!("{home}/.pihu-os/venv/bin/python");
+    if std::path::Path::new(&installed_venv).exists() {
+        return installed_venv;
+    }
+
+    // 2. Check development paths
     let relative_paths = [
         "python/venv/bin/python",
         "python/venv/Scripts/python.exe",
@@ -21,6 +29,57 @@ pub fn get_python_cmd() -> String {
     }
 
     "python3".to_string()
+}
+
+/// Run first-launch setup if ~/.pihu-os/.setup_complete doesn't exist
+fn run_first_launch_setup() {
+    let home = std::env::var("HOME").unwrap_or_else(|_| "/Users/mayankjha".to_string());
+    let lock_file = format!("{home}/.pihu-os/.setup_complete");
+
+    if std::path::Path::new(&lock_file).exists() {
+        println!("[PIHU] Setup already complete, skipping first-launch.");
+        return;
+    }
+
+    println!("[PIHU] First launch detected — running auto-setup...");
+
+    // Find the setup script (bundled resource or source tree)
+    let candidates = [
+        // Inside bundled .app (macOS)
+        std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|d| d.join("../Resources/pihu-first-launch.sh")))
+            .unwrap_or_default(),
+        // Development source tree
+        std::path::PathBuf::from("pihu-first-launch.sh"),
+        std::path::PathBuf::from("src-tauri/pihu-first-launch.sh"),
+    ];
+
+    for script in &candidates {
+        if script.exists() {
+            println!("[PIHU] Running setup script: {:?}", script);
+            match std::process::Command::new("bash")
+                .arg(script)
+                .stdout(std::process::Stdio::inherit())
+                .stderr(std::process::Stdio::inherit())
+                .status()
+            {
+                Ok(status) if status.success() => {
+                    println!("[PIHU] ✅ First-launch setup completed successfully.");
+                    return;
+                }
+                Ok(status) => {
+                    eprintln!("[PIHU] ⚠ Setup script exited with: {}", status);
+                    return;
+                }
+                Err(e) => {
+                    eprintln!("[PIHU] ⚠ Failed to run setup script: {}", e);
+                }
+            }
+        }
+    }
+
+    eprintln!("[PIHU] ⚠ Could not find pihu-first-launch.sh — skipping auto-setup.");
 }
 
 fn main() {
@@ -40,6 +99,9 @@ fn main() {
             system_monitor::execute_shell_command
         ])
         .setup(|app| {
+            // Auto-setup on first launch (installs Python venv, models, credentials)
+            run_first_launch_setup();
+
             let app_handle = app.handle().clone();
             wakeword::start_wakeword_engine(app_handle.clone());
             ytmusic::start_ytmusic_engine();

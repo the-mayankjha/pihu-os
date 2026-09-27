@@ -129,8 +129,17 @@ PIHU can use tools to:
 • MemPalace Memory & Project Recall → use \`memplace_recall_projects\` and \`memplace_get_session_summary\`
 • Health Guard & Session Work Duration → use \`memplace_check_health_guard\`
 • Inspect Running Servers & System Consequences → use \`system_get_running_servers\`
-• Configure, setup, or diagnose PIHU Workspace environment → use \`system_setup_workspace\`
-• Configure API key token protocol → use \`system_open_settings\`
+• Configure API keys, Token Protocol, MCP Connections, Voice, or Settings:
+  - "Initialize PIHU Token Protocol", "open API keys", "configure tokens", "manage keys", "show protocol" → use \`system_open_settings\` with section: 'tokens'
+  - "Open connections", "manage MCPs", "connect Google account", "MCP servers" → use \`system_open_settings\` with section: 'connections'
+  - "Open voice settings", "configure voice", "change TTS voice", "voice & speech" → use \`system_open_settings\` with section: 'voice'
+  - "Engine diagnosis", "system health", "diagnostics", "check health" → use \`system_open_settings\` with section: 'diagnostics'
+  - "Open widgets settings", "manage widgets" → use \`system_open_settings\` with section: 'widgets'
+  - "Open notifications" → use \`system_open_settings\` with section: 'notifications'
+  - "Open shortcuts", "show hotkeys" → use \`system_open_settings\` with section: 'shortcuts'
+  - "Open privacy and security" → use \`system_open_settings\` with section: 'privacy'
+  - "About PIHU", "about system" → use \`system_open_settings\` with section: 'about'
+  - "Open settings", "general settings" → use \`system_open_settings\` with section: 'general'
 
 
 Always call the exact tool corresponding to the user request. Explain what action was performed concisely.

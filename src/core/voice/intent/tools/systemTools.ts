@@ -135,20 +135,65 @@ export const systemTools: ActionTool[] = [
   {
     declaration: {
       name: 'system_open_settings',
-      description: 'Opens the Settings / PIHU Context Protocol Window to configure API keys, token rotation, and view engine health diagnostics. Use when user says "Initialize Pihu Context Protocol", "open settings", "configure API keys", "manage keys", "show protocol".',
+      description: 'Opens the Settings / PIHU Context Protocol Window to configure API keys, token rotation, connections/MCPs, voice settings, widgets, shortcuts, and view engine health diagnostics. Use when user says "Initialize PIHU Token Protocol", "open API keys", "open settings", "open connections", "manage MCPs", "configure voice", "open shortcuts", "check engine diagnosis".',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          section: {
+            type: 'STRING',
+            description: 'The specific settings tab to open: "tokens" (for Token Protocol & API keys), "connections" (for Google MCP, project MCP, and other MCPs), "voice" (for Voice & Speech), "diagnostics" (for Engine Diagnosis & Health), "general", "widgets", "notifications", "privacy", "shortcuts", "about".',
+          },
+        },
+      },
     },
-    execute: async (): Promise<ToolResult> => {
+    execute: async (args): Promise<ToolResult> => {
       try {
         const { useLayoutStore } = await import('../../../layout/LayoutStore');
+        const { useSettingsStore } = await import('../../../../stores/settingsStore');
+        
         const store = useLayoutStore.getState();
         if (!store.widgets['settings-window']?.isOpen) {
           store.toggleWidget('settings-window');
         }
+
+        const requestedSection = (args?.section || 'tokens').toLowerCase();
+        const validSectionMap: Record<string, string> = {
+          tokens: 'tokens',
+          api: 'tokens',
+          token: 'tokens',
+          protocol: 'tokens',
+          connections: 'connections',
+          connection: 'connections',
+          mcp: 'connections',
+          google: 'connections',
+          voice: 'voice',
+          speech: 'voice',
+          tts: 'voice',
+          diagnostics: 'diagnostics',
+          diagnosis: 'diagnostics',
+          health: 'diagnostics',
+          general: 'general',
+          widgets: 'widgets',
+          widget: 'widgets',
+          notifications: 'notifications',
+          notification: 'notifications',
+          privacy: 'privacy',
+          security: 'privacy',
+          shortcuts: 'shortcuts',
+          shortcut: 'shortcuts',
+          hotkeys: 'shortcuts',
+          about: 'about',
+        };
+
+        const targetCategory = validSectionMap[requestedSection] || 'tokens';
+        useSettingsStore.getState().setActiveSidebarCategory(targetCategory);
+
         return {
           success: true,
           data: {
             action: 'opened_settings',
-            message: 'Opened PIHU Context Protocol Settings Window.',
+            section: targetCategory,
+            message: `Opened PIHU Settings to ${targetCategory.toUpperCase()} page.`,
           },
         };
       } catch (e: any) {

@@ -10,9 +10,15 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "tauri": "tauri",
-    "mcp:project": "node bin/pihu-project-mcp.js"
+    "mcp:project": "node bin/pihu-project-mcp.js",
+    "start": "node bin/pihu",
+    "pihu:dev": "node bin/pihu dev",
+    "pihu:build": "node bin/pihu build",
+    "pihu:dmg": "mkdir -p src-tauri/target/release/bundle/dmg && hdiutil create -volname 'Pihu OS' -srcfolder 'src-tauri/target/release/bundle/macos/Pihu OS.app' -ov -format UDZO 'src-tauri/target/release/bundle/dmg/Pihu OS_1.0.0_aarch64.dmg'",
+    "pihu:setup": "node bin/pihu setup"
   },
   "bin": {
+    "pihu": "./bin/pihu",
     "pihu-project-mcp": "./bin/pihu-project-mcp.js"
   },
   "dependencies": {

@@ -32,8 +32,34 @@ if not model_paths:
     sys.stdout.flush()
     sys.exit(1)
 
-print(f"WAKEWORD_INFO: Loading {len(model_paths)} models from {MODELS_DIR}...")
-sys.stdout.flush()
+# Ensure openwakeword base models (melspectrogram.onnx & embedding_model.onnx) exist in package resources
+try:
+    import openwakeword
+    import shutil
+    oww_resource_dir = os.path.join(os.path.dirname(openwakeword.__file__), 'resources', 'models')
+    os.makedirs(oww_resource_dir, exist_ok=True)
+    
+    # Check if models exist in MODELS_DIR or candidate dirs and copy them
+    for base_m in ['melspectrogram.onnx', 'embedding_model.onnx']:
+        target_path = os.path.join(oww_resource_dir, base_m)
+        if not os.path.exists(target_path):
+            found_src = None
+            for d in candidate_dirs:
+                cand = os.path.join(d, base_m)
+                if os.path.exists(cand):
+                    found_src = cand
+                    break
+            if found_src:
+                shutil.copyfile(found_src, target_path)
+                print(f"WAKEWORD_INFO: Copied {base_m} to {oww_resource_dir}")
+            else:
+                try:
+                    import openwakeword.utils
+                    openwakeword.utils.download_models([base_m])
+                except Exception as down_err:
+                    print(f"WAKEWORD_INFO: Note downloading {base_m}: {down_err}")
+except Exception as oww_prep_err:
+    print(f"WAKEWORD_INFO: Resource prep note: {oww_prep_err}")
 
 try:
     # Initialize the openwakeword model

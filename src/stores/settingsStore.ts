@@ -25,6 +25,16 @@ export interface SettingsState {
   googleAccountConnected: boolean;
   connectedGoogleAccounts: GoogleAccount[];
 
+  // Appearance & Workspace Preferences
+  themeAccent: 'pink' | 'purple' | 'cyan' | 'emerald' | 'amber';
+  blurIntensity: number;
+  dockPosition: 'bottom' | 'left' | 'right';
+  dockMagnification: boolean;
+  soundEffects: boolean;
+  focusModeActive: boolean;
+  ttsSpeed: number;
+  activeSidebarCategory: string;
+
   // Actions
   addGeminiKey: (key: string) => void;
   removeGeminiKey: (index: number) => void;
@@ -36,6 +46,14 @@ export interface SettingsState {
   addConnectedGoogleAccount: (account: GoogleAccount) => void;
   removeConnectedGoogleAccount: (email: string) => void;
   setPrimaryGoogleAccount: (email: string) => void;
+  setThemeAccent: (accent: 'pink' | 'purple' | 'cyan' | 'emerald' | 'amber') => void;
+  setBlurIntensity: (val: number) => void;
+  setDockPosition: (pos: 'bottom' | 'left' | 'right') => void;
+  setDockMagnification: (enabled: boolean) => void;
+  setSoundEffects: (enabled: boolean) => void;
+  setFocusMode: (enabled: boolean) => void;
+  setTtsSpeed: (speed: number) => void;
+  setActiveSidebarCategory: (cat: string) => void;
 }
 
 
@@ -51,6 +69,23 @@ export const useSettingsStore = create<SettingsState>()(
       googleClientSecret: '',
       googleAccountConnected: false,
       connectedGoogleAccounts: [],
+      themeAccent: 'pink',
+      blurIntensity: 24,
+      dockPosition: 'bottom',
+      dockMagnification: true,
+      soundEffects: true,
+      focusModeActive: false,
+      ttsSpeed: 1.0,
+      activeSidebarCategory: 'ui-components',
+
+      setThemeAccent: (accent) => set({ themeAccent: accent }),
+      setBlurIntensity: (blurIntensity) => set({ blurIntensity }),
+      setDockPosition: (dockPosition) => set({ dockPosition }),
+      setDockMagnification: (dockMagnification) => set({ dockMagnification }),
+      setSoundEffects: (soundEffects) => set({ soundEffects }),
+      setFocusMode: (focusModeActive) => set({ focusModeActive }),
+      setTtsSpeed: (ttsSpeed) => set({ ttsSpeed }),
+      setActiveSidebarCategory: (activeSidebarCategory) => set({ activeSidebarCategory }),
 
       addGeminiKey: (key: string) => {
         const trimmed = key.trim();
