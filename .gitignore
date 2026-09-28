@@ -29,3 +29,7 @@ src-tauri/target/
 src-tauri/gen/
 models/stt/*.bin
 src-tauri/python/venv/
+
+# Scratch & Tests
+test.java
+*.class
