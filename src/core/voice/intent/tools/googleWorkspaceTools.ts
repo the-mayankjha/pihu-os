@@ -231,7 +231,32 @@ export const googleWorkspaceTools: ActionTool[] = [
     },
     execute: async (args): Promise<ToolResult> => {
       try {
-        const apiRes = await runGoogleApiClient('send_email', args.recipient, args.subject, args.body);
+        let recipientEmail = args.recipient.trim();
+        let recipientDisplay = recipientEmail;
+
+        // If recipient doesn't contain '@', look up in People Directory
+        if (!recipientEmail.includes('@')) {
+          const { useSettingsStore } = await import('../../../../stores/settingsStore');
+          const contacts = useSettingsStore.getState().contacts || [];
+          const cleanQuery = recipientEmail.toLowerCase();
+          const match = contacts.find(c => 
+            (c.name || '').toLowerCase() === cleanQuery || 
+            (c.nickname || '').toLowerCase() === cleanQuery ||
+            (c.name || '').toLowerCase().includes(cleanQuery) ||
+            (c.nickname && c.nickname.toLowerCase().includes(cleanQuery))
+          );
+          if (match && match.email) {
+            recipientEmail = match.email;
+            recipientDisplay = `${match.name} (${match.email})`;
+          } else {
+            return {
+              success: false,
+              error: `Contact "${args.recipient}" does not have an email address in your People Directory. Please provide their email address or add it in Settings > People.`,
+            };
+          }
+        }
+
+        const apiRes = await runGoogleApiClient('send_email', recipientEmail, args.subject, args.body);
         if (apiRes.error) {
           return { success: false, error: apiRes.error };
         }
@@ -240,10 +265,10 @@ export const googleWorkspaceTools: ActionTool[] = [
           success: true,
           data: {
             action: 'sent_email_via_gmail_api',
-            recipient: args.recipient,
+            recipient: recipientDisplay,
             subject: args.subject,
             message_id: apiRes.message_id,
-            message: `Successfully sent email to ${args.recipient} via Gmail API!`,
+            message: `Successfully sent email to ${recipientDisplay} via Gmail API!`,
           },
         };
       } catch (e: any) {

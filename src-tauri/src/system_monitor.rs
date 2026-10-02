@@ -221,3 +221,32 @@ pub fn execute_shell_command(command: String) -> Result<String, String> {
         Err(e) => Err(e.to_string()),
     }
 }
+
+fn contacts_file_path() -> Result<std::path::PathBuf, String> {
+    let home = std::env::var("HOME").map_err(|_| "Could not determine the home directory".to_string())?;
+    Ok(std::path::PathBuf::from(home).join(".pihu").join("contacts.json"))
+}
+
+/// Read the one contact directory shared by Desktop, CLI, REPL, and the agent.
+#[tauri::command]
+pub fn read_contacts() -> Result<String, String> {
+    let path = contacts_file_path()?;
+    match std::fs::read_to_string(&path) {
+        Ok(contents) => Ok(contents),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok("[]".to_string()),
+        Err(error) => Err(format!("Could not read {}: {error}", path.display())),
+    }
+}
+
+/// Persist contacts atomically so a CLI/REPL update cannot leave a partial JSON file.
+#[tauri::command]
+pub fn write_contacts(contacts_json: String) -> Result<(), String> {
+    serde_json::from_str::<serde_json::Value>(&contacts_json)
+        .map_err(|error| format!("Contacts must be valid JSON: {error}"))?;
+    let path = contacts_file_path()?;
+    let parent = path.parent().ok_or_else(|| "Invalid contacts path".to_string())?;
+    std::fs::create_dir_all(parent).map_err(|error| format!("Could not create contacts directory: {error}"))?;
+    let temporary = path.with_extension("json.tmp");
+    std::fs::write(&temporary, contacts_json).map_err(|error| format!("Could not write contacts: {error}"))?;
+    std::fs::rename(&temporary, &path).map_err(|error| format!("Could not save contacts: {error}"))
+}

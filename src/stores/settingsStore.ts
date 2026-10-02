@@ -9,6 +9,16 @@ export interface GoogleAccount {
   connectedAt: string;
 }
 
+export interface PihuContact {
+  id: string;
+  name: string;
+  nickname?: string;
+  email?: string;
+  phone?: string;
+  whatsappJid?: string;
+  notes?: string;
+}
+
 export interface SettingsState {
   // PIHU Token Protocol (Gemini Keys)
   geminiApiKeys: string[];
@@ -35,6 +45,9 @@ export interface SettingsState {
   ttsSpeed: number;
   activeSidebarCategory: string;
 
+  // People / Contacts
+  contacts: PihuContact[];
+
   // Actions
   addGeminiKey: (key: string) => void;
   removeGeminiKey: (index: number) => void;
@@ -54,6 +67,12 @@ export interface SettingsState {
   setFocusMode: (enabled: boolean) => void;
   setTtsSpeed: (speed: number) => void;
   setActiveSidebarCategory: (cat: string) => void;
+
+  // Contact Actions
+  addContact: (contact: PihuContact) => void;
+  setContacts: (contacts: PihuContact[]) => void;
+  updateContact: (id: string, updates: Partial<PihuContact>) => void;
+  removeContact: (id: string) => void;
 }
 
 
@@ -77,6 +96,7 @@ export const useSettingsStore = create<SettingsState>()(
       focusModeActive: false,
       ttsSpeed: 1.0,
       activeSidebarCategory: 'ui-components',
+      contacts: [],
 
       setThemeAccent: (accent) => set({ themeAccent: accent }),
       setBlurIntensity: (blurIntensity) => set({ blurIntensity }),
@@ -180,7 +200,24 @@ export const useSettingsStore = create<SettingsState>()(
           isPrimary: a.email.toLowerCase() === email.toLowerCase()
         }));
         set({ connectedGoogleAccounts: updated });
-      }
+      },
+
+      addContact: (contact: PihuContact) => {
+        const current = get().contacts;
+        if (current.some(c => c.id === contact.id)) return;
+        set({ contacts: [...current, contact] });
+      },
+
+      setContacts: (contacts: PihuContact[]) => set({ contacts }),
+
+      updateContact: (id: string, updates: Partial<PihuContact>) => {
+        const current = get().contacts;
+        set({ contacts: current.map(c => c.id === id ? { ...c, ...updates } : c) });
+      },
+
+      removeContact: (id: string) => {
+        set({ contacts: get().contacts.filter(c => c.id !== id) });
+      },
 
     }),
     {

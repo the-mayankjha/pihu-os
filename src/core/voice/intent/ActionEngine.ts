@@ -1,6 +1,7 @@
 import { LLMManager } from '../../llm/LLMManager';
 import { PIHU_CORE_IDENTITY } from './systemPrompt';
 import { buildGeminiTools, executeTool } from './tools/index';
+import { handlePendingWhatsAppConfirmation } from './tools/whatsappTools';
 import { useLayoutStore } from '../../layout/LayoutStore';
 import { useMusicStore } from '../../../stores/musicStore';
 import { useVoiceStore } from '../../../stores/voiceStore';
@@ -121,8 +122,21 @@ export class ActionEngine {
           session_start_time: new Date(session.startTime).toLocaleTimeString()
         }
       },
-      available_mcps: ["pihu-file-mcp", "pihu-system-mcp", "pihu-google-workspace-mcp", "web-search-mcp", "memplace-mcp", "memory", "fetch"],
-      capabilities: ["Complex React Project Scaffolding", "File Actions", "Real-time Folder Opening", "Google Workspace Integration", "Token Key Rotation", "Semantic Search", "MemPalace Memory & Session Resumption", "Host Server & Consequence Awareness", "Automation", "Workspace Control"]
+      people_directory: (settingsState.contacts || []).map(c => ({
+        name: c.name,
+        nickname: c.nickname || null,
+        email: c.email || null,
+        phone: c.phone || null,
+        notes: c.notes || null
+      })),
+      whatsapp_integration: {
+        mcp_server: "pihu-whatsapp-mcp",
+        bridge_status: "FastMCP + whatsmeow REST (Port 8080)",
+        device_name: "PIHU Desktop",
+        capabilities: ["Send WhatsApp Message", "Search WhatsApp Contacts & Groups", "List Chats", "Pair Phone via QR Code"]
+      },
+      available_mcps: ["pihu-file-mcp", "pihu-system-mcp", "pihu-google-workspace-mcp", "pihu-whatsapp-mcp", "web-search-mcp", "memplace-mcp", "memory", "fetch"],
+      capabilities: ["Complex React Project Scaffolding", "File Actions", "Real-time Folder Opening", "Google Workspace Integration", "WhatsApp Messaging & QR Pairing", "Token Key Rotation", "Semantic Search", "MemPalace Memory & Session Resumption", "Host Server & Consequence Awareness", "Automation", "Workspace Control"]
     };
 
     return `\n\nRUNTIME CONTEXT:\n${JSON.stringify(context, null, 2)}`;
@@ -137,6 +151,14 @@ export class ActionEngine {
       }
 
       console.log('[ActionEngine] Processing intent:', cleanText);
+
+      // Resolve a pending fuzzy WhatsApp recipient before starting a new LLM turn.
+      const pendingConfirmation = await handlePendingWhatsAppConfirmation(cleanText);
+      if (pendingConfirmation) {
+        this.conversationHistory.push({ role: 'user', parts: [{ text: cleanText }] });
+        this.conversationHistory.push({ role: 'model', parts: [{ text: pendingConfirmation }] });
+        return pendingConfirmation;
+      }
 
       useVoiceStore.getState().setProcessingStatus("Analyzing request & planning actions...");
 

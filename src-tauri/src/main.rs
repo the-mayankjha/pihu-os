@@ -96,7 +96,9 @@ fn main() {
             wakeword::speech_done,
             wakeword::resume_wakeword,
             system_monitor::get_system_info,
-            system_monitor::execute_shell_command
+            system_monitor::execute_shell_command,
+            system_monitor::read_contacts,
+            system_monitor::write_contacts
         ])
         .setup(|app| {
             // Auto-setup on first launch (installs Python venv, models, credentials)

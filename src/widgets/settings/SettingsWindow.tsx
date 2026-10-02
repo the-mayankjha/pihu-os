@@ -28,7 +28,16 @@ import {
   Wrench,
   Code,
   User,
+  Users,
   RefreshCw,
+  QrCode,
+  MessageSquare,
+  Phone,
+  Mail,
+  Edit2,
+  CheckCircle2,
+  AlertCircle,
+  ExternalLink,
 } from 'lucide-react';
 
 interface McpToolDef {
@@ -79,6 +88,11 @@ export const SettingsWindow: React.FC = () => {
     setTtsSpeed,
     activeSidebarCategory,
     setActiveSidebarCategory,
+    contacts,
+    addContact,
+    setContacts,
+    updateContact,
+    removeContact,
   } = useSettingsStore();
 
   const [newKeyInput, setNewKeyInput] = useState('');
@@ -88,12 +102,157 @@ export const SettingsWindow: React.FC = () => {
   const [activeMcpDetailId, setActiveMcpDetailId] = useState<string | null>(null);
   const [mcpSearchQuery, setMcpSearchQuery] = useState('');
   const [copiedToolName, setCopiedToolName] = useState<string | null>(null);
+  const [liveCatalog, setLiveCatalog] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch('https://pihu.nfks.co.in/api/v1/mcp/catalog')
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setLiveCatalog(data))
+      .catch(() => {});
+  }, []);
 
   // General Page PIHU OS States
   const [userName, setUserName] = useState('Sir Mayank');
   const [workspacePath, setWorkspacePath] = useState('~/Documents/projects/pihu-os');
   const [autoStartBoot, setAutoStartBoot] = useState(true);
   const [cacheCleared, setCacheCleared] = useState(false);
+
+  // WhatsApp Bridge & Device Pairing States
+  const [waStatus, setWaStatus] = useState<{
+    connected: boolean;
+    logged_in: boolean;
+    jid: string;
+    os?: string;
+    platform?: string;
+    auth_state?: string;
+  }>({ connected: false, logged_in: false, jid: '' });
+  const [waQrCode, setWaQrCode] = useState<string>('');
+  const [waLoading, setWaLoading] = useState(false);
+  const [waCopiedQr, setWaCopiedQr] = useState(false);
+
+  // WhatsApp authentication belongs to the local bridge.  The desktop, CLI and
+  // REPL deliberately consume this same API/session instead of owning clients.
+  const ensureWhatsAppBridge = async () => {
+    try {
+      const existing = await fetch('http://localhost:8080/api/status');
+      if (existing.ok) return true;
+    } catch (_) {
+      // Start the bridge below only when its shared local API is unavailable.
+    }
+
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      const startBridge = `
+        if [ -f src-tauri/pihu_mcps/mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge/bridge ]; then
+          cd src-tauri/pihu_mcps/mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge && ./bridge > /tmp/pihu_whatsapp_bridge.log 2>&1 &
+        elif [ -f ../mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge/bridge ]; then
+          cd ../mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge && ./bridge > /tmp/pihu_whatsapp_bridge.log 2>&1 &
+        else
+          cd src-tauri/pihu_mcps/mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge && go run main.go > /tmp/pihu_whatsapp_bridge.log 2>&1 &
+        fi
+      `;
+      await invoke('execute_shell_command', { command: startBridge });
+      return true;
+    } catch (_) {
+      return false;
+    }
+  };
+
+  // WhatsApp Bridge live status & QR poller
+  useEffect(() => {
+    let isMounted = true;
+    const fetchWaStatus = async () => {
+      try {
+        const res = await fetch('http://localhost:8080/api/status');
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted) {
+            setWaStatus({
+              connected: !!data.connected,
+              logged_in: !!data.logged_in,
+              jid: data.jid || '',
+              os: data.os || 'PIHU',
+              platform: data.platform || 'PIHU Desktop',
+              auth_state: data.auth_state,
+            });
+            if (data.qr_code) {
+              setWaQrCode(data.qr_code);
+            } else if (data.logged_in) {
+              setWaQrCode('');
+            }
+          }
+        }
+        // Also fetch active QR if not logged in
+        if (!data.logged_in) {
+          const qrRes = await fetch('http://localhost:8080/api/qr').catch(() => null);
+          if (qrRes && qrRes.ok) {
+            const qrData = await qrRes.json();
+            if (qrData.qr_code && isMounted) {
+              setWaQrCode(qrData.qr_code);
+            }
+            if (qrData.logged_in && isMounted) {
+              setWaStatus(prev => ({ ...prev, logged_in: true }));
+            }
+          }
+        }
+      } catch (e) {
+        if (isMounted) {
+          setWaStatus({ connected: false, logged_in: false, jid: '' });
+        }
+      }
+    };
+
+    fetchWaStatus();
+    const interval = setInterval(fetchWaStatus, 1500);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  // People & Directory States
+  const [contactSearchQuery, setContactSearchQuery] = useState('');
+  const [contactsHydrated, setContactsHydrated] = useState(false);
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+  const [editingContactId, setEditingContactId] = useState<string | null>(null);
+  const [contactForm, setContactForm] = useState({
+    name: '',
+    nickname: '',
+    email: '',
+    phone: '',
+    notes: '',
+  });
+
+  // This is the directory shared by Tauri, CLI, REPL, and WhatsApp routing.
+  // Hydrate before saving so Desktop never overwrites a contact just added via CLI.
+  useEffect(() => {
+    const loadContacts = async () => {
+      try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        const raw = await invoke<string>('read_contacts');
+        const loaded = JSON.parse(raw);
+        if (Array.isArray(loaded)) setContacts(loaded);
+      } catch (_) {
+        // Keep the locally persisted directory available when Tauri is not ready.
+      } finally {
+        setContactsHydrated(true);
+      }
+    };
+    loadContacts();
+    window.addEventListener('focus', loadContacts);
+    return () => window.removeEventListener('focus', loadContacts);
+  }, [setContacts]);
+
+  useEffect(() => {
+    if (!contactsHydrated) return;
+    const syncContacts = async () => {
+      try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        await invoke('write_contacts', { contactsJson: JSON.stringify(contacts, null, 2) });
+      } catch (_) {}
+    };
+    syncContacts();
+  }, [contacts, contactsHydrated]);
 
   // Notification states
   const [bannerAlerts, setBannerAlerts] = useState(true);
@@ -403,6 +562,71 @@ export const SettingsWindow: React.FC = () => {
         },
       ]
     },
+    {
+      id: 'pihu-whatsapp-mcp',
+      name: 'pihu-whatsapp-mcp',
+      desc: 'WhatsApp Desktop Bridge: autonomous messaging, contact lookup, history sync, and audio messages.',
+      status: 'Active',
+      port: '8080',
+      version: '1.0.0',
+      transport: 'FastMCP (stdio) + Go Bridge',
+      tools: [
+        {
+          name: 'whatsapp_send_message',
+          description: 'Sends a WhatsApp text message to any phone number or group JID.',
+          parameters: ['recipient', 'message'],
+          category: 'Messaging'
+        },
+        {
+          name: 'whatsapp_search_contacts',
+          description: 'Searches WhatsApp contacts by name or phone number.',
+          parameters: ['query'],
+          category: 'Contacts'
+        },
+        {
+          name: 'whatsapp_list_messages',
+          description: 'Retrieves recent chat history with timestamp filters and context.',
+          parameters: ['chat_jid', 'sender_phone_number', 'limit', 'query'],
+          category: 'History'
+        },
+        {
+          name: 'whatsapp_list_chats',
+          description: 'Lists active WhatsApp conversations sorted by last activity.',
+          parameters: ['query', 'limit', 'page'],
+          category: 'Chats'
+        },
+        {
+          name: 'whatsapp_get_chat',
+          description: 'Retrieves specific chat metadata and recent interaction details.',
+          parameters: ['chat_jid'],
+          category: 'Chats'
+        },
+        {
+          name: 'whatsapp_get_last_interaction',
+          description: 'Fetches the most recent message with a specific contact.',
+          parameters: ['jid'],
+          category: 'Contacts'
+        },
+        {
+          name: 'whatsapp_send_file',
+          description: 'Sends an image, video, document, or audio file to a recipient.',
+          parameters: ['recipient', 'media_path'],
+          category: 'Media'
+        },
+        {
+          name: 'whatsapp_send_audio_message',
+          description: 'Sends voice notes or audio messages encoded with Opus format.',
+          parameters: ['recipient', 'media_path'],
+          category: 'Media'
+        },
+        {
+          name: 'whatsapp_download_media',
+          description: 'Downloads media attachments from a message to local disk.',
+          parameters: ['message_id', 'chat_jid'],
+          category: 'Media'
+        },
+      ]
+    },
   ];
 
   const currentSelectedMcp = mcpServers.find(m => m.id === activeMcpDetailId);
@@ -528,6 +752,7 @@ export const SettingsWindow: React.FC = () => {
     { id: 'diagnostics', label: 'Engine Diagnostics', icon: Activity },
     { id: 'privacy', label: 'Privacy & Security', icon: Shield },
     { id: 'shortcuts', label: 'Shortcuts', icon: Command },
+    { id: 'people', label: 'People', icon: Users },
     { id: 'about', label: 'About PIHU', icon: Info },
   ];
 
@@ -642,6 +867,7 @@ export const SettingsWindow: React.FC = () => {
                 {activeSidebarCategory === 'diagnostics' && 'Engine Health & Diagnostics'}
                 {activeSidebarCategory === 'privacy' && 'Privacy & Security'}
                 {activeSidebarCategory === 'shortcuts' && 'Keyboard Shortcuts'}
+                {activeSidebarCategory === 'people' && 'People & Directory'}
                 {activeSidebarCategory === 'about' && 'About PIHU OS'}
               </h1>
               <p className="text-xs text-neutral-400">
@@ -654,6 +880,7 @@ export const SettingsWindow: React.FC = () => {
                 {activeSidebarCategory === 'diagnostics' && 'Live real-time telemetry for voice servers, STT, and MCP tools.'}
                 {activeSidebarCategory === 'privacy' && 'On-device local AI processing, encrypted keys, and data boundaries.'}
                 {activeSidebarCategory === 'shortcuts' && 'Global hotkeys and quick action triggers across PIHU OS.'}
+                {activeSidebarCategory === 'people' && 'Define contacts, email addresses, and phone numbers for AI messaging via Gmail and WhatsApp.'}
                 {activeSidebarCategory === 'about' && 'System version, Tauri v2 core architectures, and credits.'}
               </p>
             </div>
@@ -1116,6 +1343,154 @@ export const SettingsWindow: React.FC = () => {
                         ))}
                       </div>
                     </div>
+
+                    {/* WhatsApp MCP Device Pairing & QR Code Card */}
+                    <div className="p-5 rounded-2xl bg-black/30 border border-white/5 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-lg shadow-emerald-500/20">
+                            <MessageSquare className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-xs font-bold text-white">PIHU WhatsApp MCP</h4>
+                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                                waStatus.logged_in
+                                  ? 'bg-emerald-500/20 text-emerald-400'
+                                  : 'bg-amber-500/20 text-amber-400'
+                              }`}>
+                                {waStatus.logged_in ? '● Linked & Connected' : '○ Pairing Required'}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-neutral-400 mt-0.5">
+                              Device: <span className="text-pink-400 font-mono">PIHU Desktop</span> • Bridge: <span className="font-mono text-neutral-300">FastMCP + whatsmeow</span>
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={async () => {
+                              if (confirm('Clear all local WhatsApp sessions, chats cache and database?')) {
+                                try {
+                                  await fetch('http://localhost:8080/api/clear', { method: 'POST' });
+                                } catch (e) {}
+                                setWaStatus({ connected: false, logged_in: false, jid: '' });
+                                setWaQrCode('');
+                              }
+                            }}
+                            title="Clear local WhatsApp session & message database"
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-red-500/10 border border-white/10 hover:border-red-500/30 text-xs font-semibold text-neutral-400 hover:text-red-400 transition"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Clear Data
+                          </button>
+
+                          {waStatus.logged_in ? (
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await fetch('http://localhost:8080/api/logout', { method: 'POST' });
+                                  setWaStatus({ connected: false, logged_in: false, jid: '' });
+                                  setWaQrCode('');
+                                } catch (e) {}
+                              }}
+                              className="px-3.5 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-xs font-semibold text-red-400 transition"
+                            >
+                              Unlink Device
+                            </button>
+                          ) : (
+                            <button
+                              onClick={async () => {
+                                setWaLoading(true);
+                                try {
+                                  await ensureWhatsAppBridge();
+                                  // Ask the existing bridge for its QR. This never creates a
+                                  // second WhatsApp session when CLI/REPL is already pairing.
+                                  await fetch('http://localhost:8080/api/auth', { method: 'POST' }).catch(() => {});
+                                  for (let i = 0; i < 8; i++) {
+                                    await new Promise(r => setTimeout(r, 500));
+                                    try {
+                                      const res = await fetch('http://localhost:8080/api/qr');
+                                      if (res.ok) {
+                                        const d = await res.json();
+                                        if (d.qr_code) {
+                                          setWaQrCode(d.qr_code);
+                                          break;
+                                        }
+                                        if (d.logged_in) {
+                                          setWaStatus({ connected: true, logged_in: true, jid: d.jid || 'PIHU Desktop' });
+                                          break;
+                                        }
+                                      }
+                                    } catch (e) {}
+                                  }
+                                } catch (e) {} finally {
+                                  setWaLoading(false);
+                                }
+                              }}
+                              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white text-xs font-semibold shadow-lg shadow-emerald-500/20 transition"
+                            >
+                              <QrCode className="w-3.5 h-3.5" />
+                              {waLoading ? 'Starting Bridge...' : (waQrCode ? 'Refresh QR Code' : 'Scan WhatsApp QR')}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* If Authenticated: Display Device Details */}
+                      {waStatus.logged_in ? (
+                        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                            <div>
+                              <span className="text-xs font-semibold text-white">Active Session: {waStatus.jid || 'PIHU Desktop'}</span>
+                              <p className="text-[11px] text-neutral-400">PIHU AI Agent & Voice Engine can autonomously search contacts, send WhatsApp messages, and read history.</p>
+                            </div>
+                          </div>
+                          <span className="text-[10px] font-mono text-emerald-400 px-2.5 py-1 rounded-lg bg-emerald-500/20 font-bold shrink-0">
+                            REST Port: 8080
+                          </span>
+                        </div>
+                      ) : (
+                        /* If Not Authenticated: Display QR Pairing Code and Steps */
+                        <div className="p-4 rounded-xl bg-black/40 border border-white/10 space-y-4">
+                          <div className="flex flex-col md:flex-row items-center gap-5">
+                            {/* QR Code Graphic Box */}
+                            <div className="w-40 h-40 rounded-2xl bg-white p-2.5 flex items-center justify-center shadow-xl border border-white/20 shrink-0 overflow-hidden">
+                              {waQrCode ? (
+                                <img
+                                  src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=2&data=${encodeURIComponent(waQrCode)}`}
+                                  alt="WhatsApp Pairing QR Code"
+                                  className="w-full h-full object-contain rounded-lg"
+                                />
+                              ) : (
+                                <div className="text-center p-2">
+                                  <QrCode className="w-12 h-12 text-neutral-400 mx-auto mb-1 animate-pulse" />
+                                  <span className="text-[10px] text-neutral-600 font-semibold block">Click "Scan WhatsApp QR"</span>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex-1 space-y-2 text-xs">
+                              <h5 className="font-bold text-white uppercase tracking-wider text-[11px]">How to Pair Your Phone:</h5>
+                              <ol className="space-y-1.5 text-neutral-300 text-[11px] list-decimal list-inside font-medium">
+                                <li>Open <strong>WhatsApp</strong> on your mobile phone</li>
+                                <li>Tap <strong>Settings</strong> &gt; <strong>Linked Devices</strong> &gt; <strong>Link a Device</strong></li>
+                                <li>Point your phone camera at the QR code on the left</li>
+                                <li>Device will register as <strong>PIHU (Desktop)</strong></li>
+                              </ol>
+                              <div className="pt-2 flex items-center gap-3">
+                                <span className="text-[10px] text-neutral-500 font-mono">CLI Command:</span>
+                                <code className="px-2 py-0.5 rounded bg-black/60 text-[10px] font-mono text-pink-400 border border-white/5">
+                                  pihu mcp whatsapp auth
+                                </code>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -1528,7 +1903,300 @@ export const SettingsWindow: React.FC = () => {
             )}
 
 
-            {/* ══════ SECTION 10: ABOUT PIHU ══════ */}
+            {/* ══════ SECTION 10: PEOPLE & DIRECTORY ══════ */}
+            {activeSidebarCategory === 'people' && (
+              <div className="space-y-6">
+                
+                {/* Header with Search and Add Button */}
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div className="relative w-72">
+                    <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-neutral-500" />
+                    <input
+                      type="text"
+                      placeholder="Search people by name, email, or phone..."
+                      value={contactSearchQuery}
+                      onChange={(e) => setContactSearchQuery(e.target.value)}
+                      className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-pink-500 transition font-medium"
+                    />
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setEditingContactId(null);
+                      setContactForm({ name: '', nickname: '', email: '', phone: '', notes: '' });
+                      setIsContactModalOpen(true);
+                    }}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white text-xs font-semibold shadow-lg shadow-pink-500/20 transition hover:scale-105"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Add New Person
+                  </button>
+                </div>
+
+                {/* AI Routing Info Banner */}
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-transparent border border-purple-500/20 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-300">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white">Autonomous Agent Dispatch</h4>
+                      <p className="text-[11px] text-neutral-300 mt-0.5">
+                        Say <span className="text-pink-300 font-mono font-bold">"pihu send email to [Name]"</span> (Gmail) or <span className="text-emerald-300 font-mono font-bold">"pihu send message to [Name] on whatsapp"</span>.
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-mono text-neutral-400 px-2.5 py-1 rounded-lg bg-black/40 border border-white/5">
+                    ~/.pihu/contacts.json
+                  </span>
+                </div>
+
+                {/* Contacts List Grid */}
+                {contacts.length === 0 ? (
+                  <div className="p-12 text-center rounded-3xl bg-black/30 border border-white/5 space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-neutral-500 mx-auto">
+                      <Users className="w-6 h-6" />
+                    </div>
+                    <h4 className="text-xs font-bold text-neutral-300 uppercase tracking-wider">No People in Directory Yet</h4>
+                    <p className="text-xs text-neutral-500 max-w-sm mx-auto">
+                      Add friends, colleagues, or family with their email and WhatsApp phone number so PIHU can message them autonomously.
+                    </p>
+                    <button
+                      onClick={() => {
+                        setEditingContactId(null);
+                        setContactForm({ name: '', nickname: '', email: '', phone: '', notes: '' });
+                        setIsContactModalOpen(true);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-pink-500/20 hover:bg-pink-500/30 border border-pink-500/40 text-pink-300 text-xs font-semibold transition"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Add Your First Contact
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                    {contacts
+                      .filter(c => 
+                        !contactSearchQuery ||
+                        c.name.toLowerCase().includes(contactSearchQuery.toLowerCase()) ||
+                        (c.nickname && c.nickname.toLowerCase().includes(contactSearchQuery.toLowerCase())) ||
+                        (c.email && c.email.toLowerCase().includes(contactSearchQuery.toLowerCase())) ||
+                        (c.phone && c.phone.includes(contactSearchQuery))
+                      )
+                      .map((c) => {
+                        const initials = c.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'P';
+                        return (
+                          <div
+                            key={c.id}
+                            className="p-4 rounded-2xl bg-black/30 border border-white/5 hover:border-pink-500/30 transition duration-200 flex flex-col justify-between space-y-3 group shadow-lg"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-pink-500 to-purple-500 flex items-center justify-center text-xs font-bold text-white shadow-md">
+                                  {initials}
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <h4 className="text-xs font-bold text-white group-hover:text-pink-300 transition">
+                                      {c.name}
+                                    </h4>
+                                    {c.nickname && (
+                                      <span className="px-2 py-0.5 rounded-md bg-purple-500/20 border border-purple-500/30 text-[9px] font-bold text-purple-300 font-mono">
+                                        {c.nickname}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {c.notes && (
+                                    <p className="text-[10px] text-neutral-400 mt-0.5 line-clamp-1 italic">{c.notes}</p>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition">
+                                <button
+                                  onClick={() => {
+                                    setEditingContactId(c.id);
+                                    setContactForm({
+                                      name: c.name,
+                                      nickname: c.nickname || '',
+                                      email: c.email || '',
+                                      phone: c.phone || '',
+                                      notes: c.notes || '',
+                                    });
+                                    setIsContactModalOpen(true);
+                                  }}
+                                  className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-white/5 transition"
+                                  title="Edit Contact"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => removeContact(c.id)}
+                                  className="p-1.5 rounded-lg text-neutral-400 hover:text-red-400 hover:bg-white/5 transition"
+                                  title="Delete Contact"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Contact Details Badges */}
+                            <div className="space-y-1.5 pt-2 border-t border-white/5 text-[11px]">
+                              {c.email && (
+                                <div className="flex items-center justify-between text-neutral-300">
+                                  <div className="flex items-center gap-2">
+                                    <Mail className="w-3.5 h-3.5 text-pink-400 shrink-0" />
+                                    <span className="font-mono text-[11px] truncate max-w-[200px]">{c.email}</span>
+                                  </div>
+                                  <span className="text-[9px] text-neutral-500 font-semibold uppercase">Gmail</span>
+                                </div>
+                              )}
+                              {c.phone && (
+                                <div className="flex items-center justify-between text-neutral-300">
+                                  <div className="flex items-center gap-2">
+                                    <Phone className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                                    <span className="font-mono text-[11px]">{c.phone}</span>
+                                  </div>
+                                  <span className="text-[9px] text-emerald-400 font-semibold uppercase">WhatsApp</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
+
+                {/* Add / Edit Contact Modal Dialog */}
+                {isContactModalOpen && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+                    <div className="relative w-full max-w-md rounded-3xl bg-slate-950 border border-white/10 p-6 space-y-4 shadow-2xl text-white">
+                      <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-xl bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-pink-400">
+                            <User className="w-4 h-4" />
+                          </div>
+                          <h3 className="text-sm font-bold text-white">
+                            {editingContactId ? 'Edit Person Details' : 'Add New Person to Directory'}
+                          </h3>
+                        </div>
+                        <button
+                          onClick={() => setIsContactModalOpen(false)}
+                          className="p-1 rounded-lg text-neutral-400 hover:text-white transition"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          if (!contactForm.name.trim()) return;
+                          if (editingContactId) {
+                            updateContact(editingContactId, {
+                              name: contactForm.name.trim(),
+                              nickname: contactForm.nickname.trim() || undefined,
+                              email: contactForm.email.trim() || undefined,
+                              phone: contactForm.phone.trim() || undefined,
+                              notes: contactForm.notes.trim() || undefined,
+                            });
+                          } else {
+                            addContact({
+                              id: `person-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+                              name: contactForm.name.trim(),
+                              nickname: contactForm.nickname.trim() || undefined,
+                              email: contactForm.email.trim() || undefined,
+                              phone: contactForm.phone.trim() || undefined,
+                              notes: contactForm.notes.trim() || undefined,
+                            });
+                          }
+                          setIsContactModalOpen(false);
+                        }}
+                        className="space-y-3.5"
+                      >
+                        <div>
+                          <label className="block text-[11px] font-semibold text-neutral-300 mb-1">
+                            Full Name <span className="text-pink-400">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="e.g. Anin, Rahul Sharma, Mayank"
+                            value={contactForm.name}
+                            onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                            className="w-full px-3.5 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-pink-500 transition"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[11px] font-semibold text-neutral-300 mb-1">Nickname / Tag</label>
+                            <input
+                              type="text"
+                              placeholder="e.g. Lead, Friend, Boss"
+                              value={contactForm.nickname}
+                              onChange={(e) => setContactForm({ ...contactForm, nickname: e.target.value })}
+                              className="w-full px-3.5 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-pink-500 transition"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-semibold text-neutral-300 mb-1">WhatsApp Phone</label>
+                            <input
+                              type="text"
+                              placeholder="e.g. 919876543210"
+                              value={contactForm.phone}
+                              onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
+                              className="w-full px-3.5 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-pink-500 transition font-mono"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-neutral-300 mb-1">Gmail / Email Address</label>
+                          <input
+                            type="email"
+                            placeholder="e.g. anin@example.com"
+                            value={contactForm.email}
+                            onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                            className="w-full px-3.5 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-pink-500 transition font-mono"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-neutral-300 mb-1">AI Notes / Instructions</label>
+                          <textarea
+                            rows={2}
+                            placeholder="e.g. Message regarding project proposals, send updates here"
+                            value={contactForm.notes}
+                            onChange={(e) => setContactForm({ ...contactForm, notes: e.target.value })}
+                            className="w-full px-3.5 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-pink-500 transition resize-none"
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/10">
+                          <button
+                            type="button"
+                            onClick={() => setIsContactModalOpen(false)}
+                            className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-semibold text-neutral-400 transition"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            className="px-5 py-2 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white text-xs font-semibold shadow-lg shadow-pink-500/20 transition"
+                          >
+                            {editingContactId ? 'Save Changes' : 'Add Person'}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                )}
+
+              </div>
+            )}
+
+
+            {/* ══════ SECTION 11: ABOUT PIHU ══════ */}
             {activeSidebarCategory === 'about' && (
               <div className="p-8 rounded-3xl bg-black/30 border border-white/5 space-y-4 text-center">
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-pink-500 via-rose-500 to-purple-500 flex items-center justify-center text-white mx-auto shadow-2xl shadow-pink-500/30">
