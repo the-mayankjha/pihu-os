@@ -6,25 +6,37 @@ import type { ActionTool, ToolResult } from './types';
 // Helper to ensure bridge daemon is running
 async function ensureWhatsAppBridge(): Promise<boolean> {
   try {
-    const res = await fetch('http://localhost:8080/api/status').catch(() => null);
+    const res = await fetch('http://localhost:8080/api/status', { signal: AbortSignal.timeout(800) }).catch(() => null);
     if (res && res.ok) return true;
 
-    // Start bridge background process
+    // Start bridge background process with multi-path candidates
     const startCmd = `
-      if [ -f src-tauri/pihu_mcps/mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge/bridge ]; then
-        cd src-tauri/pihu_mcps/mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge && ./bridge > /tmp/pihu_whatsapp_bridge.log 2>&1 &
-      elif [ -f ../mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge/bridge ]; then
-        cd ../mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge && ./bridge > /tmp/pihu_whatsapp_bridge.log 2>&1 &
-      else
-        cd src-tauri/pihu_mcps/mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge && go run main.go > /tmp/pihu_whatsapp_bridge.log 2>&1 &
-      fi
+      HOME_DIR="\${HOME:-/Users/\$(whoami)}"
+      CANDIDATES=(
+        "src-tauri/pihu_mcps/mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge"
+        "pihu_mcps/mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge"
+        "\$HOME_DIR/Documents/projects/pihu-os/src-tauri/pihu_mcps/mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge"
+        "../src-tauri/pihu_mcps/mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge"
+        "\$HOME_DIR/.pihu/whatsapp-bridge"
+      )
+      for DIR in "\${CANDIDATES[@]}"; do
+        if [ -d "\$DIR" ]; then
+          if [ -f "\$DIR/bridge" ]; then
+            cd "\$DIR" && ./bridge > /tmp/pihu_whatsapp_bridge.log 2>&1 &
+            exit 0
+          elif [ -f "\$DIR/main.go" ]; then
+            cd "\$DIR" && go run main.go > /tmp/pihu_whatsapp_bridge.log 2>&1 &
+            exit 0
+          fi
+        fi
+      done
     `;
     await invoke('execute_shell_command', { command: startCmd }).catch(() => {});
 
-    // Wait up to 3 seconds
+    // Wait up to 3 seconds for bridge to become responsive
     for (let i = 0; i < 6; i++) {
       await new Promise((r) => setTimeout(r, 500));
-      const check = await fetch('http://localhost:8080/api/status').catch(() => null);
+      const check = await fetch('http://localhost:8080/api/status', { signal: AbortSignal.timeout(800) }).catch(() => null);
       if (check && check.ok) return true;
     }
   } catch (e) {}
@@ -74,6 +86,11 @@ async function resolveWhatsAppRecipient(query: string): Promise<RecipientResolut
   if (!clean) return { jid: '', displayName: '', phone: '', match: 'direct', confidence: 0 };
 
   const cleanLower = clean.toLowerCase();
+
+  // 0. Direct WhatsApp JID (e.g. groups @g.us or user JID @s.whatsapp.net)
+  if (clean.includes('@')) {
+    return { jid: clean, displayName: clean, phone: clean, match: 'exact', confidence: 1 };
+  }
 
   // 1. Check Settings / Local People Directory
   const contacts = useSettingsStore.getState().contacts || [];

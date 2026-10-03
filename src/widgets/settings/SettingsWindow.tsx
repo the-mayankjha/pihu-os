@@ -36,8 +36,6 @@ import {
   Mail,
   Edit2,
   CheckCircle2,
-  AlertCircle,
-  ExternalLink,
 } from 'lucide-react';
 
 interface McpToolDef {
@@ -102,14 +100,6 @@ export const SettingsWindow: React.FC = () => {
   const [activeMcpDetailId, setActiveMcpDetailId] = useState<string | null>(null);
   const [mcpSearchQuery, setMcpSearchQuery] = useState('');
   const [copiedToolName, setCopiedToolName] = useState<string | null>(null);
-  const [liveCatalog, setLiveCatalog] = useState<any[]>([]);
-
-  useEffect(() => {
-    fetch('https://pihu.nfks.co.in/api/v1/mcp/catalog')
-      .then(res => res.ok ? res.json() : [])
-      .then(data => setLiveCatalog(data))
-      .catch(() => {});
-  }, []);
 
   // General Page PIHU OS States
   const [userName, setUserName] = useState('Sir Mayank');
@@ -130,11 +120,11 @@ export const SettingsWindow: React.FC = () => {
   const [waLoading, setWaLoading] = useState(false);
   const [waCopiedQr, setWaCopiedQr] = useState(false);
 
-  // WhatsApp authentication belongs to the local bridge.  The desktop, CLI and
-  // REPL deliberately consume this same API/session instead of owning clients.
-  const ensureWhatsAppBridge = async () => {
+  // WhatsApp authentication belongs to the local bridge. The desktop, CLI and
+  // REPL deliberately consume this same API/session instead of owning separate clients.
+  const ensureWhatsAppBridge = async (): Promise<boolean> => {
     try {
-      const existing = await fetch('http://localhost:8080/api/status');
+      const existing = await fetch('http://localhost:8080/api/status', { signal: AbortSignal.timeout(800) });
       if (existing.ok) return true;
     } catch (_) {
       // Start the bridge below only when its shared local API is unavailable.
@@ -143,18 +133,69 @@ export const SettingsWindow: React.FC = () => {
     try {
       const { invoke } = await import('@tauri-apps/api/core');
       const startBridge = `
-        if [ -f src-tauri/pihu_mcps/mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge/bridge ]; then
-          cd src-tauri/pihu_mcps/mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge && ./bridge > /tmp/pihu_whatsapp_bridge.log 2>&1 &
-        elif [ -f ../mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge/bridge ]; then
-          cd ../mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge && ./bridge > /tmp/pihu_whatsapp_bridge.log 2>&1 &
-        else
-          cd src-tauri/pihu_mcps/mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge && go run main.go > /tmp/pihu_whatsapp_bridge.log 2>&1 &
-        fi
+        HOME_DIR="\${HOME:-/Users/\$(whoami)}"
+        CANDIDATES=(
+          "src-tauri/pihu_mcps/mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge"
+          "pihu_mcps/mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge"
+          "\$HOME_DIR/Documents/projects/pihu-os/src-tauri/pihu_mcps/mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge"
+          "../src-tauri/pihu_mcps/mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge"
+          "\$HOME_DIR/.pihu/whatsapp-bridge"
+        )
+        for DIR in "\${CANDIDATES[@]}"; do
+          if [ -d "\$DIR" ]; then
+            if [ -f "\$DIR/bridge" ]; then
+              cd "\$DIR" && ./bridge > /tmp/pihu_whatsapp_bridge.log 2>&1 &
+              exit 0
+            elif [ -f "\$DIR/main.go" ]; then
+              cd "\$DIR" && go run main.go > /tmp/pihu_whatsapp_bridge.log 2>&1 &
+              exit 0
+            fi
+          fi
+        done
       `;
       await invoke('execute_shell_command', { command: startBridge });
+      
+      // Wait up to 3 seconds for bridge to respond
+      for (let i = 0; i < 6; i++) {
+        await new Promise((r) => setTimeout(r, 500));
+        try {
+          const check = await fetch('http://localhost:8080/api/status', { signal: AbortSignal.timeout(800) });
+          if (check.ok) return true;
+        } catch (_) {}
+      }
       return true;
     } catch (_) {
       return false;
+    }
+  };
+
+  const handleScanQr = async () => {
+    setWaLoading(true);
+    const safetyTimer = setTimeout(() => setWaLoading(false), 8000);
+    try {
+      await ensureWhatsAppBridge();
+      await fetch('http://localhost:8080/api/pair', { method: 'POST', signal: AbortSignal.timeout(2000) }).catch(() => {});
+      for (let i = 0; i < 12; i++) {
+        try {
+          const res = await fetch('http://localhost:8080/api/pair', { signal: AbortSignal.timeout(1500) });
+          if (res.ok) {
+            const d = await res.json();
+            if (d.qr_code) {
+              setWaQrCode(d.qr_code);
+              break;
+            }
+            if (d.logged_in) {
+              setWaStatus(prev => ({ ...prev, connected: true, logged_in: true, jid: d.jid || 'PIHU Desktop' }));
+              setWaQrCode('');
+              break;
+            }
+          }
+        } catch (e) {}
+        await new Promise(r => setTimeout(r, 400));
+      }
+    } catch (e) {} finally {
+      clearTimeout(safetyTimer);
+      setWaLoading(false);
     }
   };
 
@@ -163,36 +204,60 @@ export const SettingsWindow: React.FC = () => {
     let isMounted = true;
     const fetchWaStatus = async () => {
       try {
-        const res = await fetch('http://localhost:8080/api/status');
-        if (res.ok) {
-          const data = await res.json();
-          if (isMounted) {
-            setWaStatus({
-              connected: !!data.connected,
-              logged_in: !!data.logged_in,
-              jid: data.jid || '',
-              os: data.os || 'PIHU',
-              platform: data.platform || 'PIHU Desktop',
-              auth_state: data.auth_state,
-            });
-            if (data.qr_code) {
-              setWaQrCode(data.qr_code);
-            } else if (data.logged_in) {
-              setWaQrCode('');
+        let isConnected = false;
+        let isLoggedIn = false;
+
+        // 1. Check status endpoint
+        try {
+          const res = await fetch('http://localhost:8080/api/status', { signal: AbortSignal.timeout(1200) });
+          if (res.ok) {
+            isConnected = true;
+            const data = await res.json();
+            isLoggedIn = !!data.logged_in;
+            if (isMounted) {
+              setWaStatus({
+                connected: !!data.connected,
+                logged_in: !!data.logged_in,
+                jid: data.jid || '',
+                os: data.os || 'PIHU',
+                platform: data.platform || 'PIHU Desktop',
+                auth_state: data.auth_state,
+              });
+              if (data.logged_in) {
+                setWaQrCode('');
+              } else if (data.qr_code) {
+                setWaQrCode(data.qr_code);
+              }
             }
           }
+        } catch (_) {}
+
+        // 2. If bridge is active and not logged in, query /api/pair for active QR code
+        if (isConnected && !isLoggedIn) {
+          try {
+            const pairRes = await fetch('http://localhost:8080/api/pair', { signal: AbortSignal.timeout(1500) });
+            if (pairRes.ok) {
+              const pairData = await pairRes.json();
+              if (isMounted) {
+                if (pairData.logged_in) {
+                  setWaStatus(prev => ({ ...prev, logged_in: true, connected: true }));
+                  setWaQrCode('');
+                } else if (pairData.qr_code) {
+                  setWaQrCode(pairData.qr_code);
+                }
+              }
+            }
+          } catch (_) {}
         }
-        // Also fetch active QR if not logged in
-        if (!data.logged_in) {
-          const qrRes = await fetch('http://localhost:8080/api/qr').catch(() => null);
-          if (qrRes && qrRes.ok) {
-            const qrData = await qrRes.json();
-            if (qrData.qr_code && isMounted) {
-              setWaQrCode(qrData.qr_code);
-            }
-            if (qrData.logged_in && isMounted) {
-              setWaStatus(prev => ({ ...prev, logged_in: true }));
-            }
+
+        // 3. If bridge is offline
+        if (!isConnected) {
+          if (isMounted) {
+            setWaStatus({ connected: false, logged_in: false, jid: '' });
+          }
+          // Auto-start bridge if user is actively in the Connections section
+          if (activeSidebarCategory === 'connections') {
+            ensureWhatsAppBridge().catch(() => {});
           }
         }
       } catch (e) {
@@ -203,12 +268,12 @@ export const SettingsWindow: React.FC = () => {
     };
 
     fetchWaStatus();
-    const interval = setInterval(fetchWaStatus, 1500);
+    const interval = setInterval(fetchWaStatus, 2000);
     return () => {
       isMounted = false;
       clearInterval(interval);
     };
-  }, []);
+  }, [activeSidebarCategory]);
 
   // People & Directory States
   const [contactSearchQuery, setContactSearchQuery] = useState('');
@@ -1401,35 +1466,9 @@ export const SettingsWindow: React.FC = () => {
                             </button>
                           ) : (
                             <button
-                              onClick={async () => {
-                                setWaLoading(true);
-                                try {
-                                  await ensureWhatsAppBridge();
-                                  // Ask the existing bridge for its QR. This never creates a
-                                  // second WhatsApp session when CLI/REPL is already pairing.
-                                  await fetch('http://localhost:8080/api/auth', { method: 'POST' }).catch(() => {});
-                                  for (let i = 0; i < 8; i++) {
-                                    await new Promise(r => setTimeout(r, 500));
-                                    try {
-                                      const res = await fetch('http://localhost:8080/api/qr');
-                                      if (res.ok) {
-                                        const d = await res.json();
-                                        if (d.qr_code) {
-                                          setWaQrCode(d.qr_code);
-                                          break;
-                                        }
-                                        if (d.logged_in) {
-                                          setWaStatus({ connected: true, logged_in: true, jid: d.jid || 'PIHU Desktop' });
-                                          break;
-                                        }
-                                      }
-                                    } catch (e) {}
-                                  }
-                                } catch (e) {} finally {
-                                  setWaLoading(false);
-                                }
-                              }}
-                              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white text-xs font-semibold shadow-lg shadow-emerald-500/20 transition"
+                              onClick={handleScanQr}
+                              disabled={waLoading}
+                              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:opacity-50 text-white text-xs font-semibold shadow-lg shadow-emerald-500/20 transition"
                             >
                               <QrCode className="w-3.5 h-3.5" />
                               {waLoading ? 'Starting Bridge...' : (waQrCode ? 'Refresh QR Code' : 'Scan WhatsApp QR')}
@@ -1456,19 +1495,44 @@ export const SettingsWindow: React.FC = () => {
                         /* If Not Authenticated: Display QR Pairing Code and Steps */
                         <div className="p-4 rounded-xl bg-black/40 border border-white/10 space-y-4">
                           <div className="flex flex-col md:flex-row items-center gap-5">
-                            {/* QR Code Graphic Box */}
-                            <div className="w-40 h-40 rounded-2xl bg-white p-2.5 flex items-center justify-center shadow-xl border border-white/20 shrink-0 overflow-hidden">
-                              {waQrCode ? (
-                                <img
-                                  src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=2&data=${encodeURIComponent(waQrCode)}`}
-                                  alt="WhatsApp Pairing QR Code"
-                                  className="w-full h-full object-contain rounded-lg"
-                                />
-                              ) : (
-                                <div className="text-center p-2">
-                                  <QrCode className="w-12 h-12 text-neutral-400 mx-auto mb-1 animate-pulse" />
-                                  <span className="text-[10px] text-neutral-600 font-semibold block">Click "Scan WhatsApp QR"</span>
-                                </div>
+                            <div className="flex flex-col items-center gap-2">
+                              <div className="w-40 h-40 rounded-2xl bg-white p-2.5 flex items-center justify-center shadow-xl border border-white/20 shrink-0 overflow-hidden">
+                                {waQrCode ? (
+                                  <img
+                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=2&data=${encodeURIComponent(waQrCode)}`}
+                                    alt="WhatsApp Pairing QR Code"
+                                    className="w-full h-full object-contain rounded-lg"
+                                  />
+                                ) : (
+                                  <div className="text-center p-2">
+                                    <QrCode className="w-12 h-12 text-neutral-400 mx-auto mb-1 animate-pulse" />
+                                    <span className="text-[10px] text-neutral-600 font-semibold block">
+                                      {waLoading ? 'Generating QR...' : 'Click "Scan WhatsApp QR"'}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                              {waQrCode && (
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(waQrCode);
+                                    setWaCopiedQr(true);
+                                    setTimeout(() => setWaCopiedQr(false), 2000);
+                                  }}
+                                  className="flex items-center gap-1 text-[10px] text-neutral-400 hover:text-white transition"
+                                >
+                                  {waCopiedQr ? (
+                                    <>
+                                      <Check className="w-3 h-3 text-emerald-400" />
+                                      <span className="text-emerald-400">QR Code String Copied</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Copy className="w-3 h-3" />
+                                      <span>Copy QR Payload</span>
+                                    </>
+                                  )}
+                                </button>
                               )}
                             </div>
 

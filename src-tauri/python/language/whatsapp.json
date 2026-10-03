@@ -1,0 +1,225 @@
+{
+  "metadata": {
+    "name": "PIHU WhatsApp vocabulary",
+    "version": "1.0.0",
+    "language": [
+      "en",
+      "hi",
+      "hinglish"
+    ]
+  },
+  "categories": {
+    "affirmation": {
+      "yes": [
+        "haan",
+        "han",
+        "hnn",
+        "ha",
+        "yep",
+        "yup"
+      ],
+      "okay": [
+        "ok",
+        "okk",
+        "okie",
+        "k",
+        "acha",
+        "achha",
+        "thik",
+        "theek",
+        "thik hai",
+        "theek hai"
+      ],
+      "sure": [
+        "haan bilkul",
+        "bilkul",
+        "ofc",
+        "for sure"
+      ],
+      "alright": [
+        "thik hai",
+        "theek hai",
+        "chalo thik"
+      ]
+    },
+    "negation": {
+      "no": [
+        "nahi",
+        "nhi",
+        "nah",
+        "nope",
+        "na"
+      ],
+      "dont_know": [
+        "pata nahi",
+        "pta nhi",
+        "idk",
+        "no idea"
+      ]
+    },
+    "abbreviations": {
+      "what do you mean": [
+        "wdym"
+      ],
+      "what are you doing": [
+        "wyd"
+      ],
+      "by the way": [
+        "btw"
+      ],
+      "to be honest": [
+        "tbh"
+      ],
+      "for real": [
+        "fr"
+      ],
+      "i dont know": [
+        "idk"
+      ],
+      "i dont care": [
+        "idc"
+      ],
+      "never mind": [
+        "nvm"
+      ],
+      "let me know": [
+        "lmk"
+      ],
+      "of course": [
+        "ofc"
+      ],
+      "shut the fuck up": [
+        "stfu"
+      ],
+      "laughing out loud": [
+        "lol"
+      ],
+      "talk to you later": [
+        "ttyl"
+      ],
+      "be right back": [
+        "brb"
+      ]
+    },
+    "actions": {
+      "do it": [
+        "kar",
+        "krr",
+        "kr",
+        "kar de",
+        "krde"
+      ],
+      "make it": [
+        "bana",
+        "bna",
+        "bana de",
+        "bnade"
+      ],
+      "send it": [
+        "bhej",
+        "bhej de",
+        "bhj",
+        "send kr"
+      ],
+      "tell me": [
+        "bata",
+        "bta",
+        "bol"
+      ],
+      "show me": [
+        "dikha",
+        "dikha de"
+      ],
+      "check it": [
+        "check kar",
+        "check kr",
+        "dekh"
+      ],
+      "wait": [
+        "ruk",
+        "rukk",
+        "ek sec"
+      ],
+      "fix it": [
+        "thik kar",
+        "theek kar",
+        "fix kr"
+      ]
+    },
+    "reactions": {
+      "nice": [
+        "sahi hai",
+        "badhiya",
+        "mast"
+      ],
+      "really": [
+        "sach mein?",
+        "srsly?",
+        "fr?"
+      ],
+      "exactly": [
+        "bilkul",
+        "wahi toh",
+        "exactly"
+      ],
+      "wow": [
+        "are wah",
+        "waah",
+        "damn"
+      ],
+      "oops": [
+        "arey",
+        "arre",
+        "my bad"
+      ]
+    },
+    "casual": {
+      "what happened": [
+        "kya hua",
+        "kya hogya",
+        "kya scene hai"
+      ],
+      "never mind": [
+        "chhod",
+        "chhod na",
+        "rehne de"
+      ],
+      "no problem": [
+        "koi na",
+        "koi dikkat nahi"
+      ],
+      "its fine": [
+        "koi na",
+        "chalta hai",
+        "theek hai"
+      ],
+      "hurry up": [
+        "jaldi kar",
+        "jldi kr"
+      ]
+    }
+  },
+  "normalization": {
+    "variants": {
+      "hn": "haan",
+      "han": "haan",
+      "ha": "haan",
+      "hnn": "haan",
+      "nhi": "nahi",
+      "nai": "nahi",
+      "thik": "theek",
+      "thk": "theek",
+      "kr": "kar",
+      "krr": "kar",
+      "kro": "karo",
+      "bta": "bata",
+      "btana": "batana",
+      "smjh": "samajh",
+      "smjha": "samjha",
+      "pta": "pata",
+      "hogya": "ho gaya",
+      "acha": "achha",
+      "accha": "achha"
+    }
+  }
+}

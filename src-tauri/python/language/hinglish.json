@@ -1,0 +1,98 @@
+{
+  "metadata": {
+    "name": "PIHU Hinglish phrase map",
+    "version": "1.0.0"
+  },
+  "phrases": {
+    "what do you mean": [
+      "matlab?",
+      "kya matlab?"
+    ],
+    "i dont know": [
+      "pata nahi",
+      "pta nhi"
+    ],
+    "i understand": [
+      "samajh gaya",
+      "haan samajh gaya"
+    ],
+    "got it": [
+      "samajh gaya",
+      "smjh gya"
+    ],
+    "please tell me": [
+      "bata na",
+      "please bata"
+    ],
+    "do you understand": [
+      "samajh aaya?",
+      "samjha?"
+    ],
+    "i will do it": [
+      "kar dunga",
+      "main kar dunga"
+    ],
+    "let us go": [
+      "chalo",
+      "chal"
+    ],
+    "why": [
+      "kyun",
+      "aisa kyun"
+    ],
+    "when": [
+      "kab"
+    ],
+    "where": [
+      "kahan",
+      "kidhar"
+    ],
+    "how": [
+      "kaise",
+      "kese"
+    ]
+  },
+  "connectors": {
+    "but": [
+      "lekin",
+      "par",
+      "pr"
+    ],
+    "because": [
+      "kyunki"
+    ],
+    "then": [
+      "toh",
+      "phir",
+      "fir"
+    ],
+    "also": [
+      "bhi",
+      "aur"
+    ],
+    "actually": [
+      "actually",
+      "waise"
+    ],
+    "maybe": [
+      "shayad",
+      "maybe"
+    ],
+    "now": [
+      "abhi",
+      "ab"
+    ],
+    "later": [
+      "baad mein",
+      "badme"
+    ],
+    "again": [
+      "phir se",
+      "fir se"
+    ],
+    "only": [
+      "hi",
+      "sirf"
+    ]
+  }
+}

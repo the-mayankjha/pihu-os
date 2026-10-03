@@ -1,0 +1,14 @@
+{
+  "metadata": {
+    "name": "PIHU learned vocabulary",
+    "version": "1.0.0"
+  },
+  "preferences": {
+    "language_style": "casual_hinglish",
+    "script": "roman",
+    "slang_intensity": "light",
+    "use_emojis": false
+  },
+  "overrides": {},
+  "learned": {}
+}
