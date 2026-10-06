@@ -80,16 +80,52 @@ function localTarget(contact: { whatsappJid?: string; phone?: string }) {
   return { jid: digits ? (target.includes('@') ? target : `${digits}@s.whatsapp.net`) : '', phone: contact.phone || digits };
 }
 
+const INDIC_RELATION_ALIASES: Record<string, string[]> = {
+  papa: ['papa', 'pappa', 'paapa', 'pa', 'pawpa', 'dad', 'daddy', 'pitaji', 'pita ji', 'father', 'bapa', 'baba', 'bapu', 'पापा', 'पप्पा', 'पिताजी', 'बापू', 'बाऊजी'],
+  mummy: ['mummy', 'mumma', 'maa', 'ma', 'mataji', 'mata ji', 'mom', 'mommy', 'mother', 'amma', 'मम्मी', 'माँ', 'माताजी', 'अम्मी', 'आई'],
+  bhaiya: ['bhaiya', 'bhai', 'bhaya', 'bhiya', 'bro', 'brother', 'veer', 'भैया', 'भाई', 'वीर'],
+  didi: ['didi', 'behen', 'behna', 'sister', 'sis', 'दीदी', 'बहन', 'बहना'],
+  chacha: ['chacha', 'chachu', 'kaka', 'चाचा', 'चाचू', 'काका'],
+  mama: ['mama', 'mamaji', 'मामा', 'मामाजी'],
+  dada: ['dada', 'dadaji', 'दादा', 'दादाजी', 'grandfather'],
+  dadi: ['dadi', 'dadiji', 'दादी', 'दादीजी', 'grandmother'],
+  nana: ['nana', 'nanaji', 'नाना', 'नानाजी'],
+  nani: ['nani', 'naniji', 'नानी', 'नानीजी'],
+};
+
+let lastResolvedRecipient: RecipientResolution | null = null;
+
+function getCanonicalRelation(word: string): string | null {
+  const w = word.trim().toLowerCase();
+  for (const [canonical, variants] of Object.entries(INDIC_RELATION_ALIASES)) {
+    if (canonical === w || variants.includes(w)) {
+      return canonical;
+    }
+  }
+  return null;
+}
+
 // Exact aliases send directly. Partial/phonetic matches are explicitly confirmed.
 async function resolveWhatsAppRecipient(query: string): Promise<RecipientResolution> {
   const clean = query.replace(/^[-@]+/, '').trim();
+  const cleanLower = clean.toLowerCase();
+
+  // Context / Pronoun fallback (e.g. "Send them hi", "Send him hi", "unhe message bhejo")
+  const isPronoun = !clean || /^(them|him|her|unhe|unko|inhe|inhein|wo|woh|it|this|that|last)$/i.test(cleanLower);
+  if (isPronoun && lastResolvedRecipient && lastResolvedRecipient.jid) {
+    console.log(`[whatsappTools] 🔄 Pronoun "${clean}" resolved to last active contact: ${lastResolvedRecipient.displayName}`);
+    return lastResolvedRecipient;
+  }
+
   if (!clean) return { jid: '', displayName: '', phone: '', match: 'direct', confidence: 0 };
 
-  const cleanLower = clean.toLowerCase();
+  const queryCanonical = getCanonicalRelation(cleanLower);
 
   // 0. Direct WhatsApp JID (e.g. groups @g.us or user JID @s.whatsapp.net)
   if (clean.includes('@')) {
-    return { jid: clean, displayName: clean, phone: clean, match: 'exact', confidence: 1 };
+    const res: RecipientResolution = { jid: clean, displayName: clean, phone: clean, match: 'exact', confidence: 1 };
+    lastResolvedRecipient = res;
+    return res;
   }
 
   // 1. Check Settings / Local People Directory
@@ -97,13 +133,22 @@ async function resolveWhatsAppRecipient(query: string): Promise<RecipientResolut
   for (const c of contacts) {
     const cName = (c.name || '').toLowerCase();
     const cNick = (c.nickname || '').toLowerCase();
-    if (cName === cleanLower || cNick === cleanLower) {
+    const cNameCanonical = getCanonicalRelation(cName);
+    const cNickCanonical = getCanonicalRelation(cNick);
+
+    if (
+      cName === cleanLower ||
+      cNick === cleanLower ||
+      (queryCanonical && (queryCanonical === cNameCanonical || queryCanonical === cNickCanonical))
+    ) {
       const target = localTarget(c);
-      return {
+      const res: RecipientResolution = {
         jid: target.jid,
         displayName: c.name + (c.nickname ? ` (${c.nickname})` : ''),
         phone: target.phone, match: 'exact', confidence: 1,
       };
+      lastResolvedRecipient = res;
+      return res;
     }
   }
 
@@ -115,30 +160,40 @@ async function resolveWhatsAppRecipient(query: string): Promise<RecipientResolut
       bestLocal = { jid: target.jid, displayName: c.name + (c.nickname ? ` (${c.nickname})` : ''), phone: target.phone, match: 'fuzzy', confidence: score };
     }
   }
-  if (bestLocal) return bestLocal;
+  if (bestLocal) {
+    lastResolvedRecipient = bestLocal;
+    return bestLocal;
+  }
 
-  // 2. Check Live WhatsApp Bridge for chats, contacts, and groups
+  // 2. Check Live WhatsApp Bridge for chats, contacts, and groups (with 5s timeout)
   try {
-    const res = await fetch('http://localhost:8080/api/chats', { signal: AbortSignal.timeout(1200) });
+    const res = await fetch('http://localhost:8080/api/chats', { signal: AbortSignal.timeout(5000) });
     if (res.ok) {
       const data = await res.json();
       let bestChat: RecipientResolution | null = null;
       for (const chat of data.chats || []) {
         const chatName = (chat.name || '').toLowerCase();
-        if (chatName === cleanLower) {
-          return {
+        const chatCanonical = getCanonicalRelation(chatName);
+
+        if (chatName === cleanLower || (queryCanonical && queryCanonical === chatCanonical)) {
+          const matchRes: RecipientResolution = {
             jid: chat.jid,
             displayName: chat.name + (chat.is_group ? ' [Group]' : ''),
             phone: chat.jid,
             match: 'exact', confidence: 1,
           };
+          lastResolvedRecipient = matchRes;
+          return matchRes;
         }
         const score = nameScore(clean, chat.name || '');
-        if (score >= 0.72 && (!bestChat || score > bestChat.confidence)) bestChat = {
+        if (score >= 0.70 && (!bestChat || score > bestChat.confidence)) bestChat = {
           jid: chat.jid, displayName: chat.name + (chat.is_group ? ' [Group]' : ''), phone: chat.jid, match: 'fuzzy', confidence: score,
         };
       }
-      if (bestChat) return bestChat;
+      if (bestChat) {
+        lastResolvedRecipient = bestChat;
+        return bestChat;
+      }
     }
   } catch (e) {}
 
@@ -391,10 +446,22 @@ export const whatsappTools: ActionTool[] = [
         const cleanQuery = (args.query || '').toLowerCase();
         const matches: any[] = [];
 
+        const queryCanonical = getCanonicalRelation(cleanQuery);
+
         // 1. Search local contacts
         const localContacts = useSettingsStore.getState().contacts || [];
         for (const c of localContacts) {
-          if ((c.name || '').toLowerCase().includes(cleanQuery) || (c.nickname || '').toLowerCase().includes(cleanQuery)) {
+          const cName = (c.name || '').toLowerCase();
+          const cNick = (c.nickname || '').toLowerCase();
+          const cNameCanonical = getCanonicalRelation(cName);
+          const cNickCanonical = getCanonicalRelation(cNick);
+
+          if (
+            cName.includes(cleanQuery) ||
+            cNick.includes(cleanQuery) ||
+            (queryCanonical && (cNameCanonical === queryCanonical || cNickCanonical === queryCanonical)) ||
+            nameScore(cleanQuery, c.name || '') >= 0.70
+          ) {
             matches.push({
               name: c.name,
               nickname: c.nickname,
@@ -404,13 +471,20 @@ export const whatsappTools: ActionTool[] = [
           }
         }
 
-        // 2. Search WhatsApp chats/groups
+        // 2. Search WhatsApp chats/groups (with 5s timeout)
         try {
-          const res = await fetch('http://localhost:8080/api/chats', { signal: AbortSignal.timeout(1500) });
+          const res = await fetch('http://localhost:8080/api/chats', { signal: AbortSignal.timeout(5000) });
           if (res.ok) {
             const data = await res.json();
             for (const chat of data.chats || []) {
-              if ((chat.name || '').toLowerCase().includes(cleanQuery)) {
+              const chatName = (chat.name || '').toLowerCase();
+              const chatCanonical = getCanonicalRelation(chatName);
+
+              if (
+                chatName.includes(cleanQuery) ||
+                (queryCanonical && chatCanonical === queryCanonical) ||
+                nameScore(cleanQuery, chat.name || '') >= 0.70
+              ) {
                 matches.push({
                   name: chat.name,
                   jid: chat.jid,

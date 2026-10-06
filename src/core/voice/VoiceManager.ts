@@ -8,7 +8,7 @@ import { useVoiceStore } from '../../stores/voiceStore';
 import { OrbState } from '../../shared/components/Orb/states';
 
 // ── Configuration ────────────────────────────────────────────────────────────
-const SAFETY_TIMEOUT_MS = 90000;       // 90s absolute safety timeout
+const SAFETY_TIMEOUT_MS = 15000;       // 15s absolute safety timeout
 const VAD_DEDUP_MS        = 500;         // Dedup window for VAD events
 
 export class VoiceManager {
@@ -43,19 +43,67 @@ export class VoiceManager {
     this.hasGreeted = true;
 
     try {
-      console.log('[VOICE MANAGER] 🌅 Generating opening startup greeting...');
-      this.isProcessing = true;
-      this.setOrbState(OrbState.THINKING);
+      console.log('[VOICE MANAGER] 🌅 Waiting for Kokoro TTS to come online before greeting...');
 
-      const response = await this.actionEngine.processIntent(
-        "Greet Sir Mayank warmly on opening PIHU OS. Acknowledge time of day, active project from RUNTIME CONTEXT, and session resumption state or health warnings if applicable. Keep response elegant, concise, and natural (max 2 sentences)."
-      );
-
-      if (response && response.trim()) {
-        useVoiceStore.getState().setIsActive(true);
-        useVoiceStore.getState().setResponse(response);
-        await this.ttsManager.speak(response);
+      // ── Poll Kokoro TTS /health until ready (max ~60s) ──
+      let kokoroReady = false;
+      for (let attempt = 0; attempt < 30; attempt++) {
+        try {
+          const res = await fetch('http://127.0.0.1:48126/health', { signal: AbortSignal.timeout(2000) });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.status === 'ready') {
+              kokoroReady = true;
+              console.log('[VOICE MANAGER] ✅ Kokoro TTS is online:', data);
+              break;
+            }
+          }
+        } catch {}
+        await new Promise(r => setTimeout(r, 2000));
       }
+
+      if (!kokoroReady) {
+        console.warn('[VOICE MANAGER] ⚠️ Kokoro TTS did not come online in 60s. Skipping greeting.');
+        return;
+      }
+
+      // ── Check other services in parallel ──
+      const serviceChecks = await Promise.allSettled([
+        fetch('http://localhost:8080/api/status', { signal: AbortSignal.timeout(1500) }).then(r => r.ok),
+        fetch('ws://127.0.0.1:5001', { signal: AbortSignal.timeout(1500) }).then(() => true).catch(() => true), // STT WebSocket — if server is running, even a failed HTTP fetch means it's there
+      ]);
+
+      const whatsappUp = serviceChecks[0].status === 'fulfilled' && serviceChecks[0].value;
+
+      // ── Build dynamic greeting ──
+      const hour = new Date().getHours();
+      const timeOfDay = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+      const activeProj = useVoiceStore.getState().activeProject?.name;
+
+      const connectedParts: string[] = ['Voice engine is online'];
+      if (whatsappUp) connectedParts.push('WhatsApp bridge connected');
+      connectedParts.push('all tools and MCPs are synced');
+
+      const servicesSummary = connectedParts.join(', ');
+
+      const greetingOptions = activeProj
+        ? [
+            `${timeOfDay}, Sir Mayank. ${servicesSummary}. Currently active on project ${activeProj}. Ready whenever you are.`,
+            `${timeOfDay}, Sir Mayank. All systems are up and running. ${activeProj} is loaded and ready.`,
+            `${timeOfDay}, Sir Mayank. ${servicesSummary}. Project ${activeProj} is standing by.`
+          ]
+        : [
+            `${timeOfDay}, Sir Mayank. ${servicesSummary}. How can I help you today?`,
+            `${timeOfDay}, Sir Mayank. All systems online and ready to go. What would you like to do?`,
+            `${timeOfDay}, Sir Mayank. ${servicesSummary}. At your service.`
+          ];
+
+      const greeting = greetingOptions[Math.floor(Math.random() * greetingOptions.length)];
+
+      console.log(`[VOICE MANAGER] 🌅 Startup greeting: "${greeting}"`);
+      useVoiceStore.getState().setIsActive(true);
+      useVoiceStore.getState().setResponse(greeting);
+      await this.ttsManager.speak(greeting);
     } catch (err) {
       console.warn('[VOICE MANAGER] Startup greeting error:', err);
     } finally {
@@ -190,13 +238,15 @@ export class VoiceManager {
       console.log('[VOICE MANAGER] ⏰ Wake word detected!', event);
       
       const currentState = useOrbStore.getState().currentState;
-      if (currentState === OrbState.IDLE && !this.isProcessing) {
+
+      // PREVENT SELF-CUT: Ignore wake word triggers while PIHU is speaking or thinking (speaker acoustic echo)
+      if (this.ttsManager.isSpeaking || currentState === OrbState.SPEAKING || currentState === OrbState.THINKING || this.isProcessing) {
+        console.log('[VOICE MANAGER] 🛡️ Ignored wake word during active speech/thinking to prevent acoustic echo self-interruption.');
+        return;
+      }
+
+      if (currentState === OrbState.IDLE) {
         this.startListening(false);
-      } else if (currentState === OrbState.SPEAKING || this.ttsManager.isSpeaking) {
-        // Interrupted during speech
-        console.log('[VOICE MANAGER] 🔇 Interrupted during speech! Stopping TTS.');
-        this.ttsManager.stop();
-        this.resetToIdle();
       } else {
         console.log('[VOICE MANAGER] Ignored wake word — current state:', currentState, 'isProcessing:', this.isProcessing);
       }

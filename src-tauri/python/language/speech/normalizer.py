@@ -135,6 +135,46 @@ class SpeechNormalizer:
 
         return " ".join(output)
 
+    def to_hindi_segment(self, text: str) -> str:
+        """
+        Convert ONLY Roman Hindi words to Devanagari for Kokoro Hindi (hf_alpha).
+        English words (WhatsApp, Chrome, open, message, etc.) stay in Latin script.
+        """
+        if not text:
+            return ""
+
+        text = self._replace_phrases(text)
+        tokens = self.TOKEN_RE.findall(text)
+        output: list[str] = []
+
+        for token in tokens:
+            # Preserve punctuation
+            if re.fullmatch(r"[^\w\s]", token):
+                if output:
+                    output[-1] += token
+                continue
+
+            # Preserve existing Devanagari
+            if re.fullmatch(r"[\u0900-\u097F]+", token):
+                output.append(token)
+                continue
+
+            # Keep numbers unchanged
+            if token.isdigit():
+                output.append(token)
+                continue
+
+            key = token.casefold()
+
+            # Roman Hindi -> Devanagari
+            if key in self.roman:
+                output.append(self.roman[key])
+            else:
+                # English & unknown words stay in Latin script
+                output.append(token)
+
+        return " ".join(output)
+
     @staticmethod
     def _append_segment(
         output: list[dict[str, str]],

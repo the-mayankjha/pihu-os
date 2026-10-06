@@ -53,10 +53,10 @@ export default function App() {
     // Initialize VoiceManager so it can listen to Tauri events
     const voiceMgr = VoiceManager.getInstance();
 
-    // Trigger warm opening greeting on app startup
+    // Trigger warm opening greeting on app startup (greeting itself waits for Kokoro TTS)
     const timer = setTimeout(() => {
       voiceMgr.triggerStartupGreeting();
-    }, 1500);
+    }, 500);
 
     return () => clearTimeout(timer);
   }, []);
