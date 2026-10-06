@@ -9,6 +9,24 @@ export interface ActiveProjectInfo {
   lastUpdated: number;
 }
 
+export interface PendingFileChange {
+  path: string;
+  content: string;
+  action: 'create' | 'modify' | 'delete';
+  language?: string;
+}
+
+export interface PendingProjectAction {
+  id: string;
+  type: 'scaffold_project' | 'create_react_project' | 'edit_files' | 'execute_command';
+  title: string;
+  description?: string;
+  targetDir: string;
+  files: PendingFileChange[];
+  command?: string;
+  createdAt: number;
+}
+
 interface VoiceState {
   isActive: boolean;
   isListening: boolean;
@@ -16,6 +34,7 @@ interface VoiceState {
   response: string;
   processingStatus: string | null;
   activeProject: ActiveProjectInfo | null;
+  pendingProjectAction: PendingProjectAction | null;
   activeVoiceEngine: string;
   activeVoiceName: string | null;
   lastTTSError: string | null;
@@ -26,6 +45,7 @@ interface VoiceState {
   setResponse: (text: string) => void;
   setProcessingStatus: (status: string | null) => void;
   setActiveProject: (project: ActiveProjectInfo | null) => void;
+  setPendingProjectAction: (action: PendingProjectAction | null) => void;
   setActiveVoiceEngine: (engine: string) => void;
   setActiveVoiceName: (name: string | null) => void;
   setLastTTSError: (err: string | null) => void;
@@ -43,6 +63,7 @@ export const useVoiceStore = create<VoiceState>((set) => ({
   response: '',
   processingStatus: null,
   activeProject: initialActiveProject,
+  pendingProjectAction: null,
   activeVoiceEngine: 'Awaiting Engine...',
   activeVoiceName: null,
   lastTTSError: null,
@@ -58,6 +79,7 @@ export const useVoiceStore = create<VoiceState>((set) => ({
     }
     set({ activeProject: project });
   },
+  setPendingProjectAction: (action) => set({ pendingProjectAction: action }),
   setActiveVoiceEngine: (engine) => set({ activeVoiceEngine: engine }),
   setActiveVoiceName: (name) => set({ activeVoiceName: name }),
   setLastTTSError: (err) => set({ lastTTSError: err }),
@@ -68,6 +90,7 @@ export const useVoiceStore = create<VoiceState>((set) => ({
     transcription: '',
     response: '',
     processingStatus: null,
+    pendingProjectAction: null,
     activeVoiceEngine: 'Awaiting Engine...',
     activeVoiceName: null,
     lastTTSError: null

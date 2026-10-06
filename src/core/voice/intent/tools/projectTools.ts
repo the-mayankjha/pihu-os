@@ -17,9 +17,326 @@ async function writeFileBase64(invoke: any, filePath: string, content: string): 
   await invoke('execute_shell_command', { command: pyCmd });
 }
 
+// ─── Pending Project Action Execution & Confirmation ─────────────────────────
+
+export async function executePendingProjectAction(): Promise<ToolResult> {
+  const { useVoiceStore } = await import('../../../../stores/voiceStore');
+  const pending = useVoiceStore.getState().pendingProjectAction;
+  if (!pending) return { success: false, error: 'No pending project action found.' };
+
+  const { invoke } = await import('@tauri-apps/api/core');
+  try {
+    console.log(`[projectTools] 🚀 Executing confirmed project action: "${pending.title}" in "${pending.targetDir}"`);
+
+    // 1. Create target directory
+    if (pending.targetDir) {
+      await invoke('execute_shell_command', { command: `mkdir -p "${pending.targetDir}"` });
+    }
+
+    // 2. Write all staged files
+    const writtenPaths: string[] = [];
+    for (const f of pending.files) {
+      let p = f.path;
+      if (!p.startsWith('/')) {
+        p = `${pending.targetDir}/${p}`;
+      }
+      await writeFileBase64(invoke, p, f.content);
+      writtenPaths.push(p);
+    }
+
+    // 3. Execute post-stage command if specified (e.g. npm install)
+    if (pending.command) {
+      console.log(`[projectTools] Running post-stage command: ${pending.command}`);
+      await invoke('execute_shell_command', {
+        command: `cd "${pending.targetDir}" && ${pending.command}`
+      }).catch(err => console.warn('[projectTools] Post-stage command warning:', err));
+    }
+
+    // 4. Update active project in voice store
+    const projName = pending.targetDir.split('/').pop() || pending.title;
+    useVoiceStore.getState().setActiveProject({
+      name: projName,
+      dir: pending.targetDir,
+      port: 5180,
+      url: 'http://localhost:5180',
+      lastUpdated: Date.now()
+    });
+
+    // 5. Reveal in Finder
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    if (isMac && pending.targetDir) {
+      await invoke('execute_shell_command', {
+        command: `osascript -e 'tell application "Finder" to open (POSIX file "${pending.targetDir}" as alias)' -e 'tell application "Finder" to activate'`
+      }).catch(() => {});
+    }
+
+    // Clear pending state
+    useVoiceStore.getState().setPendingProjectAction(null);
+
+    return {
+      success: true,
+      data: {
+        action: 'applied_changes',
+        title: pending.title,
+        target_dir: pending.targetDir,
+        files_written: writtenPaths.length,
+        message: `Successfully applied changes for "${pending.title}". Wrote ${writtenPaths.length} file(s) to ${pending.targetDir}.`
+      }
+    };
+  } catch (err: any) {
+    useVoiceStore.getState().setPendingProjectAction(null);
+    return { success: false, error: `Failed to apply changes: ${err?.message || String(err)}` };
+  }
+}
+
+export async function handlePendingProjectConfirmation(text: string): Promise<string | null> {
+  const { useVoiceStore } = await import('../../../../stores/voiceStore');
+  const pending = useVoiceStore.getState().pendingProjectAction;
+  if (!pending) return null;
+
+  // Expire after 5 minutes
+  if (Date.now() - pending.createdAt > 5 * 60 * 1000) {
+    useVoiceStore.getState().setPendingProjectAction(null);
+    return 'The pending project confirmation expired. Please tell me what changes you would like to make.';
+  }
+
+  const answer = text.trim().toLowerCase();
+
+  // Cancel / Reject intent
+  if (/^(no|nope|cancel|stop|wrong|don'?t|mat\s*karo|ruk\s*jao|nahi|chhod\s*do)\b/i.test(answer)) {
+    useVoiceStore.getState().setPendingProjectAction(null);
+    return 'Understood Sir, I have cancelled the proposed project changes.';
+  }
+
+  // Affirmative / Confirm intent
+  if (
+    /^(yes|yeah|yep|correct|confirm|apply|proceed|do\s*it|sure|haan|kardo|kar\s*do|chalao|lagao|banao|save\s*kardo|write\s*it|done)\b/i.test(answer) ||
+    /\b(?:apply\s+changes|proceed\s+with\s+it|create\s+it|write\s+files|save\s+it|haan\s+banao|haan\s+kardo)\b/i.test(answer)
+  ) {
+    const res = await executePendingProjectAction();
+    if (res.success) {
+      return `Done Sir Mayank! I have applied all changes for "${pending.title}". ${pending.files.length} file(s) written to ${pending.targetDir}, and the folder is opened for you.`;
+    } else {
+      return `There was an issue applying the changes: ${res.error || 'Unknown error'}`;
+    }
+  }
+
+  return null;
+}
+
 // ─── Complex Project & Scaffolding MCP Tools ─────────────────────────────────
 
 export const projectTools: ActionTool[] = [
+
+  {
+    declaration: {
+      name: 'project_mcp_run_code',
+      description: 'Compiles and runs a code file or script (Python, Java, C++, C, Rust, Go, Node.js, Shell) and opens the modern PIHU Output Window with the formatted terminal execution output. Use when user says "run this python script", "execute code", "run main.cpp", "run java program", "test output".',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          file_path: {
+            type: 'STRING',
+            description: 'Path of the file to execute (e.g. "main.py", "src/main.cpp", "Main.java")',
+          },
+          project_dir: {
+            type: 'STRING',
+            description: 'Working directory for execution. Defaults to active project directory.',
+          },
+          language: {
+            type: 'STRING',
+            description: 'Programming language: "python", "cpp", "c", "java", "rust", "go", "node", "bash"',
+          },
+          args: {
+            type: 'ARRAY',
+            items: { type: 'STRING' },
+            description: 'Command line arguments to pass to the program',
+          },
+        },
+        required: ['file_path'],
+      },
+    },
+    execute: async (args): Promise<ToolResult> => {
+      try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        const { useVoiceStore } = await import('../../../../stores/voiceStore');
+        const { useCodeOutputStore } = await import('../../../../stores/codeOutputStore');
+
+        const activeProj = useVoiceStore.getState().activeProject;
+        let cwd = args.project_dir ? args.project_dir.trim() : (activeProj?.dir || '/Users/mayankjha/Documents/projects');
+        let rawFile = args.file_path.trim();
+
+        // Resolve absolute path
+        let fullPath = rawFile.startsWith('/') ? rawFile : `${cwd}/${rawFile}`;
+        const fileName = fullPath.split('/').pop() || rawFile;
+
+        // Auto-detect language if not provided
+        let lang = (args.language || '').toLowerCase();
+        if (!lang) {
+          if (fileName.endsWith('.py')) lang = 'python';
+          else if (fileName.endsWith('.cpp') || fileName.endsWith('.cc') || fileName.endsWith('.cxx')) lang = 'cpp';
+          else if (fileName.endsWith('.c')) lang = 'c';
+          else if (fileName.endsWith('.java')) lang = 'java';
+          else if (fileName.endsWith('.rs')) lang = 'rust';
+          else if (fileName.endsWith('.go')) lang = 'go';
+          else if (fileName.endsWith('.js') || fileName.endsWith('.mjs')) lang = 'node';
+          else if (fileName.endsWith('.ts')) lang = 'typescript';
+          else if (fileName.endsWith('.sh')) lang = 'bash';
+          else lang = 'python';
+        }
+
+        let cmd = '';
+        if (lang === 'python') {
+          cmd = `python3 "${fullPath}"`;
+        } else if (lang === 'cpp') {
+          const bin = `/tmp/pihu_cpp_${Date.now()}`;
+          cmd = `g++ -std=c++17 "${fullPath}" -o "${bin}" && "${bin}"`;
+        } else if (lang === 'c') {
+          const bin = `/tmp/pihu_c_${Date.now()}`;
+          cmd = `gcc "${fullPath}" -o "${bin}" && "${bin}"`;
+        } else if (lang === 'java') {
+          const classDir = fullPath.substring(0, fullPath.lastIndexOf('/')) || cwd;
+          const baseName = fileName.replace(/\.java$/, '');
+          cmd = `cd "${classDir}" && javac "${fileName}" && java "${baseName}"`;
+        } else if (lang === 'rust') {
+          const bin = `/tmp/pihu_rust_${Date.now()}`;
+          cmd = `rustc "${fullPath}" -o "${bin}" && "${bin}"`;
+        } else if (lang === 'go') {
+          cmd = `go run "${fullPath}"`;
+        } else if (lang === 'typescript' || lang === 'node') {
+          cmd = `npx tsx "${fullPath}" 2>/dev/null || node "${fullPath}"`;
+        } else if (lang === 'bash' || lang === 'sh') {
+          cmd = `bash "${fullPath}"`;
+        }
+
+        console.log(`[projectTools] ⚡ Executing code command: ${cmd} in ${cwd}`);
+        const startTime = Date.now();
+
+        let stdout = '';
+        let stderr = '';
+        let exitCode = 0;
+
+        try {
+          stdout = await invoke('execute_shell_command', { command: `cd "${cwd}" && ${cmd} 2>&1` });
+        } catch (err: any) {
+          exitCode = 1;
+          stderr = String(err?.message || err || 'Execution failed');
+        }
+
+        const durationMs = Date.now() - startTime;
+
+        const result = {
+          id: `exec_${Date.now()}`,
+          language: lang,
+          command: cmd,
+          cwd,
+          stdout: stdout.trim(),
+          stderr: stderr.trim(),
+          exitCode,
+          durationMs,
+          timestamp: Date.now(),
+          fileName,
+          projectName: activeProj?.name,
+        };
+
+        useCodeOutputStore.getState().addExecution(result);
+
+        return {
+          success: true,
+          data: {
+            status: 'executed',
+            file: fileName,
+            language: lang,
+            exit_code: exitCode,
+            duration_ms: durationMs,
+            stdout: stdout.slice(0, 1500),
+            stderr: stderr.slice(0, 500),
+            message: `Executed ${fileName} (${lang}) in ${durationMs}ms with exit code ${exitCode}. Results displayed in PIHU Code Output Window.`,
+          }
+        };
+      } catch (e: any) {
+        return { success: false, error: `Failed to execute code: ${e?.message || String(e)}` };
+      }
+    },
+  },
+
+  {
+    declaration: {
+      name: 'project_mcp_stage_code_changes',
+      description: 'Stages proposed code modifications, new components, or file changes into the IDE code previewer for user review and confirmation BEFORE writing to disk. Always use this tool when creating or modifying code files in a project instead of directly writing to disk.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          title: {
+            type: 'STRING',
+            description: 'Brief title for the change, e.g. "Add Exercise Timer Component", "Update App.tsx Navigation"',
+          },
+          target_dir: {
+            type: 'STRING',
+            description: 'Target project root directory path, e.g. "/Users/mayankjha/Documents/projects/workout-tracker"',
+          },
+          files: {
+            type: 'ARRAY',
+            items: {
+              type: 'OBJECT',
+              properties: {
+                path: { type: 'STRING', description: 'Relative or absolute file path (e.g. "src/components/RestTimer.tsx")' },
+                content: { type: 'STRING', description: 'Full code contents to write into the file' },
+                action: { type: 'STRING', description: '"create" | "modify" | "delete"' },
+                language: { type: 'STRING', description: '"tsx" | "typescript" | "css" | "json" | "python" | "diff"' },
+              },
+              required: ['path', 'content'],
+            },
+            description: 'List of files being proposed for modification or creation',
+          },
+          command: {
+            type: 'STRING',
+            description: 'Optional shell command to execute after files are written (e.g. "npm install --no-audit")',
+          },
+        },
+        required: ['title', 'files'],
+      },
+    },
+    execute: async (args): Promise<ToolResult> => {
+      try {
+        const { useVoiceStore } = await import('../../../../stores/voiceStore');
+        const activeProj = useVoiceStore.getState().activeProject;
+        const targetDir = args.target_dir || activeProj?.dir || '/Users/mayankjha/Documents/projects';
+        const rawFiles = args.files || [];
+
+        const stagedAction = {
+          id: `proj_act_${Date.now()}`,
+          type: 'edit_files' as const,
+          title: args.title || 'Proposed Project Changes',
+          description: `Staged ${rawFiles.length} file(s) for ${targetDir}`,
+          targetDir,
+          files: rawFiles.map((f: any) => ({
+            path: f.path,
+            content: f.content,
+            action: f.action || 'create',
+            language: f.language || (f.path.endsWith('.tsx') ? 'tsx' : f.path.endsWith('.ts') ? 'typescript' : f.path.endsWith('.py') ? 'python' : f.path.endsWith('.css') ? 'css' : 'text')
+          })),
+          command: args.command,
+          createdAt: Date.now()
+        };
+
+        useVoiceStore.getState().setPendingProjectAction(stagedAction);
+
+        return {
+          success: true,
+          data: {
+            status: 'staged_for_confirmation',
+            title: stagedAction.title,
+            target_directory: targetDir,
+            files_count: rawFiles.length,
+            message: `Staged ${rawFiles.length} file(s) for review in the IDE code viewer. Awaiting user confirmation to write changes.`,
+          }
+        };
+      } catch (e: any) {
+        return { success: false, error: `Failed to stage code changes: ${e?.message || String(e)}` };
+      }
+    },
+  },
 
   {
     declaration: {
@@ -1046,53 +1363,254 @@ npm run build
         // ── PYTHON ─────────────────────────────────────────────────────────────
         if (lang === 'python') {
           if (stack === 'fastapi' || stack === 'restapi') {
-            filesMap[`${targetDir}/main.py`] = `from fastapi import FastAPI\n\napp = FastAPI(title="${rawName}")\n\n@app.get("/")\ndef read_root():\n    return {"status": "online", "project": "${rawName}", "engine": "FastAPI"}\n\n@app.get("/health")\ndef health_check():\n    return {"health": "ok"}\n`;
+            filesMap[`${targetDir}/main.py`] = `from fastapi import FastAPI
+import uvicorn
+
+app = FastAPI(
+    title="${rawName} | PIHU OS",
+    description="Engineered by PIHU OS Agentic Development Suite",
+    version="1.0.0"
+)
+
+@app.get("/")
+def read_root():
+    return {
+        "status": "online",
+        "project": "${rawName}",
+        "engine": "PIHU OS FastAPI Microservice",
+        "version": "1.0.0"
+    }
+
+@app.get("/health")
+def health_check():
+    return {"health": "ok", "system": "optimal"}
+
+if __name__ == "__main__":
+    print("\\033[1;35m╭──────────────────────────────────────────────╮\\033[0m")
+    print("\\033[1;35m│  ⚡ PIHU OS FastAPI Server: ${rawName}\\033[0m")
+    print("\\033[1;35m╰──────────────────────────────────────────────╯\\033[0m")
+    uvicorn.run(app, host="127.0.0.1", port=8000)
+`;
             filesMap[`${targetDir}/requirements.txt`] = `fastapi>=0.100.0\nuvicorn>=0.22.0\npydantic>=2.0.0\npytest>=7.0.0\n`;
-            filesMap[`${targetDir}/README.md`] = `# ${rawName} (FastAPI)\n\nRun server:\n\`\`\`bash\nuvicorn main:app --reload --port 8000\n\`\`\`\n`;
-          } else if (stack === 'django') {
-            filesMap[`${targetDir}/manage.py`] = `#!/usr/bin/env python\nimport os, sys\nif __name__ == "__main__":\n    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "app.settings")\n    from django.core.management import execute_from_command_line\n    execute_from_command_line(sys.argv)\n`;
-            filesMap[`${targetDir}/requirements.txt`] = `Django>=4.2.0\npytest-django>=4.5.0\n`;
-            filesMap[`${targetDir}/README.md`] = `# ${rawName} (Django)\n\nRun migrations & server:\n\`\`\`bash\npython manage.py migrate\npython manage.py runserver 8000\n\`\`\`\n`;
-          } else if (stack === 'tkinter') {
-            filesMap[`${targetDir}/main.py`] = `import tkinter as tk\nfrom tkinter import ttk, messagebox\n\nclass App(tk.Tk):\n    def __init__(self):\n        super().__init__()\n        self.title("${rawName} - Tkinter GUI")\n        self.geometry("600x400")\n        self.configure(bg="#0f172a")\n        \n        label = ttk.Label(self, text="Welcome to ${rawName}", font=("Helvetica", 18, "bold"))\n        label.pack(pady=40)\n        \n        btn = ttk.Button(self, text="Click Me", command=self.on_click)\n        btn.pack(pady=10)\n    \n    def on_click(self):\n        messagebox.showinfo("${rawName}", "Hello from PIHU OS Tkinter App!")\n\nif __name__ == "__main__":\n    app = App()\n    app.mainloop()\n`;
-            filesMap[`${targetDir}/requirements.txt`] = `# Tkinter is built into Python standard library\npytest>=7.0.0\n`;
-          } else if (stack === 'qtpy' || stack === 'pyqt' || stack === 'pyside') {
-            filesMap[`${targetDir}/main.py`] = `import sys\nfrom PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton, QVBoxLayout, QWidget\nfrom PyQt6.QtCore import Qt\n\nclass MainWindow(QMainWindow):\n    def __init__(self):\n        super().__init__()\n        self.setWindowTitle("${rawName} - PyQt6 GUI")\n        self.resize(700, 450)\n        self.setStyleSheet("background-color: #0f172a; color: #f8fafc;")\n        \n        layout = QVBoxLayout()\n        title = QLabel("Welcome to ${rawName}")\n        title.setAlignment(Qt.AlignmentFlag.AlignCenter)\n        title.setStyleSheet("font-size: 24px; font-weight: bold; color: #38bdf8;")\n        layout.addWidget(title)\n        \n        btn = QPushButton("Action")\n        btn.setStyleSheet("background-color: #a855f7; color: white; padding: 10px; border-radius: 8px;")\n        layout.addWidget(btn)\n        \n        container = QWidget()\n        container.setLayout(layout)\n        self.setCentralWidget(container)\n\nif __name__ == "__main__":\n    app = QApplication(sys.argv)\n    window = MainWindow()\n    window.show()\n    sys.exit(app.exec())\n`;
-            filesMap[`${targetDir}/requirements.txt`] = `PyQt6>=6.5.0\nqtpy>=2.3.0\n`;
-          } else { // flask / generic python
-            filesMap[`${targetDir}/app.py`] = `from flask import Flask, jsonify\n\napp = Flask(__name__)\n\n@app.route('/')\ndef home():\n    return jsonify({"project": "${rawName}", "status": "running"})\n\nif __name__ == '__main__':\n    app.run(port=5000, debug=True)\n`;
-            filesMap[`${targetDir}/requirements.txt`] = `Flask>=2.3.0\n`;
+            filesMap[`${targetDir}/README.md`] = `# ${rawName} (FastAPI)\n\nCreated by **PIHU OS** Agentic Suite.\n\n\`\`\`bash\nuvicorn main:app --reload --port 8000\n\`\`\`\n`;
+          } else {
+            // General Python CLI & Algorithm Template
+            filesMap[`${targetDir}/main.py`] = `import sys
+import time
+import math
+
+def main():
+    print("\\033[1;35m╔══════════════════════════════════════════════════════════╗\\033[0m")
+    print("\\033[1;35m║  🚀 PIHU OS — ${rawName}\\033[0m")
+    print("\\033[1;35m║  Python Execution Engine | Built for Sir Mayank          ║\\033[0m")
+    print("\\033[1;35m╚══════════════════════════════════════════════════════════╝\\033[0m\\n")
+
+    print("\\033[1;34m[1/3] Initializing runtime environment...\\033[0m")
+    print(f"      Python Version : {sys.version.split()[0]}")
+    print(f"      Platform       : {sys.platform}")
+    
+    print("\\n\\033[1;33m[2/3] Executing computational algorithm...\\033[0m")
+    start = time.perf_counter()
+    primes = [x for x in range(2, 5000) if all(x % d != 0 for d in range(2, int(math.isqrt(x)) + 1))]
+    elapsed_ms = (time.perf_counter() - start) * 1000
+    
+    print(f"      Computed {len(primes)} primes up to 5,000 in {elapsed_ms:.2f}ms")
+    print(f"      Sample Output: {primes[:8]}...")
+
+    print("\\n\\033[1;32m[3/3] ✨ Task completed successfully!\\033[0m")
+    print("      All systems optimal. PIHU OS is standing by.\\n")
+
+if __name__ == "__main__":
+    main()
+`;
+            filesMap[`${targetDir}/requirements.txt`] = `pytest>=7.0.0\n`;
+            filesMap[`${targetDir}/README.md`] = `# ${rawName}\n\nEngineered by **PIHU OS**.\n\nRun:\n\`\`\`bash\npython3 main.py\n\`\`\`\n`;
           }
-        }
-        // ── JAVA (SPRING BOOT) ──────────────────────────────────────────────────
-        else if (lang === 'java') {
-          const cleanPkg = slugName.replace(/-/g, '');
-          await invoke('execute_shell_command', { command: `mkdir -p "${targetDir}/src/main/java/com/example/${cleanPkg}"` });
-          filesMap[`${targetDir}/pom.xml`] = `<project xmlns="http://maven.apache.org/POM/4.0.0"\n  xmlns:xsi="http://www.w3.org/2000/svg"\n  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">\n  <modelVersion>4.0.0</modelVersion>\n  <groupId>com.example</groupId>\n  <artifactId>${slugName}</artifactId>\n  <version>1.0.0-SNAPSHOT</version>\n  <parent>\n    <groupId>org.springframework.boot</groupId>\n    <artifactId>spring-boot-starter-parent</artifactId>\n    <version>3.1.2</version>\n  </parent>\n  <dependencies>\n    <dependency>\n      <groupId>org.springframework.boot</groupId>\n      <artifactId>spring-boot-starter-web</artifactId>\n    </dependency>\n  </dependencies>\n</project>\n`;
-          filesMap[`${targetDir}/src/main/java/com/example/${cleanPkg}/Application.java`] = `package com.example.${cleanPkg};\n\nimport org.springframework.boot.SpringApplication;\nimport org.springframework.boot.autoconfigure.SpringBootApplication;\nimport org.springframework.web.bind.annotation.GetMapping;\nimport org.springframework.web.bind.annotation.RestController;\n\n@SpringBootApplication\n@RestController\npublic class Application {\n    public static void main(String[] args) {\n        SpringApplication.run(Application.class, args);\n    }\n\n    @GetMapping("/")\n    public String home() {\n        return "Hello from ${rawName} Spring Boot Service!";\n    }\n}\n`;
-        }
-        // ── RUST ──────────────────────────────────────────────────────────────
-        else if (lang === 'rust') {
-          await invoke('execute_shell_command', { command: `mkdir -p "${targetDir}/src"` });
-          filesMap[`${targetDir}/Cargo.toml`] = `[package]\nname = "${slugName}"\nversion = "0.1.0"\nedition = "2021"\n\n[dependencies]\ntokio = { version = "1.0", features = ["full"] }\naxum = "0.6"\nserde = { version = "1.0", features = ["derive"] }\n`;
-          filesMap[`${targetDir}/src/main.rs`] = `use axum::{routing::get, Router};\nuse std::net::SocketAddr;\n\n#[tokio::main]\nasync fn main() {\n    let app = Router::new().route("/", get(|| async { "Hello from ${rawName} Rust Service!" }));\n    let addr = SocketAddr::from(([127, 0, 0, 1], 8080));\n    println!("Rust server listening on {}", addr);\n    axum::Server::bind(&addr).serve(app.into_make_service()).await.unwrap();\n}\n`;
-        }
-        // ── GO ────────────────────────────────────────────────────────────────
-        else if (lang === 'go') {
-          filesMap[`${targetDir}/go.mod`] = `module ${slugName}\n\ngo 1.20\n`;
-          filesMap[`${targetDir}/main.go`] = `package main\n\nimport (\n\t"fmt"\n\t"net/http"\n)\n\nfunc handler(w http.ResponseWriter, r *http.Request) {\n\tfmt.Fprintf(w, "Hello from ${rawName} Go Microservice!")\n}\n\nfunc main() {\n\thttp.HandleFunc("/", handler)\n\tfmt.Println("${rawName} Go server running on :8080")\n\thttp.ListenAndServe(":8080", nil)\n}\n`;
         }
         // ── C / C++ ───────────────────────────────────────────────────────────
         else if (lang === 'cpp' || lang === 'c') {
           await invoke('execute_shell_command', { command: `mkdir -p "${targetDir}/src" "${targetDir}/include"` });
           filesMap[`${targetDir}/CMakeLists.txt`] = `cmake_minimum_required(VERSION 3.10)\nproject(${slugName} ${lang.toUpperCase()})\n\nset(CMAKE_${lang.toUpperCase()}_STANDARD 17)\n\ninclude_directories(include)\nadd_executable(${slugName} src/main.${lang === 'c' ? 'c' : 'cpp'})\n`;
-          filesMap[`${targetDir}/src/main.${lang === 'c' ? 'c' : 'cpp'}`] = lang === 'c' 
-            ? `#include <stdio.h>\n\nint main() {\n    printf("Hello from ${rawName} C Project!\\n");\n    return 0;\n}\n`
-            : `#include <iostream>\n\nint main() {\n    std::cout << "Hello from ${rawName} C++ Project!" << std::endl;\n    return 0;\n}\n`;
+          
+          if (lang === 'cpp') {
+            filesMap[`${targetDir}/src/main.cpp`] = `#include <iostream>
+#include <vector>
+#include <numeric>
+#include <chrono>
+#include <iomanip>
+
+int main() {
+    std::cout << "\\033[1;35m╔══════════════════════════════════════════════════════════╗\\033[0m\\n";
+    std::cout << "\\033[1;35m║  🚀 PIHU OS — ${rawName} (C++17)\\033[0m\\n";
+    std::cout << "\\033[1;35m║  High-Performance Native Pipeline | Built for Sir Mayank ║\\033[0m\\n";
+    std::cout << "\\033[1;35m╚══════════════════════════════════════════════════════════╝\\033[0m\\n\\n";
+
+    std::cout << "\\033[1;34m[1/3] Benchmarking vector memory allocation...\\033[0m\\n";
+    auto start = std::chrono::high_resolution_clock::now();
+
+    const size_t N = 100000;
+    std::vector<int64_t> data(N);
+    std::iota(data.begin(), data.end(), 1);
+
+    auto end = std::chrono::high_resolution_clock::now();
+    double alloc_ms = std::chrono::duration<double, std::milli>(end - start).count();
+    std::cout << "      Allocated & populated " << N << " elements in " << alloc_ms << " ms\\n";
+
+    std::cout << "\\n\\033[1;33m[2/3] Computing reduction sum...\\033[0m\\n";
+    int64_t sum = std::accumulate(data.begin(), data.end(), 0LL);
+    std::cout << "      Accumulated Sum: " << sum << "\\n";
+
+    std::cout << "\\n\\033[1;32m[3/3] ✨ Execution finished cleanly!\\033[0m\\n";
+    std::cout << "      Status: Exit 0 | PIHU OS C++ Engine Ready.\\n\\n";
+
+    return 0;
+}
+`;
+          } else {
+            filesMap[`${targetDir}/src/main.c`] = `#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+int main() {
+    printf("\\033[1;35m╔══════════════════════════════════════════════════════════╗\\033[0m\\n");
+    printf("\\033[1;35m║  🚀 PIHU OS — ${rawName} (C11)\\033[0m\\n");
+    printf("\\033[1;35m║  Native C Engine | Built for Sir Mayank                  ║\\033[0m\\n");
+    printf("\\033[1;35m╚══════════════════════════════════════════════════════════╝\\033[0m\\n\\n");
+
+    printf("\\033[1;34m[1/2] Initializing dynamic memory heap...\\033[0m\\n");
+    const int count = 10000;
+    int *arr = (int *)malloc(count * sizeof(int));
+    if (!arr) {
+        printf("\\033[1;31mError: Memory allocation failed!\\033[0m\\n");
+        return 1;
+    }
+
+    for (int i = 0; i < count; i++) {
+        arr[i] = i * 2;
+    }
+    printf("      Successfully allocated %d integers on heap.\\n", count);
+
+    printf("\\n\\033[1;32m[2/2] ✨ Execution completed with zero errors!\\033[0m\\n");
+    printf("      Cleaning up heap memory.\\n\\n");
+    free(arr);
+
+    return 0;
+}
+`;
+          }
+        }
+        // ── JAVA ──────────────────────────────────────────────────────────────
+        else if (lang === 'java') {
+          const cleanPkg = slugName.replace(/-/g, '');
+          await invoke('execute_shell_command', { command: `mkdir -p "${targetDir}/src/main/java/com/example/${cleanPkg}"` });
+          filesMap[`${targetDir}/src/main/java/com/example/${cleanPkg}/Main.java`] = `package com.example.${cleanPkg};
+
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("\\033[1;35m╔══════════════════════════════════════════════════════════╗\\033[0m");
+        System.out.println("\\033[1;35m║  🚀 PIHU OS — ${rawName} (Java 17)\\033[0m");
+        System.out.println("\\033[1;35m║  Enterprise Execution Engine | Built for Sir Mayank      ║\\033[0m");
+        System.out.println("\\033[1;35m╚══════════════════════════════════════════════════════════╝\\033[0m\\n");
+
+        System.out.println("\\033[1;34m[1/2] Processing Java Streams Pipeline...\\033[0m");
+        List<Integer> squares = IntStream.rangeClosed(1, 10)
+                .map(n -> n * n)
+                .boxed()
+                .collect(Collectors.toList());
+
+        System.out.println("      First 10 Square Numbers: " + squares);
+
+        System.out.println("\\n\\033[1;32m[2/2] ✨ Java Program Executed Successfully!\\033[0m");
+        System.out.println("      Java Runtime: " + System.getProperty("java.version") + " | PIHU OS Ready.\\n");
+    }
+}
+`;
+          filesMap[`${targetDir}/pom.xml`] = `<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2000/svg"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.example</groupId>
+  <artifactId>${slugName}</artifactId>
+  <version>1.0.0</version>
+  <properties>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+  </properties>
+</project>
+`;
+        }
+        // ── RUST ──────────────────────────────────────────────────────────────
+        else if (lang === 'rust') {
+          await invoke('execute_shell_command', { command: `mkdir -p "${targetDir}/src"` });
+          filesMap[`${targetDir}/Cargo.toml`] = `[package]\nname = "${slugName}"\nversion = "0.1.0"\nedition = "2021"\n\n[dependencies]\n`;
+          filesMap[`${targetDir}/src/main.rs`] = `fn main() {
+    println!("\\x1b[1;35m╔══════════════════════════════════════════════════════════╗\\x1b[0m");
+    println!("\\x1b[1;35m║  🚀 PIHU OS — ${rawName} (Rust)\\x1b[0m");
+    println!("\\x1b[1;35m║  Memory-Safe Concurrency Engine | Built for Sir Mayank   ║\\x1b[0m");
+    println!("\\x1b[1;35m╚══════════════════════════════════════════════════════════╝\\x1b[0m\\n");
+
+    println!("\\x1b[1;34m[1/2] Initializing Rust vector operations...\\x1b[0m");
+    let numbers: Vec<i64> = (1..=20).map(|x| x * x).collect();
+    println!("      Vector Computed: {:?}", &numbers[0..5]);
+
+    println!("\\n\\x1b[1;32m[2/2] ✨ Rust program finished with 100% memory safety!\\x1b[0m");
+    println!("      PIHU OS Rust Pipeline Online.\\n");
+}
+`;
+        }
+        // ── GO ────────────────────────────────────────────────────────────────
+        else if (lang === 'go') {
+          filesMap[`${targetDir}/go.mod`] = `module ${slugName}\n\ngo 1.20\n`;
+          filesMap[`${targetDir}/main.go`] = `package main
+
+import (
+	"fmt"
+	"time"
+)
+
+func main() {
+	fmt.Println("\\033[1;35m╔══════════════════════════════════════════════════════════╗\\033[0m")
+	fmt.Println("\\033[1;35m║  🚀 PIHU OS — ${rawName} (Go)\\033[0m")
+	fmt.Println("\\033[1;35m║  Concurrent Microservice Engine | Built for Sir Mayank   ║\\033[0m")
+	fmt.Println("\\033[1;35m╚══════════════════════════════════════════════════════════╝\\033[0m\\n")
+
+	fmt.Println("\\033[1;34m[1/2] Spawning Goroutines for worker tasks...\\033[0m")
+	ch := make(chan string, 3)
+
+	for i := 1; i <= 3; i++ {
+		go func(id int) {
+			time.Sleep(time.Duration(id*10) * time.Millisecond)
+			ch <- fmt.Sprintf("Worker #%d completed job", id)
+		}(i)
+	}
+
+	for i := 1; i <= 3; i++ {
+		fmt.Printf("      %s\\n", <-ch)
+	}
+
+	fmt.Println("\\n\\033[1;32m[2/2] ✨ All Goroutines synchronized cleanly!\\033[0m")
+	fmt.Println("      PIHU OS Go Engine Ready.\\n")
+}
+`;
         }
         // ── LUA ───────────────────────────────────────────────────────────────
         else if (lang === 'lua') {
-          filesMap[`${targetDir}/main.lua`] = `function love.load()\n    love.window.setTitle("${rawName} - LÖVE2D Game")\n    love.window.setMode(800, 600)\nend\n\nfunction love.draw()\n    love.graphics.setColor(1, 1, 1)\n    love.graphics.print("Welcome to ${rawName} (Lua/Love2D)!", 250, 280, 0, 1.5, 1.5)\nend\n`;
+          filesMap[`${targetDir}/main.lua`] = `function love.load()
+    love.window.setTitle("${rawName} | PIHU OS")
+    love.window.setMode(800, 600)
+end
+
+function love.draw()
+    love.graphics.setColor(0.65, 0.35, 0.95)
+    love.graphics.print("🚀 ${rawName} — Powered by PIHU OS", 200, 260, 0, 1.4, 1.4)
+    love.graphics.setColor(0.8, 0.8, 0.9)
+    love.graphics.print("Built for Sir Mayank | LÖVE2D Engine", 240, 300, 0, 1.1, 1.1)
+end
+`;
           filesMap[`${targetDir}/conf.lua`] = `function love.conf(t)\n    t.identity = "${slugName}"\n    t.window.title = "${rawName}"\n    t.window.width = 800\n    t.window.height = 600\nend\n`;
         }
 

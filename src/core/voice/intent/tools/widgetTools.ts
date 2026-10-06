@@ -20,29 +20,14 @@ const WIDGET_ALIASES: Record<string, string[]> = {
   'todo-widget-mini-square': ['mini todo', 'tiny todo', 'mini tasks'],
   'todo-widget-tiny-bar':    ['todo bar', 'task strip'],
   'todo-widget-minimal-bar': ['minimal bar', 'minimal tasks'],
-  'task-window':             ['task window', 'tasks window', 'task details', 'open tasks', 'task plugin'],
-
-  // System
-  'system-large-overview':   ['system', 'system monitor', 'performance', 'system overview', 'stats'],
-  'system-compact-cpu':      ['cpu', 'cpu widget', 'cpu usage'],
-  'system-compact-mem':      ['ram', 'memory', 'memory widget'],
-  'system-compact-disk':     ['disk', 'storage widget'],
-  'system-compact-net':      ['network', 'network widget', 'internet speed'],
-  'system-compact-bat':      ['battery', 'battery widget'],
-  'system-large-processes':  ['processes', 'process monitor', 'running apps'],
-  'system-large-resource':   ['resources', 'resource monitor'],
-
-  // Clock / Calendar / Weather
-  'clock-widget':            ['clock', 'time widget', 'time'],
-  'calendar-widget':         ['calendar', 'date', 'schedule'],
-  'calendar-widget-compact': ['compact calendar', 'mini calendar'],
-  'weather-widget-large':    ['weather', 'weather widget', 'temperature'],
-  'weather-widget-compact':  ['small weather', 'compact weather'],
-  'weather-widget-wide':     ['weather bar', 'wide weather'],
-  'weather-widget-hourly':   ['hourly weather', 'weather forecast'],
+  // Windows & Plugins
+  'task-window':             ['task window', 'tasks window', 'task details', 'open tasks', 'task plugin', 'task manager', 'todo window'],
+  'settings-window':         ['settings window', 'settings', 'preferences', 'configuration', 'options'],
+  'code-output-window':      ['output window', 'code output', 'terminal output', 'program output', 'console output', 'output console', 'output'],
 
   // Orb
   'orb-widget':              ['orb', 'pihu orb', 'ai orb'],
+  'widget-drawer':           ['widget drawer', 'widgets drawer', 'widget picker', 'widgets menu'],
 };
 
 /** Finds the best widget ID for a natural language query. */
@@ -80,11 +65,22 @@ export const widgetTools: ActionTool[] = [
         required: ['widget_name'],
       },
     },
-    execute: (args): ToolResult => {
+    execute: async (args): Promise<ToolResult> => {
       const id = resolveWidgetId(args.widget_name);
-      if (!id) {
-        return { success: false, error: `Unknown widget: "${args.widget_name}"` };
+      if (!id) return { success: false, error: `Unknown widget: "${args.widget_name}"` };
+
+      if (id === 'code-output-window') {
+        const { useCodeOutputStore } = await import('../../../../stores/codeOutputStore');
+        const curr = useCodeOutputStore.getState().isOpen;
+        useCodeOutputStore.getState().setIsOpen(!curr);
+        return { success: true, data: { widgetId: id, isOpen: !curr } };
       }
+
+      if (id === 'widget-drawer') {
+        useLayoutStore.getState().toggleWidgetDrawer();
+        return { success: true, data: { widgetId: id, isOpen: useLayoutStore.getState().isWidgetDrawerOpen } };
+      }
+
       useLayoutStore.getState().toggleWidget(id);
       const state = useLayoutStore.getState().widgets[id];
       return { success: true, data: { widgetId: id, isOpen: state?.isOpen ?? true } };
@@ -94,21 +90,35 @@ export const widgetTools: ActionTool[] = [
   {
     declaration: {
       name: 'widget_open',
-      description: 'Opens a specific widget (ensures it is visible). Use when user says "open X", "show X", "launch X".',
+      description: 'Opens a specific widget or window (ensures it is visible). Use when user says "open X", "show X", "launch X".',
       parameters: {
         type: 'OBJECT',
         properties: {
           widget_name: {
             type: 'STRING',
-            description: 'Name or description of the widget to open.',
+            description: 'Name or description of the widget/window to open (e.g. "task window", "output window", "settings window", "music").',
           },
         },
         required: ['widget_name'],
       },
     },
-    execute: (args): ToolResult => {
+    execute: async (args): Promise<ToolResult> => {
       const id = resolveWidgetId(args.widget_name);
       if (!id) return { success: false, error: `Unknown widget: "${args.widget_name}"` };
+
+      if (id === 'code-output-window') {
+        const { useCodeOutputStore } = await import('../../../../stores/codeOutputStore');
+        useCodeOutputStore.getState().setIsOpen(true);
+        return { success: true, data: { widgetId: id, isOpen: true } };
+      }
+
+      if (id === 'widget-drawer') {
+        if (!useLayoutStore.getState().isWidgetDrawerOpen) {
+          useLayoutStore.getState().toggleWidgetDrawer();
+        }
+        return { success: true, data: { widgetId: id, isOpen: true } };
+      }
+
       const layout = useLayoutStore.getState();
       const current = layout.widgets[id];
       if (!current?.isOpen) layout.toggleWidget(id);
@@ -119,21 +129,35 @@ export const widgetTools: ActionTool[] = [
   {
     declaration: {
       name: 'widget_close',
-      description: 'Closes a specific widget. Use when user says "close X", "hide X", "dismiss X".',
+      description: 'Closes a specific widget or window. Use when user says "close X", "hide X", "dismiss X".',
       parameters: {
         type: 'OBJECT',
         properties: {
           widget_name: {
             type: 'STRING',
-            description: 'Name or description of the widget to close.',
+            description: 'Name or description of the widget/window to close.',
           },
         },
         required: ['widget_name'],
       },
     },
-    execute: (args): ToolResult => {
+    execute: async (args): Promise<ToolResult> => {
       const id = resolveWidgetId(args.widget_name);
       if (!id) return { success: false, error: `Unknown widget: "${args.widget_name}"` };
+
+      if (id === 'code-output-window') {
+        const { useCodeOutputStore } = await import('../../../../stores/codeOutputStore');
+        useCodeOutputStore.getState().setIsOpen(false);
+        return { success: true, data: { widgetId: id, isOpen: false } };
+      }
+
+      if (id === 'widget-drawer') {
+        if (useLayoutStore.getState().isWidgetDrawerOpen) {
+          useLayoutStore.getState().toggleWidgetDrawer();
+        }
+        return { success: true, data: { widgetId: id, isOpen: false } };
+      }
+
       const layout = useLayoutStore.getState();
       const current = layout.widgets[id];
       if (current?.isOpen) layout.toggleWidget(id);

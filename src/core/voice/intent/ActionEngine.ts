@@ -2,6 +2,7 @@ import { LLMManager } from '../../llm/LLMManager';
 import { PIHU_CORE_IDENTITY } from './systemPrompt';
 import { buildGeminiTools, executeTool } from './tools/index';
 import { handlePendingWhatsAppConfirmation } from './tools/whatsappTools';
+import { handlePendingProjectConfirmation } from './tools/projectTools';
 import { useLayoutStore } from '../../layout/LayoutStore';
 import { useMusicStore } from '../../../stores/musicStore';
 import { useVoiceStore } from '../../../stores/voiceStore';
@@ -293,21 +294,137 @@ export class ActionEngine {
       }
     }
 
-    // ─── 3. Settings Window Navigation ───
-    if (/\b(?:settings|setting|preferences)\b/i.test(lower) && /\b(?:open|show|kholo|view|dikhao|display)\b/i.test(lower)) {
-      console.log(`[ActionEngine] ⚡ Instant Fast Path: Opening Settings Window`);
-      await executeTool('system_open_settings', { section: 'general' });
+    // ─── 3. Desktop Windows & Widgets Voice Controls ───
+
+    // Code Output Console Window (Open / Close / Clear)
+    if (/\b(?:output\s+window|code\s+output|terminal\s+output|output\s+console|program\s+output|console\s+output)\b/i.test(lower) || 
+        (/\b(?:output)\b/i.test(lower) && /\b(?:open|show|kholo|dikhao|display|close|band|hatao|hide|clear|saaf)\b/i.test(lower))) {
+      const { useCodeOutputStore } = await import('../../../stores/codeOutputStore');
+      
+      if (/\b(?:close|hide|band|hatao|dismiss)\b/i.test(lower)) {
+        console.log(`[ActionEngine] ⚡ Instant Fast Path: Closing Output Window`);
+        useCodeOutputStore.getState().setIsOpen(false);
+        return isHindi ? "Output window band kar di gayi hai, Sir." : "Closed the Code Output Console for you, Sir.";
+      }
+
+      if (/\b(?:clear|saaf|flush|clean)\b/i.test(lower)) {
+        console.log(`[ActionEngine] ⚡ Instant Fast Path: Clearing Output Window`);
+        useCodeOutputStore.getState().clearHistory();
+        return isHindi ? "Output console clear kar diya gaya hai, Sir." : "Cleared the code output console.";
+      }
+
+      console.log(`[ActionEngine] ⚡ Instant Fast Path: Opening Output Window`);
+      useCodeOutputStore.getState().setIsOpen(true);
       return isHindi
         ? this.pickRandom([
-            "Sure Sir Mayank, main Settings open kar rahi hoon.",
-            "Ji Sir, Settings open kar di hai.",
-            "Settings window aapke screen par khol di gayi hai."
+            "Ji Sir Mayank, Code Output window open kar di hai.",
+            "Output console aapke screen par aa gaya hai, Sir.",
+            "Sure Sir, Code Output window open ho gaya hai."
           ])
         : this.pickRandom([
-            "Opening Settings for you right now, Sir.",
-            "Launching Settings window, Sir Mayank.",
-            "Sure, Settings is open."
+            "Opening Code Output Console for you now, Sir.",
+            "Here is the program output console, Sir Mayank.",
+            "Code Output window is open on your screen."
           ]);
+    }
+
+    // Tasks & Todo Window (Open / Close)
+    if (/\b(?:task\s+window|tasks\s+window|task\s+manager|tasks|todos|todo\s+window|todo\s+list)\b/i.test(lower) &&
+        /\b(?:open|show|kholo|view|dikhao|display|launch|close|band|hatao|hide)\b/i.test(lower)) {
+      const layout = useLayoutStore.getState();
+      const isClose = /\b(?:close|hide|band|hatao|dismiss)\b/i.test(lower);
+
+      if (isClose) {
+        console.log(`[ActionEngine] ⚡ Instant Fast Path: Closing Tasks Window`);
+        if (layout.widgets['task-window']?.isOpen) layout.toggleWidget('task-window');
+        return isHindi ? "Tasks window band kar di gayi hai, Sir." : "Closed the Tasks Manager, Sir.";
+      }
+
+      console.log(`[ActionEngine] ⚡ Instant Fast Path: Opening Tasks Window`);
+      if (!layout.widgets['task-window']?.isOpen) layout.toggleWidget('task-window');
+      return isHindi
+        ? this.pickRandom([
+            "Ji Sir Mayank, Tasks window open kar di hai.",
+            "Aapke pending tasks screen par khol diye hain Sir.",
+            "Tasks Manager open ho gaya hai, Sir."
+          ])
+        : this.pickRandom([
+            "Opening your Tasks Manager now, Sir.",
+            "Here are your tasks and todo list, Sir Mayank.",
+            "Tasks window is now open on your desktop."
+          ]);
+    }
+
+    // Settings Window (Open / Close)
+    if (/\b(?:settings|setting|preferences|options)\b/i.test(lower) && 
+        /\b(?:open|show|kholo|view|dikhao|display|close|band|hatao|hide)\b/i.test(lower)) {
+      const layout = useLayoutStore.getState();
+      const isClose = /\b(?:close|hide|band|hatao|dismiss)\b/i.test(lower);
+
+      if (isClose) {
+        console.log(`[ActionEngine] ⚡ Instant Fast Path: Closing Settings Window`);
+        if (layout.widgets['settings-window']?.isOpen) layout.toggleWidget('settings-window');
+        return isHindi ? "Settings window band kar di gayi hai, Sir." : "Closed Settings for you, Sir.";
+      }
+
+      let section = 'general';
+      if (/\b(?:token|api\s*key|protocol|gemini\s*key|keys)\b/i.test(lower)) section = 'tokens';
+      else if (/\b(?:connection|mcp|whatsapp|google|qr)\b/i.test(lower)) section = 'connections';
+      else if (/\b(?:people|contact|contacts|directory)\b/i.test(lower)) section = 'people';
+      else if (/\b(?:voice|speech|kokoro|tts)\b/i.test(lower)) section = 'voice';
+      else if (/\b(?:diagnostics|health|system\s*check)\b/i.test(lower)) section = 'diagnostics';
+
+      console.log(`[ActionEngine] ⚡ Instant Fast Path: Opening Settings (${section})`);
+      await executeTool('system_open_settings', { section });
+      return isHindi
+        ? this.pickRandom([
+            `Sure Sir Mayank, main Settings (${section}) open kar rahi hoon.`,
+            `Ji Sir, Settings open kar di hai.`,
+            `Settings window aapke screen par khol di gayi hai.`
+          ])
+        : this.pickRandom([
+            `Opening Settings (${section}) for you right now, Sir.`,
+            `Launching Settings window, Sir Mayank.`,
+            `Sure, Settings is open.`
+          ]);
+    }
+
+    // Widget Drawer (Open / Close)
+    if (/\b(?:widget\s+drawer|widgets\s+drawer|widget\s+picker|widgets\s+menu)\b/i.test(lower) || 
+        (/\b(?:widgets)\b/i.test(lower) && /\b(?:open|show|kholo|dikhao|add|close|band|hide)\b/i.test(lower))) {
+      const isClose = /\b(?:close|hide|band|hatao|dismiss)\b/i.test(lower);
+      const isDrawerOpen = useLayoutStore.getState().isWidgetDrawerOpen;
+
+      if (isClose && isDrawerOpen) {
+        useLayoutStore.getState().toggleWidgetDrawer();
+        return isHindi ? "Widget drawer band kar diya hai, Sir." : "Closed the widget drawer.";
+      }
+      if (!isClose && !isDrawerOpen) {
+        useLayoutStore.getState().toggleWidgetDrawer();
+        return isHindi ? "Widget drawer open kar diya hai, Sir." : "Opening widget drawer for you, Sir.";
+      }
+    }
+
+    // Close All Windows / Clear Desktop
+    if (/\b(?:close\s+all\s+windows|minimize\s+all|clear\s+screen|sab\s+band\s+kardo|close\s+everything|hide\s+all\s+windows)\b/i.test(lower)) {
+      console.log(`[ActionEngine] ⚡ Instant Fast Path: Closing All Desktop Windows`);
+      const layout = useLayoutStore.getState();
+      const { useCodeOutputStore } = await import('../../../stores/codeOutputStore');
+
+      // Close output window
+      useCodeOutputStore.getState().setIsOpen(false);
+
+      // Close drawer if open
+      if (layout.isWidgetDrawerOpen) layout.toggleWidgetDrawer();
+
+      // Close all active plugin windows (task-window, settings-window)
+      ['task-window', 'settings-window'].forEach(id => {
+        if (layout.widgets[id]?.isOpen) layout.toggleWidget(id);
+      });
+
+      return isHindi 
+        ? "Desktop ke sabhi open windows band kar diye gaye hain, Sir." 
+        : "Closed all active windows and cleared your desktop, Sir Mayank.";
     }
 
     // ─── 4. Music Playback Controls ───
@@ -473,6 +590,14 @@ export class ActionEngine {
         this.conversationHistory.push({ role: 'user', parts: [{ text: cleanText }] });
         this.conversationHistory.push({ role: 'model', parts: [{ text: pendingConfirmation }] });
         return pendingConfirmation;
+      }
+
+      // Resolve a pending project / code modification confirmation before starting a new LLM turn.
+      const pendingProjectConfirmation = await handlePendingProjectConfirmation(cleanText);
+      if (pendingProjectConfirmation) {
+        this.conversationHistory.push({ role: 'user', parts: [{ text: cleanText }] });
+        this.conversationHistory.push({ role: 'model', parts: [{ text: pendingProjectConfirmation }] });
+        return pendingProjectConfirmation;
       }
 
       useVoiceStore.getState().setProcessingStatus("Thinking...");
