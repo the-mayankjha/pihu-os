@@ -44,8 +44,6 @@ async function ensureWhatsAppBridge(): Promise<boolean> {
 }
 
 type RecipientResolution = { jid: string; displayName: string; phone: string; match: 'exact' | 'fuzzy' | 'direct'; confidence: number };
-type PendingVoiceMessage = { recipient: RecipientResolution; message: string; createdAt: number };
-let pendingVoiceMessage: PendingVoiceMessage | null = null;
 
 const normalizeContactName = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '');
 const phoneticContactName = (value: string) => normalizeContactName(value).replace(/ph/g, 'f').replace(/(.)\1+/g, '$1');
@@ -66,11 +64,19 @@ function editDistance(left: string, right: string): number {
 function nameScore(query: string, candidate: string): number {
   const q = normalizeContactName(query), c = normalizeContactName(candidate);
   if (!q || !c) return 0;
-  if (q === c) return 1;
-  if (q.includes(c) || c.includes(q)) return 0.9;
+  if (q === c) return 1.0;
+  // Substring match requires both to have at least 3 chars AND significant overlap
+  if (c.length >= 3 && q.length >= 3) {
+    if (q.includes(c) && (c.length / q.length) >= 0.6) return 0.85;
+    if (c.includes(q) && (q.length / c.length) >= 0.6) return 0.85;
+  }
   const phoneticQuery = phoneticContactName(query), phoneticCandidate = phoneticContactName(candidate);
-  if (phoneticQuery === phoneticCandidate) return 0.88;
-  return 1 - editDistance(phoneticQuery, phoneticCandidate) / Math.max(phoneticQuery.length, phoneticCandidate.length);
+  if (phoneticQuery.length >= 3 && phoneticCandidate.length >= 3 && phoneticQuery === phoneticCandidate) return 0.82;
+  const maxLen = Math.max(phoneticQuery.length, phoneticCandidate.length);
+  if (maxLen <= 2) return 0;
+  const dist = editDistance(phoneticQuery, phoneticCandidate);
+  const similarity = 1 - dist / maxLen;
+  return similarity >= 0.72 ? similarity : 0;
 }
 
 function localTarget(contact: { whatsappJid?: string; phone?: string }) {
@@ -156,7 +162,7 @@ async function resolveWhatsAppRecipient(query: string): Promise<RecipientResolut
   for (const c of contacts) {
     const score = Math.max(nameScore(clean, c.name || ''), nameScore(clean, c.nickname || ''));
     const target = localTarget(c);
-    if (target.jid && score >= 0.72 && (!bestLocal || score > bestLocal.confidence)) {
+    if (target.jid && score >= 0.75 && (!bestLocal || score > bestLocal.confidence)) {
       bestLocal = { jid: target.jid, displayName: c.name + (c.nickname ? ` (${c.nickname})` : ''), phone: target.phone, match: 'fuzzy', confidence: score };
     }
   }
@@ -186,7 +192,7 @@ async function resolveWhatsAppRecipient(query: string): Promise<RecipientResolut
           return matchRes;
         }
         const score = nameScore(clean, chat.name || '');
-        if (score >= 0.70 && (!bestChat || score > bestChat.confidence)) bestChat = {
+        if (score >= 0.75 && (!bestChat || score > bestChat.confidence)) bestChat = {
           jid: chat.jid, displayName: chat.name + (chat.is_group ? ' [Group]' : ''), phone: chat.jid, match: 'fuzzy', confidence: score,
         };
       }
@@ -222,27 +228,77 @@ async function dispatchWhatsAppMessage(recipient: RecipientResolution, message: 
   });
   if (!sendRes.ok) {
     const errData = await sendRes.json().catch(() => ({}));
-    return { success: false, error: errData.message || 'Failed to dispatch WhatsApp message. Make sure the phone number is valid.' };
+    return { success: false, error: errData.message || 'Failed to dispatch WhatsApp message. Make sure WhatsApp is paired and recipient is valid.' };
   }
   return { success: true, data: { action: 'sent_whatsapp_message', recipient: recipient.displayName, message_text: message, message: `Successfully sent WhatsApp message to ${recipient.displayName}: "${message}"` } };
 }
 
+export async function executePendingWhatsAppSend(customMessage?: string): Promise<ToolResult> {
+  const { useVoiceStore } = await import('../../../../stores/voiceStore');
+  const pending = useVoiceStore.getState().pendingWhatsAppAction;
+  if (!pending) {
+    return { success: false, error: 'No pending WhatsApp message found.' };
+  }
+
+  const msgToSend = (customMessage || pending.message).trim();
+  if (!msgToSend) {
+    return { success: false, error: 'Message cannot be empty.' };
+  }
+
+  const result = await dispatchWhatsAppMessage(
+    {
+      jid: pending.recipient.jid,
+      displayName: pending.recipient.displayName,
+      phone: pending.recipient.phone,
+      match: 'exact',
+      confidence: 1
+    },
+    msgToSend
+  );
+
+  if (result.success) {
+    useVoiceStore.getState().setPendingWhatsAppAction(null);
+  }
+  return result;
+}
+
 export async function handlePendingWhatsAppConfirmation(text: string): Promise<string | null> {
-  if (!pendingVoiceMessage) return null;
-  if (Date.now() - pendingVoiceMessage.createdAt > 2 * 60 * 1000) {
-    pendingVoiceMessage = null;
-    return 'The pending WhatsApp confirmation expired. Please repeat the message request.';
+  const { useVoiceStore } = await import('../../../../stores/voiceStore');
+  const pending = useVoiceStore.getState().pendingWhatsAppAction;
+  if (!pending) return null;
+
+  if (Date.now() - pending.createdAt > 3 * 60 * 1000) {
+    useVoiceStore.getState().setPendingWhatsAppAction(null);
+    return null;
   }
+
   const answer = text.trim().toLowerCase();
-  if (/^(no|nope|cancel|stop|wrong|don'?t)\b/.test(answer)) {
-    pendingVoiceMessage = null;
-    return 'Okay, I cancelled that WhatsApp message.';
+
+  // If user asked a totally different command (like "check my unread emails"), clear pending and return null
+  if (/\b(?:email|emails|mail|gmail|music|song|weather|settings|task|todo|project|code|run)\b/i.test(answer)) {
+    useVoiceStore.getState().setPendingWhatsAppAction(null);
+    return null;
   }
-  if (!/^(yes|yeah|yep|correct|confirm|send|go ahead|do it|sure)\b/.test(answer)) return null;
-  const pending = pendingVoiceMessage;
-  pendingVoiceMessage = null;
-  const result = await dispatchWhatsAppMessage(pending.recipient, pending.message);
-  return result.success ? `Sent the WhatsApp message to ${pending.recipient.displayName}.` : `I could not send that WhatsApp message: ${result.error || 'Unknown error'}`;
+
+  // Explicit cancellation
+  if (/^(no|nope|cancel|stop|wrong|don'?t|mat\s*bhejo|ruk\s*jao|nahi|chhod\s*do)\b/i.test(answer)) {
+    useVoiceStore.getState().setPendingWhatsAppAction(null);
+    return 'Okay, I cancelled sending that WhatsApp message.';
+  }
+
+  // Explicit confirmation
+  if (
+    /^(yes|yeah|yep|correct|confirm|send|send\s*it|go\s*ahead|do\s*it|sure|haan|bhej\s*do|bhejo)\b/i.test(answer) ||
+    /\b(?:send\s+the\s+message|send\s+it\s+now|haan\s+bhej\s+do|bhej\s+dijiye)\b/i.test(answer)
+  ) {
+    const res = await executePendingWhatsAppSend();
+    if (res.success) {
+      return `Done Sir Mayank! Sent the WhatsApp message to ${pending.recipient.displayName}.`;
+    }
+    return `Could not send WhatsApp message: ${res.error || 'Unknown error'}`;
+  }
+
+  return null;
 }
 
 export const whatsappTools: ActionTool[] = [
@@ -283,13 +339,13 @@ export const whatsappTools: ActionTool[] = [
         if (!isAuth) {
           // Open Settings connections tab to show QR
           useSettingsStore.getState().setActiveSidebarCategory('connections');
-          useLayoutStore.getState().toggleWidget('settings-window');
+          const isSettingsOpen = useLayoutStore.getState().widgets['settings-window']?.isOpen;
+          if (!isSettingsOpen) {
+            useLayoutStore.getState().toggleWidget('settings-window');
+          }
           return {
-            success: true,
-            data: {
-              action: 'whatsapp_auth_required',
-              message: 'Your WhatsApp device is not yet paired with PIHU OS. I have opened the Connections tab for you—please scan the QR code on screen using WhatsApp on your phone (Settings > Linked Devices).',
-            },
+            success: false,
+            error: 'WhatsApp device is not paired. I have opened the Connections tab in Settings—please scan the QR code using WhatsApp on your phone (Settings > Linked Devices).',
           };
         }
 
@@ -297,17 +353,29 @@ export const whatsappTools: ActionTool[] = [
         if (!resolved.jid) {
           return {
             success: false,
-            error: `Contact "${args.recipient}" was not found in your People Directory or WhatsApp chats. Please specify their phone number or add them in Settings > People.`,
+            error: `Contact "${args.recipient}" was not found in your People Directory or WhatsApp chats. Please check the spelling or provide their phone number.`,
           };
         }
 
+        const { useVoiceStore } = await import('../../../../stores/voiceStore');
+
         if (resolved.match === 'fuzzy') {
-          pendingVoiceMessage = { recipient: resolved, message: args.message, createdAt: Date.now() };
+          useVoiceStore.getState().setPendingWhatsAppAction({
+            id: `wa_${Date.now()}`,
+            recipient: {
+              jid: resolved.jid,
+              displayName: resolved.displayName,
+              phone: resolved.phone,
+            },
+            message: args.message,
+            createdAt: Date.now()
+          });
+
           return {
             success: true,
             data: {
               action: 'whatsapp_confirmation_required',
-              message: `I heard "${args.recipient}" and found ${resolved.displayName}. Should I send "${args.message}" to ${resolved.displayName}? Please say yes or no.`,
+              message: `I found "${resolved.displayName}". Please review the message card above and say "Send it" or click Send to confirm.`,
             },
           };
         }

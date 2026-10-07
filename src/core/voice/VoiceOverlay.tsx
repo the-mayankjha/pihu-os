@@ -11,20 +11,33 @@ import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import { IdeCodeBlock } from './IdeCodeBlock';
 import { executePendingProjectAction } from './intent/tools/projectTools';
+import { EmailPreviewCard } from '../../shared/components/Email/EmailPreviewCard';
+import { WhatsAppConfirmationCard } from '../../shared/components/WhatsApp/WhatsAppConfirmationCard';
 
 export const VoiceOverlay: React.FC = () => {
-  const { isActive, isListening, transcription, response, processingStatus, activeProject, pendingProjectAction, setPendingProjectAction } = useVoiceStore();
+  const { 
+    isActive, 
+    isListening, 
+    transcription, 
+    response, 
+    processingStatus, 
+    activeProject, 
+    pendingProjectAction, 
+    pendingEmailAction, 
+    pendingWhatsAppAction,
+    setPendingProjectAction 
+  } = useVoiceStore();
   const orbState = useOrbStore(state => state.currentState);
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedFileIndex, setSelectedFileIndex] = useState(0);
   const [isApplying, setIsApplying] = useState(false);
 
-  // Auto-expand when code blocks or staged project actions are present
+  // Auto-expand when code blocks, staged project actions, staged emails, or WhatsApp confirmations are present
   useEffect(() => {
-    if (pendingProjectAction || (response && response.includes('```'))) {
+    if (pendingProjectAction || pendingEmailAction || pendingWhatsAppAction || (response && response.includes('```'))) {
       setIsExpanded(true);
     }
-  }, [pendingProjectAction, response]);
+  }, [pendingProjectAction, pendingEmailAction, pendingWhatsAppAction, response]);
 
   // Keep collapsed while listening to avoid covering screen
   useEffect(() => {
@@ -43,6 +56,7 @@ export const VoiceOverlay: React.FC = () => {
   const getDisplayText = () => {
     if (isListening) return transcription ? `"${transcription}"` : 'Listening...';
     if (orbState === OrbState.THINKING) return processingStatus || 'Thinking & formulating changes...';
+    if (pendingEmailAction) return `Email Preview: ${pendingEmailAction.subject || 'Draft ready'}`;
     if (pendingProjectAction) return `Awaiting Confirmation: ${pendingProjectAction.title}`;
     if (orbState === OrbState.SPEAKING) return response ? response.slice(0, 70) + (response.length > 70 ? '...' : '') : 'Speaking...';
     if (response) return response.slice(0, 70) + (response.length > 70 ? '...' : '');
@@ -119,10 +133,15 @@ export const VoiceOverlay: React.FC = () => {
                     <span>Needs Confirmation</span>
                   </span>
                 )}
+                {pendingEmailAction && !isExpanded && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-mono text-cyan-300 bg-cyan-500/15 border border-cyan-500/30 px-2 py-0.5 rounded-full flex-shrink-0 animate-pulse">
+                    <span>Email Draft</span>
+                  </span>
+                )}
               </div>
 
               {/* Expand Toggle */}
-              {(response || processingStatus || pendingProjectAction || (transcription && transcription.length > 25)) && (
+              {(response || processingStatus || pendingProjectAction || pendingEmailAction || (transcription && transcription.length > 25)) && (
                 <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center text-white/60 hover:text-white transition-colors">
                   <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
                 </div>
@@ -156,6 +175,16 @@ export const VoiceOverlay: React.FC = () => {
                       </span>
                       <span className="text-slate-400 text-[11px] truncate max-w-[280px]">{activeProject.dir}</span>
                     </div>
+                  )}
+
+                  {/* ─── PENDING WHATSAPP MESSAGE CONFIRMATION CARD ─── */}
+                  {pendingWhatsAppAction && (
+                    <WhatsAppConfirmationCard className="mb-4" />
+                  )}
+
+                  {/* ─── PENDING EMAIL DRAFT & EDITABLE PREVIEW CARD ─── */}
+                  {pendingEmailAction && (
+                    <EmailPreviewCard className="mb-4" />
                   )}
 
                   {/* ─── PENDING PROJECT / CODE MODIFICATION CONFIRMATION CARD ─── */}

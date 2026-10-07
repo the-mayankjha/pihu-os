@@ -3,6 +3,7 @@ import { PIHU_CORE_IDENTITY } from './systemPrompt';
 import { buildGeminiTools, executeTool } from './tools/index';
 import { handlePendingWhatsAppConfirmation } from './tools/whatsappTools';
 import { handlePendingProjectConfirmation } from './tools/projectTools';
+import { handlePendingEmailConfirmation } from './tools/googleWorkspaceTools';
 import { useLayoutStore } from '../../layout/LayoutStore';
 import { useMusicStore } from '../../../stores/musicStore';
 import { useVoiceStore } from '../../../stores/voiceStore';
@@ -202,11 +203,81 @@ export class ActionEngine {
       }
     }
 
-    // ─── 1. App Launch / Close (dynamic /Applications scan + fuzzy match) ───
+    // ─── 1. Gmail & Email Fast Paths ───
+    // A. Check / Show Unread Emails
+    if (/\b(?:unread\s+emails?|unread\s+mails?|check\s+(?:my\s+)?emails?|check\s+(?:my\s+)?inbox|check\s+(?:my\s+)?gmail|show\s+(?:me\s+)?unread\s+emails?|show\s+(?:my\s+)?emails?|show\s+(?:me\s+)?mails?|any\s+new\s+emails?|unread\s+messages?\s+in\s+gmail)\b/i.test(lower)) {
+      console.log('[ActionEngine] ⚡ Instant Fast Path: Checking Unread Emails');
+      useVoiceStore.getState().setProcessingStatus("Checking Gmail inbox...");
+      const toolRes = await executeTool('google_workspace_notify_new_emails', {});
+      useVoiceStore.getState().setProcessingStatus(null);
+      if (toolRes.success && toolRes.data?.message) {
+        return toolRes.data.message;
+      }
+      return isHindi ? "Gmail inbox check kar liya gaya hai." : "Checked your Gmail inbox, Sir.";
+    }
+
+    // B. Send Email Fast Path (Stage preview card)
+    const emailSendMatch = lower.match(/\b(?:send\s+(?:an?\s+)?(?:email|mail)\s+to)\s+([a-zA-Z0-9\s@.]+?)\s+(?:that|saying|about|with\s+subject)\s+(.+)$/i);
+    if (emailSendMatch) {
+      const rawRecipient = emailSendMatch[1].trim();
+      const rawContent = emailSendMatch[2].trim();
+      const subject = rawContent.length > 35 ? (rawContent.slice(0, 35) + '...') : (rawContent.charAt(0).toUpperCase() + rawContent.slice(1));
+      const body = `Dear ${rawRecipient},\n\n${rawContent.charAt(0).toUpperCase() + rawContent.slice(1)}.\n\nBest regards,\nMayank Jha`;
+
+      console.log(`[ActionEngine] ⚡ Instant Fast Path: Staging Email to "${rawRecipient}"`);
+      useVoiceStore.getState().setProcessingStatus(`Drafting email to ${rawRecipient}...`);
+      const toolRes = await executeTool('google_workspace_send_email', {
+        recipient: rawRecipient,
+        subject: `Update regarding: ${subject}`,
+        body: body
+      });
+      useVoiceStore.getState().setProcessingStatus(null);
+      if (toolRes.success && toolRes.data?.message) {
+        return toolRes.data.message;
+      }
+    }
+
+    // ─── 2. WhatsApp Fast Paths ───
+    // A. Send WhatsApp Message Fast Path
+    const waSendMatch = lower.match(/\b(?:send\s+(?:a\s+)?whatsapp(?:\s+message)?\s+to|send\s+message\s+to|text)\s+([a-zA-Z0-9\s+]+?)\s+(?:saying|that|with\s+text|message)?\s*[:"']?([^"']+)["']?$/i);
+    if (waSendMatch && !/\b(?:email|mail|gmail)\b/i.test(lower)) {
+      const rawRecipient = waSendMatch[1].replace(/\b(?:on\s+whatsapp|via\s+whatsapp|whatsapp)\b/gi, '').trim();
+      let rawMsg = waSendMatch[2].replace(/^["':\s]+|["'\s]+$/g, '').trim();
+      if (rawRecipient && rawMsg) {
+        console.log(`[ActionEngine] ⚡ Instant Fast Path: Sending WhatsApp message to "${rawRecipient}": "${rawMsg}"`);
+        useVoiceStore.getState().setProcessingStatus(`Sending WhatsApp to ${rawRecipient}...`);
+        const toolRes = await executeTool('whatsapp_send_message', {
+          recipient: rawRecipient,
+          message: rawMsg
+        });
+        useVoiceStore.getState().setProcessingStatus(null);
+        if (toolRes.success && toolRes.data?.message) {
+          return toolRes.data.message;
+        }
+        if (toolRes.error) {
+          return toolRes.error;
+        }
+      }
+    }
+
+    // B. Show Recent WhatsApp Messages
+    if (/\b(?:recent\s+whatsapp|whatsapp\s+messages?|whatsapp\s+chats?|show\s+whatsapp\s+messages?|show\s+recent\s+whatsapp\s+messages?)\b/i.test(lower)) {
+      console.log('[ActionEngine] ⚡ Instant Fast Path: Reading Recent WhatsApp Messages');
+      useVoiceStore.getState().setProcessingStatus("Checking recent WhatsApp messages...");
+      const toolRes = await executeTool('whatsapp_read_messages', { count: 5 });
+      useVoiceStore.getState().setProcessingStatus(null);
+      if (toolRes.success && toolRes.data?.message) {
+        return toolRes.data.message;
+      }
+      return isHindi ? "WhatsApp messages check kar liye gaye hain." : "Checked your recent WhatsApp messages, Sir.";
+    }
+
+    // ─── 3. App Launch / Close (dynamic /Applications scan + fuzzy match) ───
     const hasOpenVerb = /\b(?:open|launch|kholo|start|chalao|run|show|display|dikhao)\b/i.test(lower);
     const hasCloseVerb = /\b(?:close|quit|kill|band|hatao|exit)\b/i.test(lower);
+    const isExcludedForAppLaunch = /\b(?:music|song|gaana|gana|track|settings|setting|preferences|project|email|emails|mail|gmail|unread|message|messages|msg|whatsapp|chat|chats|text|palette|hotkey|command)\b/i.test(lower);
 
-    if ((hasOpenVerb || hasCloseVerb) && !(/\b(?:music|song|gaana|gana|track|settings|setting|preferences|project)\b/i.test(lower))) {
+    if ((hasOpenVerb || hasCloseVerb) && !isExcludedForAppLaunch) {
       // Extract what the user called the app
       const spokenApp = lower
         .replace(/\b(?:open|launch|kholo|start|chalao|run|show|display|dikhao|close|quit|kill|band|hatao|exit|the|a|an|please|can you|pihu|abhi|karo|karna|kar do|kardo|for me|mere liye|application|browser)\b/gi, '')
@@ -405,6 +476,20 @@ export class ActionEngine {
       }
     }
 
+    // Command Palette (Open / Close / Toggle)
+    if (/\b(?:command\s+palette|command\s+pallete|cmd\s+k|ctrl\s+k|command\s+bar|search\s+palette)\b/i.test(lower) ||
+        (/\b(?:palette|pallete)\b/i.test(lower) && /\b(?:open|show|kholo|dikhao|close|band|hide)\b/i.test(lower))) {
+      const isClose = /\b(?:close|hide|band|hatao|dismiss)\b/i.test(lower);
+      const voiceStore = useVoiceStore.getState();
+      if (isClose) {
+        voiceStore.setIsCommandPaletteOpen(false);
+        return isHindi ? "Command palette band kar diya hai, Sir." : "Closed the Command Palette.";
+      } else {
+        voiceStore.setIsCommandPaletteOpen(true);
+        return isHindi ? "Command palette open kar diya hai, Sir. Aap yahan type kar sakte hain." : "Opened the Command Palette for you, Sir. You can type commands or select actions.";
+      }
+    }
+
     // Close All Windows / Clear Desktop
     if (/\b(?:close\s+all\s+windows|minimize\s+all|clear\s+screen|sab\s+band\s+kardo|close\s+everything|hide\s+all\s+windows)\b/i.test(lower)) {
       console.log(`[ActionEngine] ⚡ Instant Fast Path: Closing All Desktop Windows`);
@@ -592,6 +677,14 @@ export class ActionEngine {
         return pendingConfirmation;
       }
 
+      // Resolve a pending email draft confirmation before starting a new LLM turn.
+      const pendingEmailConfirmation = await handlePendingEmailConfirmation(cleanText);
+      if (pendingEmailConfirmation) {
+        this.conversationHistory.push({ role: 'user', parts: [{ text: cleanText }] });
+        this.conversationHistory.push({ role: 'model', parts: [{ text: pendingEmailConfirmation }] });
+        return pendingEmailConfirmation;
+      }
+
       // Resolve a pending project / code modification confirmation before starting a new LLM turn.
       const pendingProjectConfirmation = await handlePendingProjectConfirmation(cleanText);
       if (pendingProjectConfirmation) {
@@ -607,7 +700,7 @@ export class ActionEngine {
       // Keep last 10 turns of conversation history in memory for continuous conversation context
       const historyToPass = this.conversationHistory.slice(-10);
 
-      // Step 3: LLM Generation with 8-second Timeout Guard to prevent UI lockup
+      // Step 3: LLM Generation with 25-second Timeout Guard to allow multi-step tool execution
       const llmPromise = this.llm.generateWithTools(
         {
           prompt: cleanText,
@@ -619,10 +712,11 @@ export class ActionEngine {
       );
 
       const timeoutPromise = new Promise<string>((_, reject) =>
-        setTimeout(() => reject(new Error('LLM response timed out')), 8000)
+        setTimeout(() => reject(new Error('LLM request timed out after 25s')), 25000)
       );
 
       const rawResponse = await Promise.race([llmPromise, timeoutPromise]);
+      useVoiceStore.getState().setProcessingStatus(null);
 
       // Step 4: Post-LLM Normalization (LLM -> LLM Normalizer -> TTS)
       const response = this.normalizePostLLM(rawResponse);
@@ -642,7 +736,12 @@ export class ActionEngine {
 
     } catch (error: any) {
       console.error('[ActionEngine] Error processing intent:', error);
-      return `Main aapki request process kar rahi hoon.`;
+      useVoiceStore.getState().setProcessingStatus(null);
+      const errMsg = error?.message || String(error);
+      if (errMsg.includes('timed out')) {
+        return `Sir, request process karne mein zyada samay lag gaya. Kripya punah koshish karein.`;
+      }
+      return `Sir, request process karne mein dikkat aayi: ${errMsg.slice(0, 120)}`;
     }
   }
 

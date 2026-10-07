@@ -63,104 +63,120 @@ export class LLMManager {
     return true;
   }
 
+  private static readonly FALLBACK_MODELS = [
+    'gemini-3.1-flash-lite',
+    'gemini-2.5-flash',
+    'gemini-3-flash',
+  ];
+
   /**
    * Internal fetch — returns the raw first candidate (not just text).
    * Used by generateWithTools which needs to inspect functionCall parts.
    */
   private async executeRawFetch(
-    model: GeminiModel,
+    primaryModel: GeminiModel,
     body: GeminiRequestBody,
-    maxRetries: number = 4
+    maxRetries: number = 3
   ): Promise<GeminiResponse['candidates']> {
-    if (!this.currentApiKey) throw new Error('No Gemini API Keys configured.');
-    let attempts = 0;
-    while (attempts < maxRetries) {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.currentApiKey}`;
-      try {
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
-        if (response.ok) {
-          const data: GeminiResponse = await response.json();
-          return data.candidates ?? [];
+    if (!this.currentApiKey) throw new Error('No Gemini API Keys configured in PIHU Token Protocol.');
+    
+    const candidateModels = Array.from(new Set([primaryModel, ...LLMManager.FALLBACK_MODELS]));
+
+    for (const model of candidateModels) {
+      let attempts = 0;
+      while (attempts < maxRetries) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.currentApiKey}`;
+        try {
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+
+          if (response.ok) {
+            const data: GeminiResponse = await response.json();
+            return data.candidates ?? [];
+          }
+
+          if (response.status === 429 || response.status === 403) {
+            if (this.rotateKey()) {
+              attempts++;
+              continue;
+            }
+          }
+
+          if (response.status === 404) {
+            console.warn(`[LLMManager] Model "${model}" returned 404. Falling back to next candidate model...`);
+            break; // Try next fallback model
+          }
+
+          const errorText = await response.text();
+          console.warn(`[LLMManager] Gemini error ${response.status} on model ${model}:`, errorText);
+          break; // Try next fallback model
+        } catch (error) {
+          if (attempts >= maxRetries - 1) break;
+          attempts++;
         }
-        if (response.status === 429 || response.status === 403) {
-          if (this.rotateKey()) { attempts++; continue; }
-        }
-        const errorText = await response.text();
-        throw new Error(`Gemini API Error ${response.status}: ${errorText}`);
-      } catch (error) {
-        if (attempts >= maxRetries - 1) throw error;
-        attempts++;
       }
     }
-    throw new Error(`Failed after ${maxRetries} attempts. (Possibly rate limited or quota exceeded on all keys)`);
+
+    throw new Error('Failed to communicate with Gemini API across all configured models and keys.');
   }
 
   /**
    * Internal fetch method with retry and fallback logic.
    */
-  private async executeFetchWithFailover(model: GeminiModel, body: GeminiRequestBody, maxRetries: number = 4): Promise<string> {
+  private async executeFetchWithFailover(
+    primaryModel: GeminiModel,
+    body: GeminiRequestBody,
+    maxRetries: number = 3
+  ): Promise<string> {
     if (!this.currentApiKey) {
       throw new Error("No Gemini API Keys configured.");
     }
 
-    let attempts = 0;
+    const candidateModels = Array.from(new Set([primaryModel, ...LLMManager.FALLBACK_MODELS]));
 
-    while (attempts < maxRetries) {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.currentApiKey}`;
-      
-      try {
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        });
+    for (const model of candidateModels) {
+      let attempts = 0;
+      while (attempts < maxRetries) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.currentApiKey}`;
+        try {
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          });
 
-        if (response.ok) {
-          const data: GeminiResponse = await response.json();
-          if (data.candidates && data.candidates.length > 0) {
-            return data.candidates[0].content.parts[0].text ?? '';
+          if (response.ok) {
+            const data: GeminiResponse = await response.json();
+            if (data.candidates && data.candidates.length > 0) {
+              return data.candidates[0].content.parts[0].text ?? '';
+            }
+            throw new Error("No candidates returned from Gemini");
           }
-          throw new Error("No candidates returned from Gemini");
-        }
 
-        const activeIndex = useSettingsStore.getState().activeKeyIndex;
-
-        // Handle specific errors (e.g. 429 Rate Limit)
-        if (response.status === 429) {
-          console.warn(`[LLMManager] Rate limit hit for model ${model} with key index ${activeIndex}.`);
-          if (this.rotateKey()) {
-            attempts++;
-            continue; // Retry with new key
+          if (response.status === 429 || response.status === 403) {
+            if (this.rotateKey()) {
+              attempts++;
+              continue;
+            }
           }
-        }
-        
-        // 403 could mean invalid key or quota exceeded
-        if (response.status === 403) {
-           console.warn(`[LLMManager] Auth/Quota error (${response.status}) on key index ${activeIndex}.`);
-           if (this.rotateKey()) {
-             attempts++;
-             continue; // Retry with new key
-           }
-        }
 
-        const errorText = await response.text();
-        throw new Error(`Gemini API Error ${response.status}: ${errorText}`);
+          if (response.status === 404) {
+            console.warn(`[LLMManager] Model "${model}" 404. Falling back to next model...`);
+            break;
+          }
 
-      } catch (error) {
-        // Network errors or thrown errors from above
-        if (attempts >= maxRetries - 1) {
-          throw error;
+          break;
+        } catch (error) {
+          if (attempts >= maxRetries - 1) break;
+          attempts++;
         }
-        console.warn(`[LLMManager] Attempt ${attempts + 1} failed, retrying...`, error);
-        attempts++;
       }
     }
 
-    throw new Error(`Failed to execute prompt after ${maxRetries} attempts. (Possibly rate limited or quota exceeded on all keys)`);
+    throw new Error('Failed to generate response across all fallback Gemini models.');
   }
 
   private buildRequestBody(req: LLMRequest): GeminiRequestBody {

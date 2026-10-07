@@ -10,16 +10,15 @@ export const runGoogleApiClient = async (command: string, ...args: string[]): Pr
     const cId = settings.googleClientId.trim();
     const cSecret = settings.googleClientSecret.trim();
 
-    const envVars: Record<string, string> = {};
-    if (cId) envVars.GOOGLE_CLIENT_ID = cId;
-    if (cSecret) envVars.GOOGLE_CLIENT_SECRET = cSecret;
-
     const envPrefix = (cId && cSecret)
       ? `GOOGLE_CLIENT_ID='${cId.replace(/'/g, "\\'")}' GOOGLE_CLIENT_SECRET='${cSecret.replace(/'/g, "\\'")}' `
       : '';
 
-    const pyArgs = [command, ...args].map(a => `'${a.replace(/'/g, "\\'")}'`).join(', ');
-    const pyCmd = `${envPrefix}python3 -c "import os, sys, subprocess; script = next((p for p in ['pihu_mcps/mcp/servers/google_api_client.py', 'src-tauri/pihu_mcps/mcp/servers/google_api_client.py', '/Users/mayankjha/Documents/projects/pihu-os/src-tauri/pihu_mcps/mcp/servers/google_api_client.py'] if os.path.exists(p)), None); print(subprocess.check_output(['python3', script, ${pyArgs}]).decode('utf-8')) if script else print('{}')"`;
+    // Encode [command, ...args] cleanly into base64 to avoid shell escaping / multiline issues
+    const payloadJson = JSON.stringify([command, ...args]);
+    const b64Payload = btoa(unescape(encodeURIComponent(payloadJson)));
+
+    const pyCmd = `${envPrefix}python3 -c "import os, sys, subprocess, base64, json; payload = json.loads(base64.b64decode('${b64Payload}').decode('utf-8')); script = next((p for p in ['src-tauri/pihu_mcps/mcp/servers/google_api_client.py', 'pihu_mcps/mcp/servers/google_api_client.py', '/Users/mayankjha/Documents/projects/pihu-os/src-tauri/pihu_mcps/mcp/servers/google_api_client.py'] if os.path.exists(p)), None); print(subprocess.check_output(['python3', script] + payload).decode('utf-8')) if script else print('{}')"`;
     
     const result = await invoke<string>('execute_shell_command', { command: pyCmd });
     if (result && result.trim().startsWith('{')) {
@@ -30,6 +29,75 @@ export const runGoogleApiClient = async (command: string, ...args: string[]): Pr
     return { error: e?.message || String(e) };
   }
 };
+
+// Helper to execute pending email send
+export async function executePendingEmailSend(
+  customRecipient?: string,
+  customSubject?: string,
+  customBody?: string
+): Promise<{ success: boolean; message?: string; error?: string }> {
+  try {
+    const { useVoiceStore } = await import('../../../../stores/voiceStore');
+    const pending = useVoiceStore.getState().pendingEmailAction;
+    
+    const recipient = (customRecipient || pending?.toEmail || pending?.to || '').trim();
+    const subject = (customSubject || pending?.subject || 'No Subject').trim();
+    const body = (customBody || pending?.body || '').trim();
+
+    if (!recipient) {
+      return { success: false, error: 'Recipient email address is missing.' };
+    }
+
+    const apiRes = await runGoogleApiClient('send_email', recipient, subject, body);
+    if (apiRes.error) {
+      return { success: false, error: apiRes.error };
+    }
+
+    useVoiceStore.getState().setPendingEmailAction(null);
+    return {
+      success: true,
+      message: `Email successfully sent to ${recipient} with subject "${subject}"!`
+    };
+  } catch (err: any) {
+    return { success: false, error: `Failed to send email: ${err?.message || String(err)}` };
+  }
+}
+
+// Helper to handle pending email voice confirmation
+export async function handlePendingEmailConfirmation(text: string): Promise<string | null> {
+  const { useVoiceStore } = await import('../../../../stores/voiceStore');
+  const pending = useVoiceStore.getState().pendingEmailAction;
+  if (!pending) return null;
+
+  // Expire after 5 minutes
+  if (Date.now() - pending.createdAt > 5 * 60 * 1000) {
+    useVoiceStore.getState().setPendingEmailAction(null);
+    return 'The pending email draft has expired. Please tell me if you want to draft a new email.';
+  }
+
+  const answer = text.trim().toLowerCase();
+
+  // Cancel / Reject
+  if (/^(no|nope|cancel|stop|wrong|don'?t|mat\s*bhejo|ruk\s*jao|nahi|chhod\s*do|cancel\s*mail)\b/i.test(answer)) {
+    useVoiceStore.getState().setPendingEmailAction(null);
+    return 'Understood Sir, I have cancelled sending the email draft.';
+  }
+
+  // Confirm / Send
+  if (
+    /^(yes|yeah|yep|send|send\s*it|proceed|sure|haan|bhej\s*do|bhejo|mail\s*kardo|confirm|do\s*it|okay\s*send)\b/i.test(answer) ||
+    /\b(?:send\s+the\s+mail|send\s+it\s+now|haan\s+bhej\s+do|bhej\s+dijiye|deliver\s+email)\b/i.test(answer)
+  ) {
+    const res = await executePendingEmailSend();
+    if (res.success) {
+      return `Done Sir Mayank! Email successfully sent to ${pending.to} (${pending.toEmail}) with subject "${pending.subject}".`;
+    } else {
+      return `There was an issue sending the email: ${res.error || 'Unknown error'}`;
+    }
+  }
+
+  return null;
+}
 
 // ─── Google Workspace Tools (Real Live Gmail, Calendar, Docs, Drive, Tasks, Keep) ──
 
@@ -62,12 +130,36 @@ export const googleWorkspaceTools: ActionTool[] = [
         const apiRes = await runGoogleApiClient('search_gmail', query, String(maxRes));
         
         if (apiRes.error) {
+          if (String(apiRes.error).includes('401') || String(apiRes.error).includes('token') || String(apiRes.error).includes('authentication') || String(apiRes.error).includes('link your account')) {
+            return {
+              success: false,
+              error: 'Google Workspace is not connected. Please link your Google account in Settings > Connections to view live Gmail messages.'
+            };
+          }
           return { success: false, error: apiRes.error };
         }
 
         const count = apiRes.count || 0;
         const totalEstimated = apiRes.total_estimated || count;
         const messages = apiRes.messages || [];
+
+        if (totalEstimated === 0 || messages.length === 0) {
+          return {
+            success: true,
+            data: {
+              action: 'searched_gmail',
+              query,
+              count: 0,
+              showing_count: 0,
+              messages: [],
+              message: `No emails matching "${query}" were found in your Gmail inbox, Sir.`
+            }
+          };
+        }
+
+        const formattedList = messages.map((m: any, idx: number) => 
+          `### ✉️ ${idx + 1}. ${m.subject || 'No Subject'}\n* **From:** \`${m.sender || 'Unknown'}\`\n* **Date:** *${m.date || 'Recent'}*\n> ${m.snippet || 'No preview available'}`
+        ).join('\n\n---\n\n');
 
         return {
           success: true,
@@ -77,9 +169,7 @@ export const googleWorkspaceTools: ActionTool[] = [
             count: totalEstimated,
             showing_count: count,
             messages,
-            message: totalEstimated > 0 
-              ? `You have ${totalEstimated} unread email(s) in your Gmail inbox, Sir. Here are the top ${count}:\n` + messages.map((m: any) => `• ${m.subject} from ${m.sender} (${m.date})`).join('\n') + `\n\nWould you like me to read out the full content of any of these emails for you, Sir?`
-              : `No emails matching "${query}" were found in your Gmail inbox, Sir.`,
+            message: `Found **${totalEstimated}** unread email(s) in your Gmail inbox:\n\n${formattedList}\n\n*Say "Read email 1" or "Open email" if you want me to read the full body.*`,
           },
         };
       } catch (e: any) {
@@ -99,16 +189,22 @@ export const googleWorkspaceTools: ActionTool[] = [
     },
     execute: async (): Promise<ToolResult> => {
       try {
-        const apiRes = await runGoogleApiClient('search_gmail', 'is:unread', '10');
+        const apiRes = await runGoogleApiClient('search_gmail', 'is:unread', '5');
         if (apiRes.error) {
+          if (String(apiRes.error).includes('401') || String(apiRes.error).includes('token') || String(apiRes.error).includes('authentication') || String(apiRes.error).includes('link your account')) {
+            return {
+              success: false,
+              error: 'Google Workspace is not connected. Please link your Google account in Settings > Connections to view live Gmail messages.'
+            };
+          }
           return { success: false, error: apiRes.error };
         }
 
         const count = apiRes.count || 0;
         const totalEstimated = apiRes.total_estimated || count;
-        const latest = apiRes.latest_email;
+        const messages: any[] = apiRes.messages || [];
 
-        if (totalEstimated === 0 || !latest) {
+        if (totalEstimated === 0 || messages.length === 0) {
           return {
             success: true,
             data: {
@@ -120,6 +216,10 @@ export const googleWorkspaceTools: ActionTool[] = [
           };
         }
 
+        const formattedList = messages.map((m: any, idx: number) => 
+          `### ✉️ ${idx + 1}. ${m.subject || 'No Subject'}\n* **From:** \`${m.sender || 'Unknown'}\`\n* **Date:** *${m.date || 'Recent'}*\n> ${m.snippet || 'No preview available'}`
+        ).join('\n\n---\n\n');
+
         return {
           success: true,
           data: {
@@ -127,9 +227,8 @@ export const googleWorkspaceTools: ActionTool[] = [
             has_unread: true,
             count: totalEstimated,
             showing_count: count,
-            email: latest,
-            prompt: `You have ${totalEstimated} total unread email(s) in your Gmail, Sir. The latest is from ${latest.sender}: "${latest.subject}". Would you like me to read the entire email body for you, Sir?`,
-            message: `You have ${totalEstimated} unread email(s) in your Gmail inbox, Sir. The latest email is from ${latest.sender}: "${latest.subject}". Would you like me to read out the full email body or open it in your browser, Sir?`,
+            messages,
+            message: `You have **${totalEstimated}** unread email(s) in your Gmail inbox:\n\n${formattedList}\n\n*Say "Read email 1" or "Open email in browser" if you want full details.*`,
           },
         };
       } catch (e: any) {
@@ -209,13 +308,13 @@ export const googleWorkspaceTools: ActionTool[] = [
   {
     declaration: {
       name: 'google_workspace_send_email',
-      description: 'Sends a real email to a recipient via Gmail API. Use when user says "send an email to [email] with subject [subject] and body [body]", "email [recipient] [message]".',
+      description: 'Stages and sends a real email to a recipient via Gmail API with interactive preview card and confirmation. Use when user says "send an email to [recipient] with subject [subject] and body [body]", "email [recipient] [message]", "send mail to [person] that [details]".',
       parameters: {
         type: 'OBJECT',
         properties: {
           recipient: {
             type: 'STRING',
-            description: 'Recipient email address (e.g. user@example.com).',
+            description: 'Recipient name or email address (e.g. "Mayank", "mayank@example.com").',
           },
           subject: {
             type: 'STRING',
@@ -223,7 +322,11 @@ export const googleWorkspaceTools: ActionTool[] = [
           },
           body: {
             type: 'STRING',
-            description: 'Body content of the email message.',
+            description: 'Full professional body content of the email message.',
+          },
+          confirmed: {
+            type: 'BOOLEAN',
+            description: 'Set to true ONLY if user has already explicitly confirmed sending.',
           },
         },
         required: ['recipient', 'subject', 'body'],
@@ -231,14 +334,15 @@ export const googleWorkspaceTools: ActionTool[] = [
     },
     execute: async (args): Promise<ToolResult> => {
       try {
-        let recipientEmail = args.recipient.trim();
-        let recipientDisplay = recipientEmail;
+        let recipientInput = args.recipient.trim();
+        let recipientEmail = recipientInput;
+        let recipientDisplay = recipientInput;
 
         // If recipient doesn't contain '@', look up in People Directory
         if (!recipientEmail.includes('@')) {
           const { useSettingsStore } = await import('../../../../stores/settingsStore');
           const contacts = useSettingsStore.getState().contacts || [];
-          const cleanQuery = recipientEmail.toLowerCase();
+          const cleanQuery = recipientInput.toLowerCase();
           const match = contacts.find(c => 
             (c.name || '').toLowerCase() === cleanQuery || 
             (c.nickname || '').toLowerCase() === cleanQuery ||
@@ -249,30 +353,60 @@ export const googleWorkspaceTools: ActionTool[] = [
             recipientEmail = match.email;
             recipientDisplay = `${match.name} (${match.email})`;
           } else {
-            return {
-              success: false,
-              error: `Contact "${args.recipient}" does not have an email address in your People Directory. Please provide their email address or add it in Settings > People.`,
-            };
+            if (cleanQuery.includes('mayank') || cleanQuery.includes('me') || cleanQuery.includes('myself')) {
+              recipientEmail = 'the.mayank.k.jha@gmail.com';
+              recipientDisplay = `Mayank Jha (${recipientEmail})`;
+            }
           }
         }
 
-        const apiRes = await runGoogleApiClient('send_email', recipientEmail, args.subject, args.body);
-        if (apiRes.error) {
-          return { success: false, error: apiRes.error };
+        const { useVoiceStore } = await import('../../../../stores/voiceStore');
+
+        if (args.confirmed) {
+          const apiRes = await runGoogleApiClient('send_email', recipientEmail, args.subject, args.body);
+          if (apiRes.error) {
+            return { success: false, error: apiRes.error };
+          }
+
+          useVoiceStore.getState().setPendingEmailAction(null);
+
+          return {
+            success: true,
+            data: {
+              action: 'sent_email_via_gmail_api',
+              recipient: recipientDisplay,
+              subject: args.subject,
+              message_id: apiRes.message_id,
+              message: `Successfully sent email to ${recipientDisplay} via Gmail API!`,
+            },
+          };
         }
+
+        // Stage email preview card
+        const pendingAction = {
+          id: `email_${Date.now()}`,
+          to: recipientDisplay,
+          toEmail: recipientEmail,
+          subject: args.subject,
+          body: args.body,
+          createdAt: Date.now()
+        };
+
+        useVoiceStore.getState().setPendingEmailAction(pendingAction);
 
         return {
           success: true,
           data: {
-            action: 'sent_email_via_gmail_api',
+            action: 'staged_email_preview',
             recipient: recipientDisplay,
+            toEmail: recipientEmail,
             subject: args.subject,
-            message_id: apiRes.message_id,
-            message: `Successfully sent email to ${recipientDisplay} via Gmail API!`,
+            body: args.body,
+            message: `I have prepared the email draft for ${recipientDisplay} with the subject "${args.subject}". Please review the full editable preview above. Say "Send it" or click Send to deliver, Sir.`,
           },
         };
       } catch (e: any) {
-        return { success: false, error: `Failed to send email: ${e?.message || String(e)}` };
+        return { success: false, error: `Failed to prepare email: ${e?.message || String(e)}` };
       }
     },
   },

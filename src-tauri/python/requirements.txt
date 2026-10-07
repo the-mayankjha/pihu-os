@@ -9,3 +9,8 @@ pywhispercpp
 kokoro
 soundfile
 scipy
+# Explicit imports used by wakeword validation and the language speech adapter.
+onnx
+onnxruntime
+sounddevice
+requests

@@ -27,6 +27,26 @@ export interface PendingProjectAction {
   createdAt: number;
 }
 
+export interface PendingEmailAction {
+  id: string;
+  to: string;
+  toEmail: string;
+  subject: string;
+  body: string;
+  createdAt: number;
+}
+
+export interface PendingWhatsAppAction {
+  id: string;
+  recipient: {
+    jid: string;
+    displayName: string;
+    phone: string;
+  };
+  message: string;
+  createdAt: number;
+}
+
 interface VoiceState {
   isActive: boolean;
   isListening: boolean;
@@ -35,6 +55,9 @@ interface VoiceState {
   processingStatus: string | null;
   activeProject: ActiveProjectInfo | null;
   pendingProjectAction: PendingProjectAction | null;
+  pendingEmailAction: PendingEmailAction | null;
+  pendingWhatsAppAction: PendingWhatsAppAction | null;
+  isCommandPaletteOpen: boolean;
   activeVoiceEngine: string;
   activeVoiceName: string | null;
   lastTTSError: string | null;
@@ -46,6 +69,12 @@ interface VoiceState {
   setProcessingStatus: (status: string | null) => void;
   setActiveProject: (project: ActiveProjectInfo | null) => void;
   setPendingProjectAction: (action: PendingProjectAction | null) => void;
+  setPendingEmailAction: (action: PendingEmailAction | null) => void;
+  updatePendingEmailAction: (updates: Partial<PendingEmailAction>) => void;
+  setPendingWhatsAppAction: (action: PendingWhatsAppAction | null) => void;
+  updatePendingWhatsAppAction: (updates: Partial<PendingWhatsAppAction>) => void;
+  setIsCommandPaletteOpen: (open: boolean) => void;
+  toggleCommandPalette: () => void;
   setActiveVoiceEngine: (engine: string) => void;
   setActiveVoiceName: (name: string | null) => void;
   setLastTTSError: (err: string | null) => void;
@@ -64,6 +93,9 @@ export const useVoiceStore = create<VoiceState>((set) => ({
   processingStatus: null,
   activeProject: initialActiveProject,
   pendingProjectAction: null,
+  pendingEmailAction: null,
+  pendingWhatsAppAction: null,
+  isCommandPaletteOpen: false,
   activeVoiceEngine: 'Awaiting Engine...',
   activeVoiceName: null,
   lastTTSError: null,
@@ -80,6 +112,16 @@ export const useVoiceStore = create<VoiceState>((set) => ({
     set({ activeProject: project });
   },
   setPendingProjectAction: (action) => set({ pendingProjectAction: action }),
+  setPendingEmailAction: (action) => set({ pendingEmailAction: action }),
+  updatePendingEmailAction: (updates) => set((state) => ({
+    pendingEmailAction: state.pendingEmailAction ? { ...state.pendingEmailAction, ...updates } : null,
+  })),
+  setPendingWhatsAppAction: (action) => set({ pendingWhatsAppAction: action }),
+  updatePendingWhatsAppAction: (updates) => set((state) => ({
+    pendingWhatsAppAction: state.pendingWhatsAppAction ? { ...state.pendingWhatsAppAction, ...updates } : null,
+  })),
+  setIsCommandPaletteOpen: (open) => set({ isCommandPaletteOpen: open }),
+  toggleCommandPalette: () => set((state) => ({ isCommandPaletteOpen: !state.isCommandPaletteOpen })),
   setActiveVoiceEngine: (engine) => set({ activeVoiceEngine: engine }),
   setActiveVoiceName: (name) => set({ activeVoiceName: name }),
   setLastTTSError: (err) => set({ lastTTSError: err }),
@@ -91,6 +133,8 @@ export const useVoiceStore = create<VoiceState>((set) => ({
     response: '',
     processingStatus: null,
     pendingProjectAction: null,
+    pendingEmailAction: null,
+    pendingWhatsAppAction: null,
     activeVoiceEngine: 'Awaiting Engine...',
     activeVoiceName: null,
     lastTTSError: null

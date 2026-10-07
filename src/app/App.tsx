@@ -46,6 +46,7 @@ import {
 
 import { SettingsWindow } from '../widgets/settings/SettingsWindow';
 import { CodeOutputWindow } from '../widgets/codeOutput/CodeOutputWindow';
+import { CommandPalette } from '../shared/components/CommandPalette/CommandPalette';
 
 export default function App() {
   const { widgets } = useLayoutStore();
@@ -122,6 +123,7 @@ export default function App() {
       <Dock />
       <WidgetDrawer />
       <VoiceOverlay />
+      <CommandPalette />
     </div>
   );
 }
