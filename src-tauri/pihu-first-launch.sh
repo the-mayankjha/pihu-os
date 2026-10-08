@@ -162,7 +162,7 @@ if [ ! -f "$GOOGLE_CRED_DIR/credentials.json" ]; then
     "client_secret": "${GOOGLE_CLIENT_SECRET:-}",
     "auth_uri": "https://accounts.google.com/o/oauth2/auth",
     "token_uri": "https://oauth2.googleapis.com/token",
-    "redirect_uris": ["http://localhost:8080/oauth2callback"]
+    "redirect_uris": ["http://localhost/oauth2callback"]
   }
 }
 CRED_EOF

@@ -18,7 +18,7 @@ test('Escape stops speech, closes on repeat; follow-up listens for 15 seconds an
   };
   let source=await readFile(new URL('../src/core/voice/VoiceManager.ts',import.meta.url),'utf8');
   source=source.replace(/^import .*;\n/gm,'');
-  source='const {invoke,listen,STTManager,TTSManager,ActionEngine,useVoiceStore,useOrbStore,parseUIIntent,parseBrowserIntent,rememberTarget,OrbState}=globalThis.__voiceEscapeMocks;\n'+stripTypeScriptTypes(source);
+  source='const WHATSAPP_API_URL="http://127.0.0.1:8080/api"; const {invoke,listen,STTManager,TTSManager,ActionEngine,useVoiceStore,useOrbStore,parseUIIntent,parseBrowserIntent,rememberTarget,OrbState}=globalThis.__voiceEscapeMocks;\n'+stripTypeScriptTypes(source);
   const {VoiceManager}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
   const manager=VoiceManager.getInstance();
   manager.handleEscape();

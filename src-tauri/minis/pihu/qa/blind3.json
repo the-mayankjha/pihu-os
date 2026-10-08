@@ -1,0 +1,88 @@
+{
+  "pairs": [
+    {
+      "pair": "horizontal-1",
+      "A": "ambiguous",
+      "B": "screen-right",
+      "reason": "A nose and pupils appear centered in a frontal face; B nose projects toward screen-right with pupils and face turned right."
+    },
+    {
+      "pair": "horizontal-2",
+      "A": "screen-left",
+      "B": "screen-right",
+      "reason": "A nose and raised pupils point toward screen-left; B nose and raised pupils point toward screen-right."
+    },
+    {
+      "pair": "horizontal-3",
+      "A": "screen-right",
+      "B": "screen-left",
+      "reason": "A nose projects right and pupils follow; B nose projects left and pupils follow."
+    },
+    {
+      "pair": "horizontal-4",
+      "A": "screen-right",
+      "B": "screen-left",
+      "reason": "A near-profile nose projects screen-right; B near-profile nose projects screen-left."
+    },
+    {
+      "pair": "horizontal-5",
+      "A": "screen-left",
+      "B": "screen-right",
+      "reason": "A lowered face retains a left-projecting nose and leftward eyes; B nose and eyes project right."
+    },
+    {
+      "pair": "horizontal-6",
+      "A": "screen-left",
+      "B": "screen-right",
+      "reason": "Both heads tilt down, but A nose and pupils point left while B nose and pupils point right."
+    },
+    {
+      "pair": "horizontal-7",
+      "A": "screen-left",
+      "B": "screen-right",
+      "reason": "Downward pitch is strong in both; nose position and pupil direction still read left for A and right for B."
+    },
+    {
+      "pair": "vertical-1",
+      "A": "down",
+      "B": "up",
+      "reason": "A chin tucks toward chest, crown is prominent, and eyes lower; B chin lifts with eyes raised and underside of face visible."
+    },
+    {
+      "pair": "vertical-2",
+      "A": "down",
+      "B": "up",
+      "reason": "A nose and pupils angle down beneath a prominent crown; B chin and nose lift and pupils look upward."
+    },
+    {
+      "pair": "vertical-3",
+      "A": "down",
+      "B": "up",
+      "reason": "A head slopes forward with lowered nose and gaze; B head tilts back with raised nose and gaze."
+    },
+    {
+      "pair": "vertical-4",
+      "A": "ambiguous",
+      "B": "up",
+      "reason": "A has a largely level side-facing nose and near-level pupils without clear downward pitch; B chin lifts and pupils look upward."
+    },
+    {
+      "pair": "vertical-5",
+      "A": "up",
+      "B": "down",
+      "reason": "A frontal face has lifted chin and raised pupils; B crown dominates with chin tucked and pupils lowered."
+    },
+    {
+      "pair": "vertical-6",
+      "A": "down",
+      "B": "up",
+      "reason": "A lowered nose and pupils accompany forward head pitch; B raised chin, nose, and pupils show upward pitch."
+    },
+    {
+      "pair": "vertical-7",
+      "A": "up",
+      "B": "down",
+      "reason": "A chin and nose lift with gaze upward; B chin tucks, nose angles down, and pupils lower."
+    }
+  ]
+}

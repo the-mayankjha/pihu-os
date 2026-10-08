@@ -1,0 +1,64 @@
+{
+  "ok": true,
+  "source": "decoded/look-row-10.png",
+  "atlas": "final/spritesheet-extended-raw.png",
+  "inspection": "Inspected source and final native 192x208 cells. All eight complete, same physical ponytail screen-right, anchored frontal bodies and baseline.",
+  "directions": [
+    {
+      "expected": "180",
+      "observed": "down",
+      "verdict": "pass",
+      "evidence": "Frontal bowed head with crown prominent, eyes lowered behind glasses and chin toward chest."
+    },
+    {
+      "expected": "202.5",
+      "observed": "down-left",
+      "verdict": "pass",
+      "evidence": "Nose and eyes shift slightly left while lowered eyelids/chin retain downward pitch."
+    },
+    {
+      "expected": "225",
+      "observed": "down-left",
+      "verdict": "pass",
+      "evidence": "Nose left of neck and lowered pupils; crown exposed with bowed chin."
+    },
+    {
+      "expected": "247.5",
+      "observed": "down-left",
+      "verdict": "pass",
+      "evidence": "Leftward head yaw, nose left of neck, lowered chin and eyes slightly down."
+    },
+    {
+      "expected": "270",
+      "observed": "left",
+      "verdict": "pass",
+      "evidence": "Unmistakable left profile nose and pupils toward screen-left, torso stays frontal."
+    },
+    {
+      "expected": "292.5",
+      "observed": "up-left",
+      "verdict": "pass",
+      "evidence": "Left-facing nose and pupils with chin raised and upward gaze."
+    },
+    {
+      "expected": "315",
+      "observed": "up-left",
+      "verdict": "pass",
+      "evidence": "Head yaw left with raised chin, nose left of neck, pupils directed upper-left."
+    },
+    {
+      "expected": "337.5",
+      "observed": "up-left",
+      "verdict": "pass",
+      "evidence": "Nearly frontal raised chin with slight left nose displacement and pupils upper-left; approaches up anchor."
+    }
+  ],
+  "boundaries": {
+    "157.5_to_180": "Same down-pitched family, yaw returns to frontal; pronounced right yaw in157.5 makes larger head-yaw step than neighboring frames. Parent to independently assess playback. No body or scale snap observed.",
+    "337.5_to_000": "Nearly frontal up-left to frontal up, consistent raised chin/eye family with small yaw step."
+  },
+  "warnings": [
+    "202.5 and225 visually similar but both down-left and no quadrant reversal.",
+    "157.5 to180 has pronounced head-yaw change; independent final motion review needed."
+  ]
+}

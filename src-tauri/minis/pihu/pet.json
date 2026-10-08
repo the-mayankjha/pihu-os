@@ -1,0 +1,13 @@
+{
+  "id": "pet_6ac800da7b64819184d6fbd8f513aff4",
+  "name": "Pihu",
+  "is_custom": true,
+  "is_active": true,
+  "atlas_sha256": "880000a9bbe650d60b44c05985dd436b4841b083a828f35ec7317d1ca7d670ed",
+  "sprite_version": 2,
+  "frames": 73,
+  "description": "Pihu — a cute, caring, and helpful companion who’s always ready to lend a hand. She’s friendly, supportive, and will always do her best to make your day a little easier.",
+  "validation": "passed",
+  "storage": "local files",
+  "generation": "built-in imagegen"
+}

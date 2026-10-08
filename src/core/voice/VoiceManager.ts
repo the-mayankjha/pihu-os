@@ -1,3 +1,4 @@
+import { WHATSAPP_API_URL } from '../services/whatsappBridge';
 import { listen } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
 import { STTManager } from './stt/STTManager';
@@ -73,7 +74,7 @@ export class VoiceManager {
 
       // ── Check other services in parallel ──
       const serviceChecks = await Promise.allSettled([
-        fetch('http://localhost:8080/api/status', { signal: AbortSignal.timeout(1500) }).then(r => r.ok),
+        fetch(`${WHATSAPP_API_URL}/status`, { signal: AbortSignal.timeout(1500) }).then(r => r.ok),
         fetch('ws://127.0.0.1:5001', { signal: AbortSignal.timeout(1500) }).then(() => true).catch(() => true), // STT WebSocket — if server is running, even a failed HTTP fetch means it's there
       ]);
 
@@ -169,6 +170,7 @@ export class VoiceManager {
       const sequence = planSequence(text);
       if (/\bvtop\b/i.test(text)) this.startSafetyTimer(150000);
       else if (/\b(?:project|run it|preview it|open it)\b/i.test(text)) this.startSafetyTimer(90000);
+      if (/\bwhatsapp\b/i.test(text)) this.startSafetyTimer(45000);
       if (parseBrowserIntent(text) || parseUIIntent(text)) this.startSafetyTimer(90000);
       if (sequence && !sequence.error) this.startSafetyTimer(sequence.steps.length * 20000 + 45000);
 

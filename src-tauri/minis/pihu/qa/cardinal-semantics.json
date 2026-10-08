@@ -1,0 +1,30 @@
+{
+  "ok": true,
+  "directions": [
+    {
+      "expected": "000 up",
+      "observed": "up",
+      "verdict": "pass",
+      "evidence": "Frontal face pitched upward, chin underside exposed, pupils against upper eyelids; feet and torso frontal."
+    },
+    {
+      "expected": "090 screen-right",
+      "observed": "screen-right",
+      "verdict": "pass",
+      "evidence": "Head yaw right; nose tip and pupils right of head center, far eye narrower. Repaired single anchor retains ponytail on screen-right shoulder."
+    },
+    {
+      "expected": "180 down",
+      "observed": "down",
+      "verdict": "pass",
+      "evidence": "Crown prominent, face bowed toward chest, lower pupil direction beneath drooping upper eyelids; feet planted."
+    },
+    {
+      "expected": "270 screen-left",
+      "observed": "screen-left",
+      "verdict": "pass",
+      "evidence": "Head yaw left; nose tip and pupils displaced screen-left; ponytail stays behind screen-right shoulder."
+    }
+  ],
+  "repair": "090 replaced from separately generated anchor using bundled remove_chroma_background and fit_to_cell functions; other three preserved. Inspected all at native 192x208."
+}

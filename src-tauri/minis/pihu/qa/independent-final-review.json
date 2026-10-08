@@ -1,0 +1,44 @@
+{
+  "reviewer": "independent-final-review",
+  "inputs": [
+    "qa/direction-sheet.png",
+    "qa/contact-sheet-final.png",
+    "final/spritesheet-extended.png"
+  ],
+  "method": "Direct visual inspection of exact PNG and labeled contact sheets; adjacent cells compared in ordered animation and clockwise look sequence. No artwork edits.",
+  "hard_failures": [],
+  "overall": "acceptable_with_warnings",
+  "checks": {
+    "clipping": "No visible clipping in populated cells. Running hands, shoes and ponytails remain inside cell boundaries; jumping raised hands and seated pet silhouette remain complete.",
+    "attachments": "No visible broken neck, arm, wrist, leg or ponytail attachment. Jewelry remains adjacent to the ears and hands connect to sleeves.",
+    "identity": "Consistent pink glasses, dark curly hair and side ponytail, floral tunic, blue trousers and red-white shoes throughout. Facial expressions and pose changes retain the same character.",
+    "direction_order": "Clockwise progression is readable from up through right, down, left and up. Neighboring silhouettes and gaze directions progress without a sign reversal.",
+    "loop_337_5_to_000": "Both are nearly frontal with elevated pupils; small residual left turn returns to centered up without a large pose jump.",
+    "transition_000_to_022_5": "Noticeable but coherent head turn: centered raised gaze becomes right-facing raised gaze. Body and foot placement stay stable; nose and ear arrangement change more than neighboring 022.5 to045.",
+    "transition_157_5_to_180": "Noticeable shift from right-biased lowered face to centered chin-tucked down face. Feet/body remain stable, and down pitch is maintained; crown and facial position shift more strongly than neighboring135 to157.5.",
+    "animation_continuity": "Run rows alternate extended stride and tucked-leg phases with consistent facing. Idle, wave, waiting, petting and review cells return toward their starting pose. Jump ends standing with arms raised, so return to its crouched start is a visible state change if replayed continuously."
+  },
+  "warnings": [
+    {
+      "location": "look112.5",
+      "severity": "acceptable_warning",
+      "evidence": "Rightward nose/profile is clear, but chin remains nearly level and downward pupil displacement is weak. This reads closer to right with a subtle downward component than an unmistakable diagonal down-right."
+    },
+    {
+      "location": "look337.5",
+      "severity": "acceptable_warning",
+      "evidence": "Upward pupils and raised chin are clear. Screen-left component is very subtle in this nearly frontal face; it can read as centered up when viewed alone."
+    },
+    {
+      "location": "look000\u2192022.5 and157.5\u2192180",
+      "severity": "acceptable_warning",
+      "evidence": "Angular motion is uneven: these front-to-three-quarter transitions are larger than several neighboring steps. No detached anatomy, clipping or identity break accompanies the change."
+    },
+    {
+      "location": "jump frame4\u2192frame0",
+      "severity": "acceptable_warning",
+      "evidence": "Last frame is standing with both arms raised; first frame crouches with hands close to face. This is a substantial reset if the five-frame jump is treated as a continuous loop."
+    }
+  ],
+  "limits": "Static ordered-cell review cannot establish playback timing or temporal smoothness at the actual runtime frame rate."
+}

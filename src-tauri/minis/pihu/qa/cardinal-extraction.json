@@ -1,0 +1,61 @@
+{
+  "ok": true,
+  "strip": "/Users/mayankjha/Documents/Codex/2026-10-08/pets-plugin-work-pets-openai-curated-4/outputs/pihu/decoded/look-cardinals.png",
+  "directions": [
+    "000",
+    "090",
+    "180",
+    "270"
+  ],
+  "errors": [],
+  "anchors": [
+    {
+      "direction": "000",
+      "source_box": [
+        0,
+        0,
+        542,
+        725
+      ],
+      "used_pixels": 163768,
+      "edge_pixels": 0,
+      "output": "/Users/mayankjha/Documents/Codex/2026-10-08/pets-plugin-work-pets-openai-curated-4/outputs/pihu/decoded/look-anchors/000.png"
+    },
+    {
+      "direction": "090",
+      "source_box": [
+        542,
+        0,
+        1084,
+        725
+      ],
+      "used_pixels": 163540,
+      "edge_pixels": 0,
+      "output": "/Users/mayankjha/Documents/Codex/2026-10-08/pets-plugin-work-pets-openai-curated-4/outputs/pihu/decoded/look-anchors/090.png"
+    },
+    {
+      "direction": "180",
+      "source_box": [
+        1084,
+        0,
+        1627,
+        725
+      ],
+      "used_pixels": 164160,
+      "edge_pixels": 0,
+      "output": "/Users/mayankjha/Documents/Codex/2026-10-08/pets-plugin-work-pets-openai-curated-4/outputs/pihu/decoded/look-anchors/180.png"
+    },
+    {
+      "direction": "270",
+      "source_box": [
+        1627,
+        0,
+        2169,
+        725
+      ],
+      "used_pixels": 163545,
+      "edge_pixels": 0,
+      "output": "/Users/mayankjha/Documents/Codex/2026-10-08/pets-plugin-work-pets-openai-curated-4/outputs/pihu/decoded/look-anchors/270.png"
+    }
+  ]
+}

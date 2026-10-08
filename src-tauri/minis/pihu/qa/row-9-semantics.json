@@ -1,0 +1,60 @@
+{
+  "ok": true,
+  "source": "decoded/look-row-9.png",
+  "registered": "decoded/look-row-9-registered.png",
+  "inspection": "Eight native 192x208 cells visually inspected after bundled registration; consistent feet, torso, identity and ponytail side. No clipping or missing frames.",
+  "directions": [
+    {
+      "expected": "000",
+      "observed": "up",
+      "verdict": "pass",
+      "evidence": "Frontal face, chin underside exposed and pupils raised toward top."
+    },
+    {
+      "expected": "022.5",
+      "observed": "up-right",
+      "verdict": "pass",
+      "evidence": "Head yaw and nose tip screen-right; chin still raised and pupils upward."
+    },
+    {
+      "expected": "045",
+      "observed": "up-right",
+      "verdict": "pass",
+      "evidence": "Nose and pupils screen-right; upward chin pitch and raised pupil centers."
+    },
+    {
+      "expected": "067.5",
+      "observed": "up-right",
+      "verdict": "pass",
+      "evidence": "Rightward head yaw, nose forward right; slight upward pitch remains."
+    },
+    {
+      "expected": "090",
+      "observed": "right",
+      "verdict": "pass",
+      "evidence": "Strong rightward head yaw, nose and gaze toward right edge."
+    },
+    {
+      "expected": "112.5",
+      "observed": "down-right",
+      "verdict": "pass",
+      "evidence": "Head rightward with lowered chin and gaze beginning downward."
+    },
+    {
+      "expected": "135",
+      "observed": "down-right",
+      "verdict": "pass",
+      "evidence": "Nose right of neck, chin lowered with crown gaining visibility; eyes directed down-right."
+    },
+    {
+      "expected": "157.5",
+      "observed": "down-right",
+      "verdict": "pass",
+      "evidence": "Bowed head, visible crown and lowered eyelids/pupils; nose remains screen-right."
+    }
+  ],
+  "warnings": [
+    "022.5 to 067.5 head poses similar but maintain upward-right quadrant and no reversal.",
+    "157.5 retains pronounced rightward yaw; inspect continuity into row10 180 before final acceptance."
+  ]
+}

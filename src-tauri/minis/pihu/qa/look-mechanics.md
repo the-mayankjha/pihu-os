@@ -1,0 +1,1 @@
+Pihu keeps her feet and torso planted; neck and head lead the gaze. Original eyes rotate naturally within lids behind her pink glasses. Nose tip, pupils and chin pitch establish vertical direction; head yaw, nose displacement and face visibility establish horizontal direction. Ponytail and earrings follow subtly. No whole body turntable or replacement eyes.

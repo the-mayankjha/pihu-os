@@ -1,0 +1,118 @@
+{
+  "directions": [
+    {
+      "observed": "up",
+      "verdict": "pass",
+      "evidence": "Frontal face, chin underside exposed and pupils raised toward top.",
+      "label": "000",
+      "expected": "up"
+    },
+    {
+      "observed": "up-right",
+      "verdict": "warning",
+      "evidence": "Head yaw and nose tip screen-right; chin still raised and pupils upward.",
+      "label": "022.5",
+      "expected": "up-right"
+    },
+    {
+      "observed": "up-right",
+      "verdict": "warning",
+      "evidence": "Nose and pupils screen-right; upward chin pitch and raised pupil centers.",
+      "label": "045",
+      "expected": "up-right"
+    },
+    {
+      "observed": "up-right",
+      "verdict": "warning",
+      "evidence": "Rightward head yaw, nose forward right; slight upward pitch remains.",
+      "label": "067.5",
+      "expected": "up-right"
+    },
+    {
+      "observed": "right",
+      "verdict": "pass",
+      "evidence": "Strong rightward head yaw, nose and gaze toward right edge.",
+      "label": "090",
+      "expected": "right"
+    },
+    {
+      "observed": "down-right",
+      "verdict": "warning",
+      "evidence": "Head rightward with lowered chin and gaze beginning downward.",
+      "label": "112.5",
+      "expected": "down-right"
+    },
+    {
+      "observed": "down-right",
+      "verdict": "pass",
+      "evidence": "Nose right of neck, chin lowered with crown gaining visibility; eyes directed down-right.",
+      "label": "135",
+      "expected": "down-right"
+    },
+    {
+      "observed": "down-right",
+      "verdict": "warning",
+      "evidence": "Bowed head, visible crown and lowered eyelids/pupils; nose remains screen-right.",
+      "label": "157.5",
+      "expected": "down-right"
+    },
+    {
+      "observed": "down",
+      "verdict": "pass",
+      "evidence": "Frontal bowed head with crown prominent, eyes lowered behind glasses and chin toward chest.",
+      "label": "180",
+      "expected": "down"
+    },
+    {
+      "observed": "down-left",
+      "verdict": "warning",
+      "evidence": "Nose and eyes shift slightly left while lowered eyelids/chin retain downward pitch.",
+      "label": "202.5",
+      "expected": "down-left"
+    },
+    {
+      "observed": "down-left",
+      "verdict": "warning",
+      "evidence": "Nose left of neck and lowered pupils; crown exposed with bowed chin.",
+      "label": "225",
+      "expected": "down-left"
+    },
+    {
+      "observed": "down-left",
+      "verdict": "pass",
+      "evidence": "Leftward head yaw, nose left of neck, lowered chin and eyes slightly down.",
+      "label": "247.5",
+      "expected": "down-left"
+    },
+    {
+      "observed": "left",
+      "verdict": "pass",
+      "evidence": "Unmistakable left profile nose and pupils toward screen-left, torso stays frontal.",
+      "label": "270",
+      "expected": "left"
+    },
+    {
+      "observed": "up-left",
+      "verdict": "pass",
+      "evidence": "Left-facing nose and pupils with chin raised and upward gaze.",
+      "label": "292.5",
+      "expected": "up-left"
+    },
+    {
+      "observed": "up-left",
+      "verdict": "pass",
+      "evidence": "Head yaw left with raised chin, nose left of neck, pupils directed upper-left.",
+      "label": "315",
+      "expected": "up-left"
+    },
+    {
+      "observed": "up-left",
+      "verdict": "warning",
+      "evidence": "Nearly frontal raised chin with slight left nose displacement and pupils upper-left; approaches up anchor.",
+      "label": "337.5",
+      "expected": "up-left"
+    }
+  ],
+  "review": "Parent inspected final labeled sheet. Native cells preserve cardinal meaning and clockwise quadrant order. Independent review confirms no hard visual failures. 112.5 downward and337.5 left components subtle but nose/chin/pupil landmarks and neighboring loop confirm intended quadrant; no reversal. Larger yaw transitions retain same body registration, down pitch and identity, accepted as timing/angular warnings.",
+  "blind_review": "All cardinals pass independent majority. Two intermediates marked ambiguous are accepted only after labeled loop review."
+}

@@ -1,0 +1,88 @@
+{
+  "pairs": [
+    {
+      "pair": "horizontal-1",
+      "A": "ambiguous",
+      "B": "screen-right",
+      "reason": "A face is nearly frontal with centered nose and no clear lateral pitch; B nose projects right and pupils look right."
+    },
+    {
+      "pair": "horizontal-2",
+      "A": "screen-left",
+      "B": "screen-right",
+      "reason": "A nose and raised pupils point left; B nose and raised pupils point right."
+    },
+    {
+      "pair": "horizontal-3",
+      "A": "screen-right",
+      "B": "screen-left",
+      "reason": "Nose projection and pupils are right in A, left in B."
+    },
+    {
+      "pair": "horizontal-4",
+      "A": "screen-right",
+      "B": "screen-left",
+      "reason": "A shows right-facing nose and profile; B shows left-facing nose and profile."
+    },
+    {
+      "pair": "horizontal-5",
+      "A": "screen-left",
+      "B": "screen-right",
+      "reason": "A lowered face projects left; B nose projects right with rightward pupils."
+    },
+    {
+      "pair": "horizontal-6",
+      "A": "screen-left",
+      "B": "screen-right",
+      "reason": "A nose projects left under lowered brows; B face and nose project right."
+    },
+    {
+      "pair": "horizontal-7",
+      "A": "screen-left",
+      "B": "screen-right",
+      "reason": "Both heads tilt down, with nose/pupil direction left in A and right in B."
+    },
+    {
+      "pair": "vertical-1",
+      "A": "down",
+      "B": "up",
+      "reason": "A chin tucks toward chest and eyes lower; B chin lifts and pupils look upward."
+    },
+    {
+      "pair": "vertical-2",
+      "A": "down",
+      "B": "up",
+      "reason": "A bows head and lowers pupils; B lifts nose/chin and eyes."
+    },
+    {
+      "pair": "vertical-3",
+      "A": "down",
+      "B": "up",
+      "reason": "A face tilts downward with lower gaze; B face pitches upward with raised pupils."
+    },
+    {
+      "pair": "vertical-4",
+      "A": "ambiguous",
+      "B": "up",
+      "reason": "A looks roughly level in profile without a clear vertical pitch; B visibly raises nose and pupils."
+    },
+    {
+      "pair": "vertical-5",
+      "A": "up",
+      "B": "down",
+      "reason": "A lifts chin and gaze; B tucks chin and looks down beneath brows."
+    },
+    {
+      "pair": "vertical-6",
+      "A": "down",
+      "B": "up",
+      "reason": "A lowers face toward chest; B raises nose and gaze."
+    },
+    {
+      "pair": "vertical-7",
+      "A": "up",
+      "B": "down",
+      "reason": "A lifts chin and pupils in left profile; B tilts face and eyes downward."
+    }
+  ]
+}

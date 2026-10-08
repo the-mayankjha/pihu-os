@@ -1,3 +1,4 @@
+import { ensureWhatsAppBridge, WHATSAPP_API_URL } from '../../core/services/whatsappBridge';
 import { GlassCard } from '../../shared/components/GlassCard/GlassCard';
 import React, { useState, useEffect } from 'react';
 import { useSettingsStore } from '../../stores/settingsStore';
@@ -122,66 +123,21 @@ export const SettingsWindow: React.FC = () => {
   }>({ connected: false, logged_in: false, jid: '' });
   const [waQrCode, setWaQrCode] = useState<string>('');
   const [waLoading, setWaLoading] = useState(false);
+  const [waError, setWaError] = useState('');
   const [waCopiedQr, setWaCopiedQr] = useState(false);
 
   // WhatsApp authentication belongs to the local bridge. The desktop, CLI and
   // REPL deliberately consume this same API/session instead of owning separate clients.
-  const ensureWhatsAppBridge = async (): Promise<boolean> => {
-    try {
-      const existing = await fetch('http://localhost:8080/api/status', { signal: AbortSignal.timeout(800) });
-      if (existing.ok) return true;
-    } catch (_) {
-      // Start the bridge below only when its shared local API is unavailable.
-    }
-
-    try {
-      const { invoke } = await import('@tauri-apps/api/core');
-      const startBridge = `
-        HOME_DIR="\${HOME:-/Users/\$(whoami)}"
-        CANDIDATES=(
-          "src-tauri/pihu_mcps/mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge"
-          "pihu_mcps/mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge"
-          "\$HOME_DIR/Documents/projects/pihu-os/src-tauri/pihu_mcps/mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge"
-          "../src-tauri/pihu_mcps/mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge"
-          "\$HOME_DIR/.pihu/whatsapp-bridge"
-        )
-        for DIR in "\${CANDIDATES[@]}"; do
-          if [ -d "\$DIR" ]; then
-            if [ -f "\$DIR/bridge" ]; then
-              cd "\$DIR" && ./bridge > /tmp/pihu_whatsapp_bridge.log 2>&1 &
-              exit 0
-            elif [ -f "\$DIR/main.go" ]; then
-              cd "\$DIR" && go run main.go > /tmp/pihu_whatsapp_bridge.log 2>&1 &
-              exit 0
-            fi
-          fi
-        done
-      `;
-      await invoke('execute_shell_command', { command: startBridge });
-      
-      // Wait up to 3 seconds for bridge to respond
-      for (let i = 0; i < 6; i++) {
-        await new Promise((r) => setTimeout(r, 500));
-        try {
-          const check = await fetch('http://localhost:8080/api/status', { signal: AbortSignal.timeout(800) });
-          if (check.ok) return true;
-        } catch (_) {}
-      }
-      return true;
-    } catch (_) {
-      return false;
-    }
-  };
-
   const handleScanQr = async () => {
+    setWaError('');
     setWaLoading(true);
-    const safetyTimer = setTimeout(() => setWaLoading(false), 8000);
+    const safetyTimer = setTimeout(() => setWaLoading(false), 30000);
     try {
       await ensureWhatsAppBridge();
-      await fetch('http://localhost:8080/api/pair', { method: 'POST', signal: AbortSignal.timeout(2000) }).catch(() => {});
+      await fetch(`${WHATSAPP_API_URL}/pair`, { method: 'POST', signal: AbortSignal.timeout(2000) }).catch(() => {});
       for (let i = 0; i < 12; i++) {
         try {
-          const res = await fetch('http://localhost:8080/api/pair', { signal: AbortSignal.timeout(1500) });
+          const res = await fetch(`${WHATSAPP_API_URL}/pair`, { signal: AbortSignal.timeout(1500) });
           if (res.ok) {
             const d = await res.json();
             if (d.qr_code) {
@@ -197,7 +153,9 @@ export const SettingsWindow: React.FC = () => {
         } catch (e) {}
         await new Promise(r => setTimeout(r, 400));
       }
-    } catch (e) {} finally {
+    } catch (e) {
+      setWaError(e instanceof Error ? e.message : String(e));
+    } finally {
       clearTimeout(safetyTimer);
       setWaLoading(false);
     }
@@ -213,10 +171,14 @@ export const SettingsWindow: React.FC = () => {
 
         // 1. Check status endpoint
         try {
-          const res = await fetch('http://localhost:8080/api/status', { signal: AbortSignal.timeout(1200) });
+          const res = await fetch(`${WHATSAPP_API_URL}/status`, { signal: AbortSignal.timeout(1200) });
           if (res.ok) {
-            isConnected = true;
             const data = await res.json();
+            if (typeof data.logged_in !== 'boolean' || typeof data.connected !== 'boolean') {
+              throw new Error('Port 8080 is not serving the WhatsApp bridge.');
+            }
+            isConnected = true;
+            if (isMounted) setWaError('');
             isLoggedIn = !!data.logged_in;
             if (isMounted) {
               setWaStatus({
@@ -239,7 +201,7 @@ export const SettingsWindow: React.FC = () => {
         // 2. If bridge is active and not logged in, query /api/pair for active QR code
         if (isConnected && !isLoggedIn) {
           try {
-            const pairRes = await fetch('http://localhost:8080/api/pair', { signal: AbortSignal.timeout(1500) });
+            const pairRes = await fetch(`${WHATSAPP_API_URL}/pair`, { signal: AbortSignal.timeout(1500) });
             if (pairRes.ok) {
               const pairData = await pairRes.json();
               if (isMounted) {
@@ -261,7 +223,9 @@ export const SettingsWindow: React.FC = () => {
           }
           // Auto-start bridge if user is actively in the Connections section
           if (activeSidebarCategory === 'connections') {
-            ensureWhatsAppBridge().catch(() => {});
+            ensureWhatsAppBridge().catch(error => {
+              if (isMounted) setWaError(error instanceof Error ? error.message : String(error));
+            });
           }
         }
       } catch (e) {
@@ -1445,7 +1409,7 @@ export const SettingsWindow: React.FC = () => {
                             onClick={async () => {
                               if (confirm('Clear all local WhatsApp sessions, chats cache and database?')) {
                                 try {
-                                  await fetch('http://localhost:8080/api/clear', { method: 'POST' });
+                                  await fetch(`${WHATSAPP_API_URL}/clear`, { method: 'POST' });
                                 } catch (e) {}
                                 setWaStatus({ connected: false, logged_in: false, jid: '' });
                                 setWaQrCode('');
@@ -1462,7 +1426,7 @@ export const SettingsWindow: React.FC = () => {
                             <button
                               onClick={async () => {
                                 try {
-                                  await fetch('http://localhost:8080/api/logout', { method: 'POST' });
+                                  await fetch(`${WHATSAPP_API_URL}/logout`, { method: 'POST' });
                                   setWaStatus({ connected: false, logged_in: false, jid: '' });
                                   setWaQrCode('');
                                 } catch (e) {}
@@ -1481,6 +1445,7 @@ export const SettingsWindow: React.FC = () => {
                               {waLoading ? 'Starting Bridge...' : (waQrCode ? 'Refresh QR Code' : 'Scan WhatsApp QR')}
                             </button>
                           )}
+                          {waError && <p role="alert" className="mt-2 text-xs text-neutral-300">{waError}</p>}
                         </div>
                       </div>
 

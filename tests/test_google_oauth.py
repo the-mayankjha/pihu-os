@@ -13,6 +13,25 @@ class OAuthTests(unittest.TestCase):
         self.assertIn('&lt;script&gt;test&lt;/script&gt;',page)
         self.assertIn('Let’s try that again.',oauth.render_callback(400,'Cancelled'))
 
+    def test_packaged_agent_callback_also_uses_its_own_port(self):
+        agent_path=pathlib.Path(__file__).parents[1]/'src-tauri/pihu_mcps/agent/pihu/mcp/servers/google_oauth_server.py'
+        agent_spec=importlib.util.spec_from_file_location('agent_google_oauth',agent_path)
+        agent_oauth=importlib.util.module_from_spec(agent_spec)
+        agent_spec.loader.exec_module(agent_oauth)
+        config={'client_id':'fixture','client_secret':'fixture'}
+        desktop=oauth.create_server(config)
+        try:
+            agent=agent_oauth.create_server(config)
+            try:
+                self.assertNotEqual(agent.server_port,8080)
+                self.assertNotEqual(agent.server_port,desktop.server_port)
+                self.assertIn(str(agent.server_port),agent.redirect_uri)
+                self.assertIn('PIHU',agent_oauth.render_callback(200,'Connected'))
+            finally:
+                agent.server_close()
+        finally:
+            desktop.server_close()
+
     def test_account_refresh_token_preserved_per_email(self):
         with tempfile.TemporaryDirectory() as folder:
             path=os.path.join(folder,'tokens.json')

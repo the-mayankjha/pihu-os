@@ -1,0 +1,82 @@
+{
+  "ok": true,
+  "frames_root": "/Users/mayankjha/Documents/Codex/2026-10-08/pets-plugin-work-pets-openai-curated-4/outputs/pihu/qa/rows/waving/frames",
+  "states": [
+    "waving"
+  ],
+  "errors": [],
+  "warnings": [],
+  "rows": [
+    {
+      "state": "waving",
+      "expected_frames": 4,
+      "actual_frames": 4,
+      "extraction_method": "components",
+      "ok": true,
+      "errors": [],
+      "warnings": [],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-08/pets-plugin-work-pets-openai-curated-4/outputs/pihu/qa/rows/waving/frames/waving/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 13020,
+          "bbox": [
+            48,
+            5,
+            143,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 68
+        },
+        {
+          "index": 1,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-08/pets-plugin-work-pets-openai-curated-4/outputs/pihu/qa/rows/waving/frames/waving/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 13276,
+          "bbox": [
+            43,
+            5,
+            148,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 62
+        },
+        {
+          "index": 2,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-08/pets-plugin-work-pets-openai-curated-4/outputs/pihu/qa/rows/waving/frames/waving/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 13553,
+          "bbox": [
+            41,
+            5,
+            150,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 67
+        },
+        {
+          "index": 3,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-08/pets-plugin-work-pets-openai-curated-4/outputs/pihu/qa/rows/waving/frames/waving/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 13051,
+          "bbox": [
+            45,
+            5,
+            145,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 50
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "ok": true,
+  "atlas": "/Users/mayankjha/Documents/Codex/2026-10-08/pets-plugin-work-pets-openai-curated-4/outputs/pihu/final/spritesheet-extended.png",
+  "encoded_bytes": 3196046,
+  "sha256": "880000a9bbe650d60b44c05985dd436b4841b083a828f35ec7317d1ca7d670ed",
+  "jump": {
+    "idle_baseline": 202,
+    "jump_baselines": [
+      202,
+      202,
+      159,
+      195,
+      202
+    ],
+    "airborne_lift_pixels": 43,
+    "landing_delta_pixels": 0
+  },
+  "look_registration": {
+    "neutral_center_x": 95.5,
+    "look_centers_x": [
+      99.5,
+      92.0,
+      90.0,
+      89.0,
+      90.5,
+      91.0,
+      92.5,
+      93.0,
+      98.0,
+      96.0,
+      95.5,
+      97.0,
+      97.0,
+      99.0,
+      101.0,
+      97.5
+    ],
+    "look_widths": [
+      97,
+      96,
+      96,
+      94,
+      93,
+      90,
+      89,
+      86,
+      96,
+      100,
+      99,
+      100,
+      92,
+      90,
+      90,
+      91
+    ],
+    "maximum_center_drift_pixels": 6.5,
+    "maximum_width_ratio": 1.1627906976744187
+  },
+  "errors": [],
+  "warnings": [
+    "look direction 022.5 accepted with a reviewed warning",
+    "look direction 045 accepted with a reviewed warning",
+    "look direction 067.5 accepted with a reviewed warning",
+    "look direction 112.5 accepted with a reviewed warning",
+    "look direction 157.5 accepted with a reviewed warning",
+    "look direction 202.5 accepted with a reviewed warning",
+    "look direction 225 accepted with a reviewed warning",
+    "look direction 337.5 accepted with a reviewed warning",
+    "000->022.5 diff is a local outlier (2533 pixels vs neighbor average 1086)",
+    "157.5->180 diff is a local outlier (2012 pixels vs neighbor average 1380)"
+  ]
+}

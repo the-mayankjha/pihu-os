@@ -1,47 +1,7 @@
-import { invoke } from '@tauri-apps/api/core';
+import { ensureWhatsAppBridge, WHATSAPP_API_URL } from '../../../services/whatsappBridge';
 import { useSettingsStore } from '../../../../stores/settingsStore';
 import { useLayoutStore } from '../../../layout/LayoutStore';
 import type { ActionTool, ToolResult } from './types';
-
-// Helper to ensure bridge daemon is running
-async function ensureWhatsAppBridge(): Promise<boolean> {
-  try {
-    const res = await fetch('http://localhost:8080/api/status', { signal: AbortSignal.timeout(800) }).catch(() => null);
-    if (res && res.ok) return true;
-
-    // Start bridge background process with multi-path candidates
-    const startCmd = `
-      HOME_DIR="\${HOME:-/Users/\$(whoami)}"
-      CANDIDATES=(
-        "src-tauri/pihu_mcps/mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge"
-        "pihu_mcps/mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge"
-        "\$HOME_DIR/Documents/projects/pihu-os/src-tauri/pihu_mcps/mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge"
-        "../src-tauri/pihu_mcps/mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge"
-        "\$HOME_DIR/.pihu/whatsapp-bridge"
-      )
-      for DIR in "\${CANDIDATES[@]}"; do
-        if [ -d "\$DIR" ]; then
-          if [ -f "\$DIR/bridge" ]; then
-            cd "\$DIR" && ./bridge > /tmp/pihu_whatsapp_bridge.log 2>&1 &
-            exit 0
-          elif [ -f "\$DIR/main.go" ]; then
-            cd "\$DIR" && go run main.go > /tmp/pihu_whatsapp_bridge.log 2>&1 &
-            exit 0
-          fi
-        fi
-      done
-    `;
-    await invoke('execute_shell_command', { command: startCmd }).catch(() => {});
-
-    // Wait up to 3 seconds for bridge to become responsive
-    for (let i = 0; i < 6; i++) {
-      await new Promise((r) => setTimeout(r, 500));
-      const check = await fetch('http://localhost:8080/api/status', { signal: AbortSignal.timeout(800) }).catch(() => null);
-      if (check && check.ok) return true;
-    }
-  } catch (e) {}
-  return false;
-}
 
 type RecipientResolution = { jid: string; displayName: string; phone: string; match: 'exact' | 'fuzzy' | 'direct'; confidence: number };
 
@@ -173,7 +133,7 @@ async function resolveWhatsAppRecipient(query: string): Promise<RecipientResolut
 
   // 2. Check Live WhatsApp Bridge for chats, contacts, and groups (with 5s timeout)
   try {
-    const res = await fetch('http://localhost:8080/api/chats', { signal: AbortSignal.timeout(5000) });
+    const res = await fetch(`${WHATSAPP_API_URL}/chats`, { signal: AbortSignal.timeout(5000) });
     if (res.ok) {
       const data = await res.json();
       let bestChat: RecipientResolution | null = null;
@@ -222,7 +182,7 @@ async function resolveWhatsAppRecipient(query: string): Promise<RecipientResolut
 }
 
 async function dispatchWhatsAppMessage(recipient: RecipientResolution, message: string): Promise<ToolResult> {
-  const sendRes = await fetch('http://localhost:8080/api/send', {
+  const sendRes = await fetch(`${WHATSAPP_API_URL}/send`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ recipient: recipient.jid, message }), signal: AbortSignal.timeout(10000),
   });
@@ -329,7 +289,7 @@ export const whatsappTools: ActionTool[] = [
         // Check authentication status first
         let isAuth = false;
         try {
-          const stRes = await fetch('http://localhost:8080/api/status', { signal: AbortSignal.timeout(2000) });
+          const stRes = await fetch(`${WHATSAPP_API_URL}/status`, { signal: AbortSignal.timeout(2000) });
           if (stRes.ok) {
             const stData = await stRes.json();
             isAuth = !!stData.logged_in;
@@ -410,7 +370,7 @@ export const whatsappTools: ActionTool[] = [
         // Fetch QR
         let hasQr = false;
         try {
-          const qrRes = await fetch('http://localhost:8080/api/qr', { signal: AbortSignal.timeout(2000) });
+          const qrRes = await fetch(`${WHATSAPP_API_URL}/qr`, { signal: AbortSignal.timeout(2000) });
           if (qrRes.ok) {
             const qrData = await qrRes.json();
             if (qrData.logged_in) {
@@ -452,7 +412,7 @@ export const whatsappTools: ActionTool[] = [
     },
     execute: async (): Promise<ToolResult> => {
       try {
-        const res = await fetch('http://localhost:8080/api/status', { signal: AbortSignal.timeout(2000) }).catch(() => null);
+        const res = await fetch(`${WHATSAPP_API_URL}/status`, { signal: AbortSignal.timeout(2000) }).catch(() => null);
         if (!res || !res.ok) {
           return {
             success: true,
@@ -541,7 +501,7 @@ export const whatsappTools: ActionTool[] = [
 
         // 2. Search WhatsApp chats/groups (with 5s timeout)
         try {
-          const res = await fetch('http://localhost:8080/api/chats', { signal: AbortSignal.timeout(5000) });
+          const res = await fetch(`${WHATSAPP_API_URL}/chats`, { signal: AbortSignal.timeout(5000) });
           if (res.ok) {
             const data = await res.json();
             for (const chat of data.chats || []) {
@@ -601,7 +561,7 @@ export const whatsappTools: ActionTool[] = [
     },
     execute: async (): Promise<ToolResult> => {
       try {
-        const res = await fetch('http://localhost:8080/api/clear', {
+        const res = await fetch(`${WHATSAPP_API_URL}/clear`, {
           method: 'POST',
           signal: AbortSignal.timeout(3000),
         }).catch(() => null);
