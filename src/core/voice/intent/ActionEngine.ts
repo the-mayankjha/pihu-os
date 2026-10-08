@@ -11,6 +11,10 @@ import { useSettingsStore } from '../../../stores/settingsStore';
 import { useMemplaceStore } from '../../memory/MemplaceStore';
 import { getGlobalSystemStats } from '../../../widgets/system/useSystemMonitor';
 import type { GeminiContent } from '../../llm/types';
+import { planSequence, runSequence } from '../../automation/sequenceIntent';
+import { parseBrowserIntent } from '../../automation/browserIntent';
+import { parseUIIntent } from '../../automation/uiIntent';
+import { parseAppIntent } from '../../automation/appIntent';
 
 export class ActionEngine {
   private llm: LLMManager;
@@ -178,8 +182,19 @@ export class ActionEngine {
     const lower = text.toLowerCase().trim();
     const isHindi = /[\u0900-\u097F]/.test(text) || /\b(kya|tum|kr|karo|karti|karta|ho|hoon|kholo|chalao|band|badhao|kam|bhejo|sunao|abhi|kardo|kar do|dikhao|batao|bataiye|rok|roko|gaana|gana|waqt|samay|aaj)\b/i.test(lower);
 
+    const browserIntent = navigator.platform.toUpperCase().includes('MAC') ? parseBrowserIntent(text) : null;
+    if (browserIntent) {
+      const result = await executeTool('macos_control_browser', browserIntent);
+      return result.success ? result.data.message : `Browser action failed: ${result.error}`;
+    }
+    const uiIntent = navigator.platform.toUpperCase().includes('MAC') ? parseUIIntent(text) : null;
+    if (uiIntent) {
+      const result = await executeTool('macos_control_ui', uiIntent);
+      return result.success ? result.data.message : `UI action failed: ${result.error}`;
+    }
+
     // ─── 0. Contextual Project Actions ("then open it", "run it", "preview it") ───
-    if (/\b(?:then\s+open\s+it|open\s+it|run\s+it|preview\s+it|open\s+project|start\s+project|chala\s+do|open\s+kardo|kholo\s+ise)\b/i.test(lower)) {
+    if (/\b(?:then\s+open\s+it|(?:open|run|start|preview)\s+(?:this|current|the current|my)?\s*project|open\s+it|run\s+it|preview\s+it|open\s+project|start\s+project|chala\s+do|open\s+kardo|kholo\s+ise)\b/i.test(lower)) {
       const activeProj = useVoiceStore.getState().activeProject;
       if (activeProj) {
         console.log(`[ActionEngine] ⚡ Instant Fast Path: Opening Active Project "${activeProj.name}"`);
@@ -200,7 +215,9 @@ export class ActionEngine {
                 `${activeProj.name} is now running and opened for you, Sir Mayank.`
               ]);
         }
+        return `Could not open ${activeProj.name}: ${toolRes.error || "Development server failed to start."}`;
       }
+      return "Select an active project before running its browser preview.";
     }
 
     // ─── 1. Gmail & Email Fast Paths ───
@@ -272,96 +289,14 @@ export class ActionEngine {
       return isHindi ? "WhatsApp messages check kar liye gaye hain." : "Checked your recent WhatsApp messages, Sir.";
     }
 
-    // ─── 3. App Launch / Close (dynamic /Applications scan + fuzzy match) ───
-    const hasOpenVerb = /\b(?:open|launch|kholo|start|chalao|run|show|display|dikhao)\b/i.test(lower);
-    const hasCloseVerb = /\b(?:close|quit|kill|band|hatao|exit)\b/i.test(lower);
-    const isExcludedForAppLaunch = /\b(?:music|song|gaana|gana|track|settings|setting|preferences|project|email|emails|mail|gmail|unread|message|messages|msg|whatsapp|chat|chats|text|palette|hotkey|command)\b/i.test(lower);
-
-    if ((hasOpenVerb || hasCloseVerb) && !isExcludedForAppLaunch) {
-      // Extract what the user called the app
-      const spokenApp = lower
-        .replace(/\b(?:open|launch|kholo|start|chalao|run|show|display|dikhao|close|quit|kill|band|hatao|exit|the|a|an|please|can you|pihu|abhi|karo|karna|kar do|kardo|for me|mere liye|application|browser)\b/gi, '')
-        .replace(/\bapp\b/gi, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-
-      if (spokenApp && spokenApp.length >= 2) {
-        const resolved = await ActionEngine.resolveAppName(spokenApp);
-
-        if (resolved) {
-          const { macName, displayName } = resolved;
-
-          if (hasOpenVerb && !hasCloseVerb) {
-            console.log(`[ActionEngine] ⚡ Fast App Launch: "${macName}" (display: ${displayName}, spoken: "${spokenApp}")`);
-            try {
-              const { invoke } = await import('@tauri-apps/api/core');
-              const cmd = macName === 'Finder'
-                ? `osascript -e 'tell application "Finder" to activate'`
-                : `open -a "${macName}"`;
-              await invoke('execute_shell_command', { command: cmd });
-              return isHindi
-                ? this.pickRandom([
-                    `Sure Sir Mayank, ${displayName} open kar diya hai.`,
-                    `Ji Sir, ${displayName} launch ho gaya hai.`,
-                    `Bilkul, ${displayName} khol diya hai Sir.`,
-                    `Done Sir, ${displayName} open ho gaya hai.`,
-                    `${displayName} aapke screen par aa gaya hai, Sir.`
-                  ])
-                : this.pickRandom([
-                    `Opening ${displayName} for you now, Sir.`,
-                    `Launching ${displayName} right away, Sir Mayank.`,
-                    `Sure, ${displayName} is opened.`,
-                    `${displayName} is ready on your screen, Sir.`,
-                    `Got it, ${displayName} is open.`,
-                    `Done, launched ${displayName} for you.`
-                  ]);
-            } catch (err: any) {
-              const errMsg = String(err?.message || err || '');
-              console.warn(`[ActionEngine] ⚠️ Failed to open "${macName}":`, errMsg);
-              if (errMsg.includes('Unable to find') || errMsg.includes('not found') || errMsg.includes('does not exist')) {
-                return isHindi
-                  ? `Sir, "${displayName}" nahi mil raha system mein. Shayad yeh install nahi hai.`
-                  : `Sorry Sir, I couldn't find "${displayName}" on your system. It may not be installed.`;
-              }
-              return isHindi
-                ? `Sir, "${displayName}" open karne mein error aaya: ${errMsg.slice(0, 100)}`
-                : `Couldn't open ${displayName}, Sir. Error: ${errMsg.slice(0, 100)}`;
-            }
-          }
-
-          if (hasCloseVerb) {
-            console.log(`[ActionEngine] ⚡ Fast App Close: "${macName}" (display: ${displayName})`);
-            try {
-              const { invoke } = await import('@tauri-apps/api/core');
-              await invoke('execute_shell_command', { command: `osascript -e 'quit app "${macName}"'` });
-              return isHindi
-                ? this.pickRandom([
-                    `Ji Sir, ${displayName} band kar diya hai.`,
-                    `${displayName} close ho gaya hai, Sir.`,
-                    `Bilkul, ${displayName} close kar diya gaya hai.`
-                  ])
-                : this.pickRandom([
-                    `Closed ${displayName} for you, Sir.`,
-                    `Quitting ${displayName} now.`,
-                    `Sure, ${displayName} has been closed.`,
-                    `${displayName} is now closed, Sir Mayank.`
-                  ]);
-            } catch (err: any) {
-              const errMsg = String(err?.message || err || '');
-              console.warn(`[ActionEngine] ⚠️ Failed to close "${macName}":`, errMsg);
-              return isHindi
-                ? `Sir, "${displayName}" close karne mein issue aaya: ${errMsg.slice(0, 100)}`
-                : `Couldn't close ${displayName}, Sir. ${errMsg.slice(0, 100)}`;
-            }
-          }
-        } else {
-          // No match found at all
-          if (hasOpenVerb) {
-            return isHindi
-              ? `Sir, "${spokenApp}" naam ki koi app nahi mili system mein. Shayad yeh install nahi hai.`
-              : `Sorry Sir, I couldn't find any app matching "${spokenApp}" on your system.`;
-          }
-        }
+    // Native app/window control uses the existing Python automation's shared AppleScript.
+    const appIntent = navigator.platform.toUpperCase().includes('MAC') ? parseAppIntent(text) : null;
+    if (appIntent) {
+      const result = await executeTool('macos_control_app', appIntent);
+      if (result.success) return result.data.message;
+      // Unknown open targets may be files or projects, so leave them to the LLM.
+      if (appIntent.action !== 'open' || !String(result.error).includes('No unambiguous installed app')) {
+        return `App action failed: ${result.error}`;
       }
     }
 
@@ -650,7 +585,7 @@ export class ActionEngine {
     return null;
   }
 
-  public async processIntent(text: string): Promise<string> {
+  public async processIntent(text: string, onMode?: (mode: 'executing' | 'thinking') => void): Promise<string> {
     try {
       // Step 1: Pre-LLM Normalization (STT -> Normalizer)
       const cleanText = this.normalizePreLLM(text);
@@ -661,7 +596,11 @@ export class ActionEngine {
       console.log('[ActionEngine] Processing intent:', cleanText);
 
       // Step 2: Instant Fast Path for Direct System Activities & Commands
-      const fastResponse = await this.tryFastDirectIntent(cleanText);
+      const sequence = navigator.platform.toUpperCase().includes('MAC') ? planSequence(cleanText) : null;
+      onMode?.('executing');
+      const fastResponse = sequence && !sequence.error
+        ? await runSequence(sequence, executeTool)
+        : sequence?.error ? null : await this.tryFastDirectIntent(cleanText);
       if (fastResponse) {
         console.log('[ActionEngine] Fast direct response:', fastResponse);
         this.conversationHistory.push({ role: 'user', parts: [{ text: cleanText }] });
@@ -693,6 +632,7 @@ export class ActionEngine {
         return pendingProjectConfirmation;
       }
 
+      onMode?.('thinking');
       useVoiceStore.getState().setProcessingStatus("Thinking...");
 
       const fullSystemInstruction = PIHU_CORE_IDENTITY + this.getDynamicContext();
@@ -794,17 +734,9 @@ export class ActionEngine {
     }
     try {
       const { invoke } = await import('@tauri-apps/api/core');
-      const raw: string = await invoke('execute_shell_command', {
-        command: 'ls -1 /Applications /System/Applications ~/Applications 2>/dev/null | grep "\\.app$" | sort -u'
-      });
-      const apps = raw
-        .split('\n')
-        .map(line => line.trim().replace(/\.app$/, ''))
-        .filter(name => name.length > 0);
-
-      ActionEngine.installedApps = apps;
+      ActionEngine.installedApps = await invoke<string[]>('macos_list_apps');
       ActionEngine.appsCacheTime = Date.now();
-      console.log(`[ActionEngine] 📦 Discovered ${apps.length} installed apps`);
+      console.log(`[ActionEngine] 📦 Discovered ${ActionEngine.installedApps.length} installed apps`);
     } catch (err) {
       console.warn('[ActionEngine] Failed to scan /Applications:', err);
     }
@@ -856,7 +788,7 @@ export class ActionEngine {
     // 1. Check nickname map first (instant)
     const sortedNicknames = Object.keys(ActionEngine.APP_NICKNAMES).sort((a, b) => b.length - a.length);
     for (const nick of sortedNicknames) {
-      if (spokenLower === nick || spokenLower.includes(nick)) {
+      if (spokenLower === nick) {
         const macName = ActionEngine.APP_NICKNAMES[nick];
         return { macName, displayName: macName };
       }
@@ -865,27 +797,29 @@ export class ActionEngine {
     // 2. Refresh installed apps cache
     await ActionEngine.refreshInstalledApps();
 
-    if (ActionEngine.installedApps.length === 0) {
-      // Fallback: just try title-cased spoken name
-      return { macName: spoken.replace(/\b\w/g, c => c.toUpperCase()), displayName: spoken.replace(/\b\w/g, c => c.toUpperCase()) };
-    }
+    if (ActionEngine.installedApps.length === 0) return null;
+    const exact = ActionEngine.installedApps.find(app => app.toLowerCase() === spokenLower);
+    if (exact) return { macName: exact, displayName: exact };
 
-    // 3. Fuzzy match against installed apps
     let bestMatch: string | null = null;
     let bestScore = 0;
+    let runnerUp = 0;
 
     for (const app of ActionEngine.installedApps) {
       const score = ActionEngine.fuzzyScore(spokenLower, app);
       if (score > bestScore) {
+        runnerUp = bestScore;
         bestScore = score;
         bestMatch = app;
+      } else if (score > runnerUp) {
+        runnerUp = score;
       }
     }
 
     console.log(`[ActionEngine] 🔍 Fuzzy match: "${spokenLower}" → "${bestMatch}" (score: ${bestScore.toFixed(2)})`);
 
     // Require reasonable confidence
-    if (bestMatch && bestScore >= 0.55) {
+    if (bestMatch && bestScore >= 0.8 && bestScore - runnerUp > 0.03) {
       return { macName: bestMatch, displayName: bestMatch };
     }
 

@@ -21,6 +21,7 @@ export const OrbWidget: React.FC<OrbWidgetProps> = ({ preview = false, onClick }
       case OrbState.IDLE: 
         return <>Hi, I'm <span style={{ color: '#e3005b' }}>PIHU</span></>;
       case OrbState.LISTENING: return "Listening...";
+      case OrbState.EXECUTING: return "Executing...";
       case OrbState.THINKING: return "Thinking...";
       case OrbState.SPEAKING: return "Speaking...";
       default: 

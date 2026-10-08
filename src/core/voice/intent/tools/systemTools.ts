@@ -272,6 +272,10 @@ export const systemTools: ActionTool[] = [
       try {
         const { invoke } = await import('@tauri-apps/api/core');
         const rawAppName = args.app_name.trim();
+        if (navigator.platform.toUpperCase().includes('MAC')) {
+          const { controlApp } = await import('./appTools');
+          return controlApp({ action: 'open', app: rawAppName });
+        }
         const normName = rawAppName.toLowerCase().replace(/[-_ ]/g, '');
 
         const appMap: Record<string, { mac: string; win: string }> = {
@@ -349,11 +353,16 @@ export const systemTools: ActionTool[] = [
     },
     execute: async (args): Promise<ToolResult> => {
       try {
+        if (!args.browser || !/^safari$/i.test(args.browser.trim())) {
+          const { controlBrowser } = await import('./browserTools');
+          return controlBrowser({ action: 'search', query: args.query, site: 'google' });
+        }
+
         const { invoke } = await import('@tauri-apps/api/core');
         const query = args.query.trim();
         const rawBrowser = (args.browser || '').trim().toLowerCase();
 
-        const searchUrl = `https://search.brave.com/search?q=${encodeURIComponent(query)}`;
+        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
         const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
         let cmd = '';
@@ -373,6 +382,12 @@ export const systemTools: ActionTool[] = [
         console.log(`[systemTools] Executing browser search command: ${cmd}`);
         await invoke('execute_shell_command', { command: cmd });
 
+        if (isMac) {
+          const { rememberTarget } = await import('../../../automation/targetContext');
+          const target = rawBrowser.includes('safari') ? 'Safari' : rawBrowser.includes('chrome') ? 'Google Chrome' : rawBrowser.includes('brave') ? 'Brave Browser' : rawBrowser.includes('firefox') ? 'Firefox' : await invoke<string>('macos_frontmost_app');
+          rememberTarget(target);
+        }
+
         return {
           success: true,
           data: {
@@ -389,4 +404,3 @@ export const systemTools: ActionTool[] = [
     },
   },
 ];
-

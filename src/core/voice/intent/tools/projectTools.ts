@@ -1210,8 +1210,9 @@ npm run build
         }
         
         // Never use port 5173 as it is occupied by PIHU OS main app. Start searching from port 5180 upwards.
-        let requestedPort = args.port && args.port !== '5173' ? parseInt(args.port, 10) : 5180;
-        let selectedPort = requestedPort;
+        let requestedPort = args.port && args.port !== '5173' ? Number(args.port) : 5180;
+        if (!Number.isInteger(requestedPort) || requestedPort < 1024 || requestedPort > 65505) throw new Error('Invalid development server port.');
+        let selectedPort = 0;
 
         for (let p = requestedPort; p < requestedPort + 30; p++) {
           const checkCmd = `lsof -ti:${p} 2>/dev/null || true`;
@@ -1222,30 +1223,46 @@ npm run build
           }
         }
 
+        if (!selectedPort) throw new Error("No free development server port found.");
         const targetUrl = `http://localhost:${selectedPort}`;
         const rawBrowser = (args.browser || '').trim().toLowerCase();
 
         console.log(`[projectTools] Starting dev server for ${projectDir} on dedicated port ${selectedPort}...`);
 
-        // Start dev server on dedicated port (5180+) non-blockingly in background with clean nohup syntax
-        const startCmd = `cd "${projectDir}" && nohup npm run dev -- --port ${selectedPort} </dev/null >/dev/null 2>&1 &`;
+        // Detach the server with all streams redirected; wait for HTTP readiness in
+        // the worker command, preserving startup diagnostics instead of swallowing them.
+        const launcher = `import sys, pathlib, subprocess, time, urllib.request, tempfile, os
+project = pathlib.Path(sys.argv[1]).resolve()
+port = int(sys.argv[2])
+if not (project / 'package.json').is_file():
+    raise SystemExit('No package.json found in ' + str(project))
+log = pathlib.Path(tempfile.gettempdir()) / ('pihu-project-' + str(port) + '.log')
+env = {k:v for k,v in os.environ.items() if not k.startswith('DYLD_')}
+with log.open('wb') as out:
+    process = subprocess.Popen(['npm', 'run', 'dev', '--', '--port', str(port)], cwd=str(project), stdin=subprocess.DEVNULL, stdout=out, stderr=out, start_new_session=True, env=env)
+for attempt in range(60):
+    if process.poll() is not None:
+        raise SystemExit('Dev server exited. ' + log.read_text(errors='replace')[-3000:])
+    try:
+        with urllib.request.urlopen('http://localhost:' + str(port), timeout=0.4) as response:
+            if response.status < 400:
+                print('Ready')
+                break
+    except Exception:
+        time.sleep(0.2)
+else:
+    process.terminate()
+    raise SystemExit('Dev server did not become ready. ' + log.read_text(errors='replace')[-3000:])`;
+        const quote = (value: string) => "'" + value.replace(/'/g, "'\\''") + "'";
+        const encodedLauncher = toBase64(launcher);
+        const startCmd = `python3 -c ${quote("import base64; exec(base64.b64decode('" + encodedLauncher + "'))")} ${quote(projectDir)} ${selectedPort}`;
         await invoke('execute_shell_command', { command: startCmd });
-        
-        // Short delay for Vite to initialize
-        await new Promise(r => setTimeout(r, 1200));
 
-        // Open in browser
-        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-        let openCmd = '';
-        if (rawBrowser.includes('brave')) {
-          openCmd = isMac ? `open -a "Brave Browser" "${targetUrl}"` : `start brave "${targetUrl}"`;
-        } else if (rawBrowser.includes('chrome')) {
-          openCmd = isMac ? `open -a "Google Chrome" "${targetUrl}"` : `start chrome "${targetUrl}"`;
-        } else {
-          openCmd = isMac ? `open "${targetUrl}"` : `start "" "${targetUrl}"`;
-        }
-
-        await invoke('execute_shell_command', { command: openCmd });
+        // Keep the preview in the same session used by subsequent voice clicks.
+        const { controlBrowser } = await import('./browserTools');
+        const opened = await controlBrowser({ action: 'navigate', url: targetUrl,
+          ...(rawBrowser.includes('safari') ? { app: 'Safari' } : {}) });
+        if (!opened.success) throw new Error(opened.error || 'Could not open project preview.');
 
         // Sync with MemplaceStore active project
         try {

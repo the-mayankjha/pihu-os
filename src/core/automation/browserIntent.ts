@@ -1,0 +1,32 @@
+import { normalizeCommand } from './normalizeCommand.ts';
+export function parseBrowserIntent(text: string): Record<string, unknown> | null {
+  let command = normalizeCommand(text);
+  const qualifier = command.match(/^(.*)\s+(?:in|on)\s+(Safari|(?:Google )?Chrome|Brave(?: Browser)?|(?:Microsoft )?Edge)$/i);
+  const app = qualifier ? { app: qualifier[2] } : {};
+  if (qualifier) command = qualifier[1];
+  if (/^(?:open|new|create)\s+(?:a\s+)?(?:new\s+)?tab$/i.test(command)) return { action:'tabs', tab_action:'new', ...app };
+  if (/^close\s+(?:the\s+)?(?:current\s+)?tab$/i.test(command)) return { action:'tabs', tab_action:'close', ...app };
+  const tab = command.match(/^(?:switch\s+to|select)\s+tab\s+(\d+)$/i);
+  if (tab) return { action:'tabs', tab_action:'select', index:Number(tab[1])-1, ...app };
+  if (/^(?:inspect|snapshot)\s+(?:the\s+)?(?:page|browser)$/i.test(command)) return { action:'snapshot', ...app };
+  const playQuery = command.match(/^play\s+(.+)\s+on\s+youtube$/i);
+  if (playQuery) return { action: 'search_play', query: playQuery[1], site: 'youtube', ...app };
+  const search = command.match(/^search\s+(?:for\s+)?(.+?)(?:\s+on\s+(youtube|google))?$/i);
+  if (search) return { action: 'search', query: search[1], site: search[2]?.toLowerCase() || 'current', ...app };
+  if (/^(?:click|focus)\s+(?:on\s+)?(?:the\s+)?search\s+(?:bar|box|field)$/i.test(command)) return { action: 'focus_search', ...app };
+  const video = command.match(/^(?:play|open|click)\s+(?:on\s+)?(?:the\s+)?(first|second|third|fourth|fifth|\d+)(?:st|nd|rd|th)?\s+video(?:\s+(?:from\s+this|on\s+this\s+page|here))?$/i);
+  if (video) return { action: 'open_video', index: ['first','second','third','fourth','fifth'].indexOf(video[1].toLowerCase()) + 1 || Number(video[1]), ...app };
+  if (/^(?:play|resume)\s+(?:the\s+)?video$/i.test(command)) return { action: 'play', ...app };
+  if (/^pause\s+(?:the\s+)?video$/i.test(command)) return { action: 'pause', ...app };
+  const mute = command.match(/^(mute|unmute)\s+(?:the\s+)?(?:video|browser)$/i);
+  if (mute) return { action: mute[1].toLowerCase(), ...app };
+  const volume = command.match(/^(?:set\s+)?(?:video\s+)?volume\s+(?:to\s+)?(\d+)\s*(?:%|percent)$/i);
+  if (volume) return { action: 'volume', value: Number(volume[1]), ...app };
+  const seek = command.match(/^(?:skip|seek)\s+(forward|back(?:ward)?)\s+(\d+)\s+seconds?$/i);
+  if (seek) return { action: 'seek', value: Number(seek[2]) * (/^back/i.test(seek[1]) ? -1 : 1), ...app };
+  if (/^(?:full\s*screen|enter\s+full\s*screen)\s+(?:the\s+)?video$/i.test(command)) return { action: 'fullscreen', ...app };
+  if (/^exit\s+full\s*screen\s+(?:the\s+)?video$/i.test(command)) return { action: 'exit_fullscreen', ...app };
+  if (/^(?:reload|refresh)\s+(?:the\s+)?(?:page|tab)$/i.test(command)) return { action: 'reload', ...app };
+  if (/^go\s+(back|forward)$/i.test(command)) return { action: command.match(/back/i) ? 'back' : 'forward', ...app };
+  return null;
+}

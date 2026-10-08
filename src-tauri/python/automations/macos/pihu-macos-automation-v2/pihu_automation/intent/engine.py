@@ -40,6 +40,10 @@ class IntentEngine:
             return self._result(r, "browser", "browser.open_in", browser, url)
 
         patterns = [
+            (r'^(?:exit|leave)\s+full\s*screen\s+(.+)$', "window.exit_fullscreen"),
+            (r'^close\s+window\s+(?:of|in|for)\s+(.+)$', "window.close"),
+            (r'^(?:snap|tile)\s+left\s+(.+)$', "window.snap_left"),
+            (r'^(?:snap|tile)\s+right\s+(.+)$', "window.snap_right"),
             (r'^(?:open|launch|start)\s+(.+)$', "app.open"),
             (r'^(?:close|quit|exit)\s+(.+)$', "app.close"),
             (r'^(?:activate|focus|switch to)\s+(.+)$', "app.activate"),
@@ -57,6 +61,8 @@ class IntentEngine:
             if not m:
                 continue
             target = m.group(1).strip()
+            if action.startswith("window.") and target in ("current window", "this window", "active window", "frontmost window"):
+                target = None
             if action == "ui.type":
                 r = self.a.ui.type_text(target)
                 return self._result(r, "ui", action, None, "Typed text")

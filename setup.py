@@ -131,6 +131,7 @@ def setup_system_dependencies(install):
 
 def setup_frontend():
     run_command([tool('npm'), 'ci' if (ROOT / 'package-lock.json').exists() else 'install'])
+    run_command([tool('npm'), 'run', 'browser:prepare'])
 
 
 def setup_python_env():

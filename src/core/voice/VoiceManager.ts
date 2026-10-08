@@ -5,6 +5,9 @@ import { TTSManager } from './tts/TTSManager';
 import { ActionEngine } from './intent/ActionEngine';
 import { useOrbStore } from '../orb/OrbStore';
 import { useVoiceStore } from '../../stores/voiceStore';
+import { parseUIIntent } from '../automation/uiIntent';
+import { parseBrowserIntent } from '../automation/browserIntent';
+import { rememberTarget } from '../automation/targetContext';
 import { OrbState } from '../../shared/components/Orb/states';
 
 // ── Configuration ────────────────────────────────────────────────────────────
@@ -116,14 +119,14 @@ export class VoiceManager {
   }
 
   // ── Safety timeout: auto-reset if isProcessing gets stuck ────────────────
-  private startSafetyTimer() {
+  private startSafetyTimer(duration = SAFETY_TIMEOUT_MS) {
     this.clearSafetyTimer();
     this.safetyTimer = setTimeout(() => {
       if (this.isProcessing || useOrbStore.getState().currentState !== OrbState.IDLE) {
         console.warn('[VOICE MANAGER] ⚠️ Safety timeout! Force-resetting to IDLE.');
         this.resetToIdle();
       }
-    }, SAFETY_TIMEOUT_MS);
+    }, duration);
   }
 
   private clearSafetyTimer() {
@@ -176,11 +179,16 @@ export class VoiceManager {
 
       console.log('[VOICE MANAGER] Valid transcription. Processing intent...');
       useVoiceStore.getState().setTranscription(text);
+      const { planSequence } = await import('./../automation/sequenceIntent');
+      const sequence = planSequence(text);
+      if (/\b(?:project|run it|preview it|open it)\b/i.test(text)) this.startSafetyTimer(90000);
+      if (parseBrowserIntent(text) || parseUIIntent(text)) this.startSafetyTimer(90000);
+      if (sequence && !sequence.error) this.startSafetyTimer(sequence.steps.length * 20000 + 45000);
 
       try {
         // ── THINKING phase ──────────────────────────────────────────────────
-        this.setOrbState(OrbState.THINKING);
-        const response = await this.actionEngine.processIntent(text);
+        this.setOrbState(OrbState.EXECUTING);
+        const response = await this.actionEngine.processIntent(text, mode => this.setOrbState(mode === 'thinking' ? OrbState.THINKING : OrbState.EXECUTING));
         console.log(`[VOICE MANAGER] Response: "${response}"`);
 
         if (!this.isProcessing) {
@@ -228,7 +236,7 @@ export class VoiceManager {
       if (!this.isProcessing) {
         this.isProcessing = true;
         this.startSafetyTimer();
-        this.setOrbState(OrbState.THINKING);
+        this.setOrbState(OrbState.EXECUTING);
         useVoiceStore.getState().setIsListening(false);
       }
     };
@@ -264,7 +272,7 @@ export class VoiceManager {
       if (useVoiceStore.getState().isListening && !this.isProcessing) {
         this.isProcessing = true;
         this.startSafetyTimer();
-        this.setOrbState(OrbState.THINKING);
+        this.setOrbState(OrbState.EXECUTING);
         useVoiceStore.getState().setIsListening(false);
         this.sttManager.stopListening();
         this.sttManager.processAudio();
@@ -290,6 +298,11 @@ export class VoiceManager {
     // Stop any active STT session before starting new one
     this.sttManager.stopListening();
 
+    // Capture external focus before the voice overlay activates PIHU.
+    if (navigator.platform.toUpperCase().includes('MAC')) {
+      try { rememberTarget(await invoke<string>('macos_frontmost_app')); }
+      catch (error) { console.debug('[VOICE MANAGER] Could not capture target app:', error); }
+    }
     this.setOrbState(OrbState.WAKE);
     useVoiceStore.getState().reset();
     useVoiceStore.getState().setIsActive(true);

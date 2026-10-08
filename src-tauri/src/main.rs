@@ -5,6 +5,8 @@ mod ytmusic;
 mod stt;
 mod system_monitor;
 mod tts;
+mod automation;
+mod browser_mcp;
 
 pub fn get_python_cmd() -> String {
     // 1. Check ~/.pihu-os/venv (installed app)
@@ -84,6 +86,7 @@ fn run_first_launch_setup() {
 
 fn main() {
     tauri::Builder::default()
+        .manage(browser_mcp::BrowserMcpState::default())
         .manage(wakeword::WakewordState {
             stdin: std::sync::Mutex::new(None),
         })
@@ -98,7 +101,13 @@ fn main() {
             system_monitor::get_system_info,
             system_monitor::execute_shell_command,
             system_monitor::read_contacts,
-            system_monitor::write_contacts
+            system_monitor::write_contacts,
+            automation::macos_app_action,
+            automation::macos_ui_action,
+            browser_mcp::browser_mcp_action,
+            automation::macos_frontmost_app,
+            automation::macos_browser_navigate,
+            automation::macos_list_apps
         ])
         .setup(|app| {
             // Auto-setup on first launch (installs Python venv, models, credentials)

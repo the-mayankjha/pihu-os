@@ -1,54 +1,36 @@
-from .applescript import run, quote
+from .control import control
+
 
 class WindowController:
-    def _process(self, app, body):
-        a = quote(app)
-        return run(f'''
-tell application "System Events"
-    tell process "{a}"
-        if not (exists window 1) then error "No window found for {a}"
-        {body}
-    end tell
-end tell
-''')
+    def minimize(self, app=None, window=1):
+        return control(app, 'minimize', window)
 
-    def minimize(self, app):
-        # Cmd+M is more reliable than setting miniaturized on UI elements.
-        return self._process(app, 'keystroke "m" using command down')
+    def restore(self, app=None, window=1):
+        return control(app, 'restore', window)
 
-    def restore(self, app):
-        return run(f'tell application "{quote(app)}" to activate')
+    def fullscreen(self, app=None, window=1):
+        return control(app, 'fullscreen', window)
 
-    def fullscreen(self, app):
-        return self._process(app, 'keystroke "f" using {control down, command down}')
+    def exit_fullscreen(self, app=None, window=1):
+        return control(app, 'exit_fullscreen', window)
 
-    def maximize(self, app):
-        # Accessibility zoom/green-button fallback.
-        a = quote(app)
-        return run(f'''
-tell application "System Events"
-    tell process "{a}"
-        if not (exists window 1) then error "No window found for {a}"
-        tell window 1
-            try
-                click (first button whose description is "zoom")
-            on error
-                try
-                    click (first button whose description is "full screen")
-                on error
-                    error "Could not locate the window zoom control"
-                end try
-            end try
-        end tell
-    end tell
-end tell
-''')
+    def maximize(self, app=None, window=1):
+        return control(app, 'maximize', window)
 
-    def move(self, app, x, y):
-        return self._process(app, f'set position of window 1 to {{{int(x)}, {int(y)}}}')
+    def close(self, app=None, window=1):
+        return control(app, 'close_window', window)
 
-    def resize(self, app, width, height):
-        return self._process(app, f'set size of window 1 to {{{int(width)}, {int(height)}}}')
+    def snap_left(self, app=None, window=1):
+        return control(app, 'snap_left', window)
 
-    def info(self, app):
-        return self._process(app, 'return {position, size} of window 1')
+    def snap_right(self, app=None, window=1):
+        return control(app, 'snap_right', window)
+
+    def move(self, app, x, y, window=1):
+        return control(app, 'move', window, x=int(x), y=int(y))
+
+    def resize(self, app, width, height, window=1):
+        return control(app, 'resize', window, width=int(width), height=int(height))
+
+    def info(self, app=None):
+        return control(app, 'windows')

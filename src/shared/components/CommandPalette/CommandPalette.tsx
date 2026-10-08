@@ -110,6 +110,7 @@ export const CommandPalette: React.FC = () => {
   const [lastQuery, setLastQuery] = useState('');
   const [result, setResult] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [executionMode, setExecutionMode] = useState<'executing' | 'thinking'>('executing');
   const [selectedFileIndex, setSelectedFileIndex] = useState(0);
   const [isApplyingProject, setIsApplyingProject] = useState(false);
 
@@ -154,11 +155,12 @@ export const CommandPalette: React.FC = () => {
 
     setLastQuery(textToProcess);
     setQuery('');
+    setExecutionMode('executing');
     setIsProcessing(true);
     setResult(null);
 
     try {
-      const response = await actionEngineRef.current!.processIntent(textToProcess);
+      const response = await actionEngineRef.current!.processIntent(textToProcess, setExecutionMode);
       setResult(response);
     } catch (err: any) {
       setResult(`Error executing command: ${err?.message || String(err)}`);
@@ -293,7 +295,7 @@ export const CommandPalette: React.FC = () => {
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-30 text-white text-xs font-semibold shadow-md transition cursor-pointer"
               >
                 {isProcessing ? (
-                  <ThinkingOrb state="thinking" size={14} />
+                  <ThinkingOrb state={executionMode === "thinking" ? "thinking" : "idle"} size={14} />
                 ) : (
                   <Send className="w-3.5 h-3.5" />
                 )}
@@ -308,8 +310,8 @@ export const CommandPalette: React.FC = () => {
             {/* If Processing */}
             {isProcessing && (
               <div className="p-6 rounded-2xl bg-purple-950/20 border border-purple-500/30 flex items-center justify-center gap-3 text-purple-300 text-sm font-medium">
-                <ThinkingOrb state="thinking" size={24} />
-                <span>PIHU is processing: "{lastQuery}"...</span>
+                <ThinkingOrb state={executionMode === "thinking" ? "thinking" : "idle"} size={24} />
+                <span>{executionMode === "thinking" ? "Thinking about" : "Executing"}: "{lastQuery}"...</span>
               </div>
             )}
 

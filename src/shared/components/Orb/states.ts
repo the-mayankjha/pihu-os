@@ -3,6 +3,7 @@ export const OrbState = {
   WAKE: 'wake',
   LISTENING: 'listening',
   THINKING: 'thinking',
+  EXECUTING: 'executing',
   SPEAKING: 'speaking',
   SUCCESS: 'success',
   ERROR: 'error',

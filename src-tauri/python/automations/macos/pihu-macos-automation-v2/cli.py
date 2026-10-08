@@ -26,7 +26,7 @@ def main():
 
     x = s.add_parser("app"); x.add_argument("action", choices=["open","close","activate","hide","unhide","running"]); x.add_argument("name"); x.set_defaults(fn=lambda z: getattr(a.apps, z.action)(z.name))
 
-    x = s.add_parser("window"); x.add_argument("action", choices=["minimize","restore","maximize","fullscreen","move","resize","info"]); x.add_argument("app"); x.add_argument("values", nargs="*"); x.set_defaults(fn=window)
+    x = s.add_parser("window"); x.add_argument("action", choices=["minimize","restore","maximize","fullscreen","exit_fullscreen","close","snap_left","snap_right","move","resize","info"]); x.add_argument("app", nargs="?", default=None); x.add_argument("values", nargs="*"); x.add_argument("--window", type=int, default=1); x.set_defaults(fn=window)
 
     x = s.add_parser("key"); x.add_argument("key"); x.add_argument("--mods", nargs="*", default=[]); x.add_argument("--app"); x.set_defaults(fn=lambda z: a.ui.key(z.key, z.mods, z.app))
     x = s.add_parser("type"); x.add_argument("text"); x.add_argument("--app"); x.set_defaults(fn=lambda z: a.ui.type_text(z.text, z.app))
@@ -40,7 +40,10 @@ def main():
 
     args = p.parse_args()
     try:
-        emit(args.fn(args))
+        result = args.fn(args)
+        emit(result)
+        if hasattr(result, "success") and not result.success:
+            sys.exit(1)
     except Exception as e:
         print(json.dumps({"success": False, "error": str(e)}, indent=2))
         sys.exit(1)
@@ -48,10 +51,12 @@ def main():
 def window(x):
     fn = getattr(a.windows, x.action)
     if x.action == "move":
-        return fn(x.app, int(x.values[0]), int(x.values[1]))
+        if len(x.values) != 2: raise ValueError("move requires x y")
+        return fn(x.app, int(x.values[0]), int(x.values[1]), window=x.window)
     if x.action == "resize":
-        return fn(x.app, int(x.values[0]), int(x.values[1]))
-    return fn(x.app)
+        if len(x.values) != 2: raise ValueError("resize requires width height")
+        return fn(x.app, int(x.values[0]), int(x.values[1]), window=x.window)
+    return fn(x.app) if x.action == "info" else fn(x.app, window=x.window)
 
 if __name__ == "__main__":
     main()

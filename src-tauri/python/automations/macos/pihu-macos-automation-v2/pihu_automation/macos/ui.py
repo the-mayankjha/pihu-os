@@ -44,3 +44,17 @@ end tell
         return self._process(app, f'''
 click (first UI element of window 1 whose description is "{quote(text)}" or name is "{quote(text)}")
 ''')
+
+    def interact(self, action, **options):
+        """Semantic accessibility control shared with the native voice bridge."""
+        from .ui_actions import perform_ui
+        return perform_ui({'action': action, **options})
+
+    def scroll(self, direction='down', amount=5, app=None):
+        return self.interact('scroll', direction=direction, amount=amount, app=app)
+
+    def inspect_items(self, app=None, kind='control'):
+        return self.interact('inspect', app=app, kind=kind)
+
+    def select_item(self, index=None, label='', app=None, kind='item'):
+        return self.interact('select', index=index, label=label, app=app, kind=kind)

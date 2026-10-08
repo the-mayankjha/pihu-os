@@ -1,0 +1,25 @@
+- generic "YouTube Video Player" [ref=f4e5]:
+  - generic [ref=f4e7]: The All New House of McDowell's Soda | Yaari Ki Nayi Vibe | Vijay Deverakonda | Telugu
+  - button "Play" [ref=f4e14] [cursor=pointer]
+  - generic [ref=f4e15]:
+    - generic [ref=f4e16]:
+      - slider "Seek slider" [disabled] [ref=f4e17]
+      - generic:
+        - generic:
+          - generic:
+            - slider "Click or scroll the panel for precise seeking." [disabled]
+    - generic [ref=f4e26]:
+      - generic [ref=f4e27]:
+        - button "Play (k)" [ref=f4e28] [cursor=pointer]
+        - generic [ref=f4e29]:
+          - button "Mute (m)" [ref=f4e31] [cursor=pointer]
+          - slider "Volume":
+            - generic [ref=f4e32] [cursor=pointer]
+        - button "0 Minutes 0 Seconds of 0 Minutes 20 Seconds" [ref=f4e35] [cursor=pointer]: 0:00 / 0:20
+      - generic [ref=f4e36]:
+        - generic [ref=f4e37]:
+          - button "Subtitles/closed captions unavailable" [ref=f4e38] [cursor=pointer]
+          - button "Settings" [ref=f4e40] [cursor=pointer]
+        - generic [ref=f4e41]:
+          - button "Cinema mode (t)" [ref=f4e42] [cursor=pointer]
+          - button "Full screen (f)" [ref=f4e43] [cursor=pointer]

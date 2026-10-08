@@ -15,7 +15,9 @@
     "pihu:dev": "node bin/pihu dev",
     "pihu:build": "node bin/pihu build",
     "pihu:dmg": "mkdir -p src-tauri/target/release/bundle/dmg && hdiutil create -volname 'Pihu OS' -srcfolder 'src-tauri/target/release/bundle/macos/Pihu OS.app' -ov -format UDZO 'src-tauri/target/release/bundle/dmg/Pihu OS_1.0.0_aarch64.dmg'",
-    "pihu:setup": "node bin/pihu setup"
+    "pihu:setup": "node bin/pihu setup",
+    "browser:prepare": "npm ci --prefix bin/browser-runtime --omit=dev",
+    "mcp:browser": "node node_modules/@playwright/mcp/cli.js --browser chrome"
   },
   "bin": {
     "pihu": "./bin/pihu",
@@ -27,6 +29,8 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@elevenlabs/elevenlabs-js": "^2.53.1",
     "@lottiefiles/dotlottie-react": "^0.19.4",
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "@playwright/mcp": "0.0.83",
     "@tauri-apps/api": "^2.11.0",
     "framer-motion": "^12.40.0",
     "katex": "^0.17.0",

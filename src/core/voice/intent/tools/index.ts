@@ -7,6 +7,10 @@ import { googleWorkspaceTools } from './googleWorkspaceTools';
 import { whatsappTools } from './whatsappTools';
 import { projectTools } from './projectTools';
 import { memplaceTools } from './memplaceTools';
+import { browserTools } from './browserTools';
+import { sequenceTools } from './sequenceTools';
+import { uiTools } from './uiTools';
+import { appTools } from './appTools';
 import type { ActionTool, GeminiTool, ToolResult } from './types';
 
 // ─── Master Tool Registry ─────────────────────────────────────────────────────
@@ -22,6 +26,10 @@ export const ALL_TOOLS: ActionTool[] = [
   ...whatsappTools,
   ...projectTools,
   ...memplaceTools,
+  ...appTools,
+  ...uiTools,
+  ...sequenceTools,
+  ...browserTools,
 ];
 
 

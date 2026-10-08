@@ -55,6 +55,7 @@ export const VoiceOverlay: React.FC = () => {
 
   const getDisplayText = () => {
     if (isListening) return transcription ? `"${transcription}"` : 'Listening...';
+    if (orbState === OrbState.EXECUTING) return processingStatus || 'Executing...';
     if (orbState === OrbState.THINKING) return processingStatus || 'Thinking & formulating changes...';
     if (pendingEmailAction) return `Email Preview: ${pendingEmailAction.subject || 'Draft ready'}`;
     if (pendingProjectAction) return `Awaiting Confirmation: ${pendingProjectAction.title}`;
@@ -266,7 +267,7 @@ export const VoiceOverlay: React.FC = () => {
                   {/* Processing Status Banner when details requested */}
                   {processingStatus && !response && (
                     <div className="py-2.5 px-4 bg-slate-900/60 border border-purple-500/20 rounded-2xl text-xs text-purple-200 flex items-center gap-3">
-                      <ThinkingOrb state="thinking" size={20} />
+                      <ThinkingOrb state={orbState === OrbState.THINKING ? "thinking" : "idle"} size={20} />
                       <span>{processingStatus}</span>
                     </div>
                   )}

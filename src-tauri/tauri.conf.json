@@ -4,7 +4,7 @@
   "identifier": "com.mayankjha.pihuos",
   "build": {
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build",
+    "beforeBuildCommand": "npm run browser:prepare && npm run build",
     "devUrl": "http://127.0.0.1:5173",
     "frontendDist": "../dist"
   },
@@ -44,8 +44,10 @@
       "python/wakeword.py",
       "python/ytmusic_server.py",
       "python/requirements.txt",
+      "python/automations/macos/pihu-macos-automation-v2/",
       "../models/wakeWord/*",
       "../bin/pihu-project-mcp.js",
+      "../bin/browser-runtime/",
       "pihu-first-launch.sh"
     ],
     "category": "Productivity",

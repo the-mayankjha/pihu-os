@@ -197,7 +197,12 @@ pub fn get_system_info(state: State<'_, SystemMonitorState>) -> SystemStats {
 }
 
 #[tauri::command]
-pub fn execute_shell_command(command: String) -> Result<String, String> {
+pub async fn execute_shell_command(command: String) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || execute_shell_command_blocking(command))
+        .await.map_err(|error| error.to_string())?
+}
+
+fn execute_shell_command_blocking(command: String) -> Result<String, String> {
     println!("Executing OS command via Tauri: {}", command);
     let output = if cfg!(target_os = "windows") {
         std::process::Command::new("cmd")
