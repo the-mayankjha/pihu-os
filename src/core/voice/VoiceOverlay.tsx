@@ -1,3 +1,5 @@
+import { getCurrentWindow } from '@tauri-apps/api/window';
+import { emitTo } from '@tauri-apps/api/event';
 import { VoiceManager } from './VoiceManager';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
@@ -41,7 +43,8 @@ export const VoiceOverlay: React.FC = () => {
       if (event.key !== 'Escape' || event.repeat) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      VoiceManager.getInstance().handleEscape();
+      if (new URLSearchParams(window.location.search).has('voiceOverlay')) void emitTo('main', 'voice-overlay-escape');
+      else VoiceManager.getInstance().handleEscape();
     };
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
@@ -140,7 +143,8 @@ export const VoiceOverlay: React.FC = () => {
               data-testid="voice-overlay-handle"
               onPointerDown={(event) => {
                 wasDragged.current = false;
-                dragControls.start(event);
+                if (new URLSearchParams(window.location.search).has('voiceOverlay')) void getCurrentWindow().startDragging();
+                else dragControls.start(event);
               }}
               onClick={() => {
                 if (wasDragged.current) return;

@@ -11,7 +11,7 @@ import { YTMusicPlugin } from '../widgets/music/YTMusicPlugin';
 import { useLayoutStore } from '../core/layout/LayoutStore';
 import { Dock } from '../shared/components/Dock/Dock';
 import { WidgetDrawer } from '../shared/components/WidgetDrawer/WidgetDrawer';
-import { VoiceOverlay } from '../core/voice/VoiceOverlay';
+import { NativeVoiceOverlayHost } from '../core/voice/NativeVoiceOverlay';
 import { VoiceManager } from '../core/voice/VoiceManager';
 
 // Calendar Widgets
@@ -123,7 +123,7 @@ export default function App() {
 
       <Dock />
       <WidgetDrawer />
-      <VoiceOverlay />
+      <NativeVoiceOverlayHost />
       <CommandPalette />
       <SpiritsHost />
     </div>

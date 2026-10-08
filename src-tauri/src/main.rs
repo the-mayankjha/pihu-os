@@ -105,6 +105,7 @@ fn main() {
         .manage(spotify_mcp::SpotifyMcpState::default())
         .invoke_handler(tauri::generate_handler![
             spirits::sync_spirits,
+            spirits::sync_voice_overlay,
             wakeword::trigger_listening,
             wakeword::speech_done,
             wakeword::resume_wakeword,
