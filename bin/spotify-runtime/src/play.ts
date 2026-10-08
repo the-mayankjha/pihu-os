@@ -51,6 +51,21 @@ async function ensureActiveDevice(preferredDeviceId?: string): Promise<string> {
   return target.id;
 }
 
+interface VerifiedPlayback {
+  is_playing: boolean;
+  device?: { id: string; name: string };
+  item?: { uri: string; name: string; linked_from?: { uri: string } };
+}
+async function verifyPlayback(deviceId: string, uri?: string): Promise<VerifiedPlayback> {
+  for (let attempt = 0; attempt < 6; attempt++) {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    const state = await spotifyFetch<VerifiedPlayback>('me/player');
+    if (state?.is_playing && state.device?.id === deviceId &&
+        (!uri || state.item?.uri === uri || state.item?.linked_from?.uri === uri)) return state;
+  }
+  throw new Error('Spotify accepted the request, but playback could not be confirmed. Check the Spotify device and your Premium account.');
+}
+
 const playMusic = defineTool({
   name: 'playMusic',
   description:
@@ -116,32 +131,16 @@ const playMusic = defineTool({
     try {
       const activeDeviceId = await ensureActiveDevice(deviceId);
 
-      await handleSpotifyRequest(async (spotifyApi) => {
-        if (!spotifyUri) {
-          await spotifyApi.player.startResumePlayback(activeDeviceId);
-          return;
-        }
-        if (resolvedType === 'track') {
-          await spotifyApi.player.startResumePlayback(
-            activeDeviceId,
-            undefined,
-            [spotifyUri],
-            undefined,
-            offset,
-          );
-        } else {
-          // album, playlist, artist — use context_uri + optional offset
-          await spotifyApi.player.startResumePlayback(
-            activeDeviceId,
-            spotifyUri,
-            undefined,
-            offset !== undefined ? { position: offset } : undefined,
-          );
-        }
+      await spotifyFetch('me/player/play', {
+        method: 'PUT', query: { device_id: activeDeviceId },
+        body: resolvedType === 'track'
+          ? { uris: [spotifyUri], ...(offset !== undefined ? { position_ms: offset } : {}) }
+          : { context_uri: spotifyUri, ...(offset !== undefined ? { offset: { position: offset } } : {}) },
       });
+      const playback = await verifyPlayback(activeDeviceId, resolvedType === 'track' ? spotifyUri : undefined);
 
       return {
-        content: [{ type: 'text', text: `Now playing: ${spotifyUri}` }],
+        content: [{ type: 'text', text: `Now playing: ${playback.item?.name || spotifyUri} on ${playback.device?.name || "Spotify"}` }],
       };
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
@@ -371,9 +370,9 @@ const resumePlayback = defineTool({
 
     try {
       const activeDeviceId = await ensureActiveDevice(deviceId);
-      await handleSpotifyRequest(async (spotifyApi) => {
-        await spotifyApi.player.startResumePlayback(activeDeviceId);
-      });
+      await spotifyFetch('me/player/play', { method: 'PUT', query: { device_id: activeDeviceId } });
+      await verifyPlayback(activeDeviceId);
+
       return { content: [{ type: 'text', text: 'Playback resumed' }] };
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);

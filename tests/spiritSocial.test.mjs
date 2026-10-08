@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validEncounter, socialStep, socialTarget, socialAligned, socialFrame } from '../src/features/spirits/socialModel.ts';
+import { validEncounter, socialStep, socialTarget, socialAligned, socialFrame, socialNearby } from '../src/features/spirits/socialModel.ts';
 const encounter = { members: ['mayank','pihu'], started: 10000, x: 250, y: 200, size: 128, action: 'hug' };
-test('encounters require both known partners, finite coordinates and a current shared clock', () => {
+test('encounters require both known partners, finite coordinates and a valid shared clock', () => {
  assert.equal(validEncounter(encounter,'pihu',11000),true);
  for (const broken of [{...encounter,members:['pihu','pihu']},{...encounter,members:['other','pihu']},{...encounter,x:NaN},{...encounter,size:300},{...encounter,action:'unknown'},{...encounter,started:20000}]) assert.equal(validEncounter(broken,'pihu',11000),false);
- assert.equal(validEncounter(encounter,'mayank',22800),false);
+ assert.equal(validEncounter(encounter,'mayank',1000000),true);
 });
 test('both characters converge on adjacent equal-height windows without crossing', () => {
  const left=socialTarget(encounter,'mayank'),right=socialTarget(encounter,'pihu');
@@ -28,4 +28,11 @@ test('pair frames use the same wall clock and hold the final pose', () => {
 
 test('conversation mouth cycles repeat while greeting contact holds', () => {
  assert.deepEqual([0,400,800,1200,1600].map(ms=>socialFrame(1000,1000+ms,true)),[0,1,2,3,0]);
+});
+
+test("social sessions stay nearby until a companion is moved away", () => {
+ const self={x:100,y:200,size:128};
+ assert.equal(socialNearby(self,{x:228,y:200,size:128}),true);
+ assert.equal(socialNearby(self,{x:400,y:200,size:128}),false);
+ assert.equal(socialNearby(self,{x:228,y:500,size:128}),false);
 });

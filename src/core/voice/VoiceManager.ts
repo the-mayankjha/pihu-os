@@ -191,6 +191,7 @@ export class VoiceManager {
       if (/\bvtop\b/i.test(text)) this.startSafetyTimer(150000);
       else if (/\b(?:project|run it|preview it|open it)\b/i.test(text)) this.startSafetyTimer(90000);
       if (/\bwhatsapp\b/i.test(text)) this.startSafetyTimer(45000);
+      if (/\bspotify\b/i.test(text)) this.startSafetyTimer(120000);
       if (parseBrowserIntent(text) || parseUIIntent(text)) this.startSafetyTimer(90000);
       if (sequence && !sequence.error) this.startSafetyTimer(sequence.steps.length * 20000 + 45000);
 

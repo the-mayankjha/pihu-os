@@ -1,3 +1,5 @@
+import { parseSpotifyIntent } from '../../services/spotifyIntent';
+import { callSpotifyTool } from '../../services/spotify';
 import { parseSpiritCommand } from '../../../features/spirits/voiceControl';
 import { controlSpirit } from './tools/spiritTools';
 import { messageNotifications } from '../../services/messageNotifications';
@@ -626,6 +628,18 @@ export class ActionEngine {
         return "";
       }
 
+      const spotifyIntent = parseSpotifyIntent(cleanText);
+      if (spotifyIntent) {
+        onMode('executing');
+        try {
+          if ('name' in spotifyIntent) return (await callSpotifyTool(spotifyIntent.name, spotifyIntent.args)).message;
+          const found = await callSpotifyTool('searchSpotify', { query: spotifyIntent.query, type: 'track', limit: spotifyIntent.play ? 1 : 5 });
+          if (!spotifyIntent.play) return found.message;
+          const id = found.message.match(/ID:\s*([a-zA-Z0-9]{22})/)?.[1];
+          if (!id) return 'No matching Spotify track was found.';
+          return (await callSpotifyTool('playMusic', { type: 'track', id })).message;
+        } catch (error) { return `Spotify: ${String(error)}`; }
+      }
       const spiritCommand = parseSpiritCommand(cleanText);
       if (spiritCommand) {
         onMode('executing');

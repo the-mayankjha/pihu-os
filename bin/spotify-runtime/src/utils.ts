@@ -8,7 +8,7 @@ import { SpotifyApi } from '@spotify/web-api-ts-sdk';
 import open from 'open';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const CONFIG_FILE = path.join(__dirname, '../spotify-config.json');
+const CONFIG_FILE = process.env.SPOTIFY_CONFIG_PATH || path.join(__dirname, '../spotify-config.json');
 
 export interface SpotifyConfig {
   clientId: string;

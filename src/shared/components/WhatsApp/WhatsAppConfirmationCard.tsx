@@ -4,6 +4,7 @@ import { useVoiceStore } from '../../../stores/voiceStore';
 import type { PendingWhatsAppAction } from '../../../stores/voiceStore';
 import { executePendingWhatsAppSend } from '../../../core/voice/intent/tools/whatsappTools';
 import { ThinkingOrb } from '../ThinkingOrb';
+import './WhatsAppConfirmationCard.css';
 
 interface WhatsAppConfirmationCardProps {
   action?: PendingWhatsAppAction;
@@ -71,21 +72,18 @@ export const WhatsAppConfirmationCard: React.FC<WhatsAppConfirmationCardProps> =
   };
 
   return (
-    <div className={`p-4 sm:p-5 rounded-2xl bg-neutral-900/95 border border-emerald-500/40 shadow-2xl backdrop-blur-xl relative overflow-hidden transition-all text-white ${className}`}>
-      {/* Background Glow */}
-      <div className="absolute top-0 right-0 w-64 h-64 bg-white/[0.06] backdrop-blur-xl from-emerald-600/15 via-teal-500/10  blur-2xl pointer-events-none" />
-
+    <div className={`wa-confirmation p-4 sm:p-5 rounded-2xl relative overflow-hidden transition-all ${className}`}>
       {/* Header Bar */}
       <div className="flex items-center justify-between gap-3 mb-4 pb-3 border-b border-white/10">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-300 shadow-inner">
+          <div className="w-8 h-8 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center text-neutral-200 shadow-inner">
             <MessageSquare className="w-4 h-4" />
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-white flex items-center gap-2">
-              <span>WhatsApp Message Confirmation</span>
-              <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full">
-                Review & Confirm
+            <h4 className="text-sm font-semibold text-white flex flex-wrap items-center gap-2">
+              <span>Review WhatsApp message</span>
+              <span className="text-[10px] font-mono uppercase tracking-wider text-neutral-200 bg-white/10 border border-white/15 px-2 py-0.5 rounded-full">
+                Awaiting confirmation
               </span>
             </h4>
             <p className="text-[11px] text-neutral-400">Review recipient and message before sending.</p>
@@ -103,7 +101,7 @@ export const WhatsAppConfirmationCard: React.FC<WhatsAppConfirmationCardProps> =
       </div>
 
       {error && (
-        <div className="mb-3 p-2.5 rounded-xl bg-neutral-500/10 border border-neutral-500/30 text-neutral-300 text-xs flex items-center gap-2">
+        <div className="mb-3 p-2.5 rounded-xl bg-neutral-500/10 border border-neutral-500/30 text-neutral-300 text-xs flex flex-wrap items-center gap-2">
           <AlertCircle className="w-4 h-4 flex-shrink-0 text-neutral-400" />
           <span>{error}</span>
         </div>
@@ -112,13 +110,13 @@ export const WhatsAppConfirmationCard: React.FC<WhatsAppConfirmationCardProps> =
       {/* Recipient info */}
       <div className="space-y-3">
         <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5">
-          <User className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-          <div className="flex-1 min-w-0 flex items-center justify-between">
+          <User className="w-4 h-4 text-neutral-200 flex-shrink-0" />
+          <div className="flex-1 min-w-0 flex flex-wrap items-center justify-between gap-2">
             <span className="text-sm font-medium text-neutral-200 truncate">
               {recipientName}
             </span>
             {phone && (
-              <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md">
+              <span className="text-xs font-mono text-neutral-200 bg-white/5 px-2 py-0.5 rounded-md">
                 {phone}
               </span>
             )}
@@ -126,7 +124,7 @@ export const WhatsAppConfirmationCard: React.FC<WhatsAppConfirmationCardProps> =
         </div>
 
         {/* Message Input Area */}
-        <div className="flex flex-col bg-black/15/70 border border-white/10 rounded-xl p-3 focus-within:border-emerald-500/50 transition">
+        <div className="flex flex-col bg-black/15 border border-white/10 rounded-xl p-3 focus-within:border-white/40 transition">
           <div className="flex items-center justify-between mb-1.5">
             <span className="text-xs font-mono text-neutral-400">Message Text:</span>
             <span className="text-[10px] text-neutral-500 font-mono">Editable</span>
@@ -136,7 +134,7 @@ export const WhatsAppConfirmationCard: React.FC<WhatsAppConfirmationCardProps> =
             onChange={(e) => handleMessageChange(e.target.value)}
             placeholder="Type WhatsApp message..."
             disabled={isSending}
-            rows={3}
+            rows={2}
             className="w-full bg-transparent text-sm text-neutral-200 placeholder-neutral-500 focus:outline-none resize-none font-sans leading-relaxed scrollbar-thin scrollbar-thumb-white/20"
           />
         </div>
@@ -145,7 +143,7 @@ export const WhatsAppConfirmationCard: React.FC<WhatsAppConfirmationCardProps> =
       {/* Action Footer & Voice Hint */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 pt-3 border-t border-white/10">
         <div className="text-[11px] text-neutral-400 font-mono text-center sm:text-left">
-          Say <strong className="text-emerald-400">"Send it"</strong>, <strong className="text-emerald-400">"Yes"</strong> or click Send.
+          Say <strong className="text-neutral-200">"Send it"</strong>, <strong className="text-neutral-200">"Yes"</strong> or click Send.
         </div>
 
         <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
@@ -160,8 +158,8 @@ export const WhatsAppConfirmationCard: React.FC<WhatsAppConfirmationCardProps> =
 
           <button
             onClick={handleSend}
-            disabled={isSending}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-1.5 rounded-xl bg-white/[0.06] backdrop-blur-xl from-emerald-600 via-teal-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white text-xs font-semibold shadow-lg shadow-emerald-950/50 transition cursor-pointer disabled:opacity-50"
+            disabled={isSending || !message.trim()}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 border border-white/20 text-white text-xs font-semibold shadow-sm transition cursor-pointer disabled:opacity-50"
           >
             {isSending ? (
               <>

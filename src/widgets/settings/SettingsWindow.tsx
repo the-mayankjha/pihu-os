@@ -1,3 +1,5 @@
+import { SpotifyConnection } from './SpotifyConnection';
+import spotifyCatalog from '../../core/services/spotifyToolCatalog.json';
 import { useVoiceStore } from '../../stores/voiceStore';
 import { ensureWhatsAppBridge, WHATSAPP_API_URL } from '../../core/services/whatsappBridge';
 import { GlassCard } from '../../shared/components/GlassCard/GlassCard';
@@ -117,6 +119,8 @@ export const SettingsWindow: React.FC = () => {
   const [waStatus, setWaStatus] = useState<{
     connected: boolean;
     logged_in: boolean;
+    has_session?: boolean;
+    reachable?: boolean;
     jid: string;
     os?: string;
     platform?: string;
@@ -165,14 +169,18 @@ export const SettingsWindow: React.FC = () => {
   // WhatsApp Bridge live status & QR poller
   useEffect(() => {
     let isMounted = true;
+    let polling = false;
     const fetchWaStatus = async () => {
+      if (polling) return;
+      polling = true;
       try {
         let isConnected = false;
         let isLoggedIn = false;
+        let hasSession = false;
 
         // 1. Check status endpoint
         try {
-          const res = await fetch(`${WHATSAPP_API_URL}/status`, { signal: AbortSignal.timeout(1200) });
+          const res = await fetch(`${WHATSAPP_API_URL}/status`, { signal: AbortSignal.timeout(4000) });
           if (res.ok) {
             const data = await res.json();
             if (typeof data.logged_in !== 'boolean' || typeof data.connected !== 'boolean') {
@@ -181,8 +189,11 @@ export const SettingsWindow: React.FC = () => {
             isConnected = true;
             if (isMounted) setWaError('');
             isLoggedIn = !!data.logged_in;
+            hasSession = data.has_session ?? (data.logged_in || data.auth_state === "reconnecting");
             if (isMounted) {
               setWaStatus({
+                has_session: hasSession,
+                reachable: true,
                 connected: !!data.connected,
                 logged_in: !!data.logged_in,
                 jid: data.jid || '',
@@ -200,7 +211,7 @@ export const SettingsWindow: React.FC = () => {
         } catch (_) {}
 
         // 2. If bridge is active and not logged in, query /api/pair for active QR code
-        if (isConnected && !isLoggedIn) {
+        if (isConnected && !isLoggedIn && !hasSession) {
           try {
             const pairRes = await fetch(`${WHATSAPP_API_URL}/pair`, { signal: AbortSignal.timeout(1500) });
             if (pairRes.ok) {
@@ -220,7 +231,7 @@ export const SettingsWindow: React.FC = () => {
         // 3. If bridge is offline
         if (!isConnected) {
           if (isMounted) {
-            setWaStatus({ connected: false, logged_in: false, jid: '' });
+            setWaStatus(prev => ({ ...prev, connected: false, logged_in: false, reachable: false }));
           }
           // Auto-start bridge if user is actively in the Connections section
           if (activeSidebarCategory === 'connections') {
@@ -231,8 +242,10 @@ export const SettingsWindow: React.FC = () => {
         }
       } catch (e) {
         if (isMounted) {
-          setWaStatus({ connected: false, logged_in: false, jid: '' });
+          setWaStatus(prev => ({ ...prev, connected: false, logged_in: false, reachable: false }));
         }
+      } finally {
+        polling = false;
       }
     };
 
@@ -289,6 +302,7 @@ export const SettingsWindow: React.FC = () => {
   }, [contacts, contactsHydrated]);
 
   const messageVoiceAlerts = useSettingsStore(state => state.messageVoiceAlerts);
+  const [spotifyConnected, setSpotifyConnected] = useState(false);
   // Notification states
   const [bannerAlerts, setBannerAlerts] = useState(true);
   const [spokenVoiceAlerts, setSpokenVoiceAlerts] = useState(true);
@@ -297,6 +311,7 @@ export const SettingsWindow: React.FC = () => {
 
   // Master MCP Server & Tool Registry
   const mcpServers: McpServerDef[] = [
+    { id: 'spotify-mcp', name: 'Spotify MCP', desc: 'Marcel Marais’s Spotify server: search, playback, devices, queue and playlists.', status: spotifyConnected ? 'Active' : 'Connect account', port: 'OAuth 8888', version: '1.0.0', transport: 'stdio', tools: spotifyCatalog.map(tool => ({ name: tool.name, description: tool.description || '', parameters: Object.keys(tool.inputSchema.properties || {}), category: 'Spotify' })) },
     {
       id: 'pihu-project-mcp',
       name: 'pihu-project-mcp',
@@ -1234,6 +1249,7 @@ export const SettingsWindow: React.FC = () => {
                 ) : (
                   /* TOP LEVEL MCP SERVER CARDS GRID */
                   <div className="space-y-6">
+                    <SpotifyConnection onConnectionChange={setSpotifyConnected} />
                     <div>
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider">
@@ -1402,7 +1418,7 @@ export const SettingsWindow: React.FC = () => {
                                   ? 'bg-emerald-500/20 text-emerald-400'
                                   : 'bg-amber-500/20 text-amber-400'
                               }`}>
-                                {waStatus.logged_in ? '● Linked & Connected' : '○ Pairing Required'}
+                                {waStatus.reachable === false ? '○ Bridge Offline' : waStatus.logged_in && waStatus.connected ? '● Linked & Connected' : waStatus.has_session ? '○ Linked · Reconnecting' : waStatus.reachable ? '○ Pairing Required' : '○ Checking Connection'}
                               </span>
                             </div>
                             <p className="text-[11px] text-neutral-400 mt-0.5">
@@ -1418,7 +1434,7 @@ export const SettingsWindow: React.FC = () => {
                                 try {
                                   await fetch(`${WHATSAPP_API_URL}/clear`, { method: 'POST' });
                                 } catch (e) {}
-                                setWaStatus({ connected: false, logged_in: false, jid: '' });
+                                setWaStatus(prev => ({ ...prev, connected: false, logged_in: false, reachable: false }));
                                 setWaQrCode('');
                               }
                             }}
@@ -1429,12 +1445,12 @@ export const SettingsWindow: React.FC = () => {
                             Clear Data
                           </button>
 
-                          {waStatus.logged_in ? (
+                          {waStatus.has_session || waStatus.logged_in ? (
                             <button
                               onClick={async () => {
                                 try {
                                   await fetch(`${WHATSAPP_API_URL}/logout`, { method: 'POST' });
-                                  setWaStatus({ connected: false, logged_in: false, jid: '' });
+                                  setWaStatus(prev => ({ ...prev, connected: false, logged_in: false, reachable: false }));
                                   setWaQrCode('');
                                 } catch (e) {}
                               }}
@@ -1457,12 +1473,12 @@ export const SettingsWindow: React.FC = () => {
                       </div>
 
                       {/* If Authenticated: Display Device Details */}
-                      {waStatus.logged_in ? (
+                      {waStatus.has_session || waStatus.logged_in ? (
                         <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
                             <div>
-                              <span className="text-xs font-semibold text-white">Active Session: {waStatus.jid || 'PIHU Desktop'}</span>
+                              <span className="text-xs font-semibold text-white">Saved Session: {waStatus.jid || 'PIHU Desktop'}</span>
                               <p className="text-[11px] text-neutral-400">PIHU AI Agent & Voice Engine can autonomously search contacts, send WhatsApp messages, and read history.</p>
                             </div>
                           </div>

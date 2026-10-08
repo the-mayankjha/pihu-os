@@ -1,4 +1,4 @@
-import { ensureWhatsAppBridge, WHATSAPP_API_URL } from '../../../services/whatsappBridge';
+import { ensureWhatsAppBridge, waitForWhatsAppConnection, hasWhatsAppSession, WHATSAPP_API_URL } from '../../../services/whatsappBridge';
 import { useSettingsStore } from '../../../../stores/settingsStore';
 import { useLayoutStore } from '../../../layout/LayoutStore';
 import type { ActionTool, ToolResult } from './types';
@@ -286,17 +286,8 @@ export const whatsappTools: ActionTool[] = [
       try {
         await ensureWhatsAppBridge();
 
-        // Check authentication status first
-        let isAuth = false;
-        try {
-          const stRes = await fetch(`${WHATSAPP_API_URL}/status`, { signal: AbortSignal.timeout(2000) });
-          if (stRes.ok) {
-            const stData = await stRes.json();
-            isAuth = !!stData.logged_in;
-          }
-        } catch (e) {}
-
-        if (!isAuth) {
+        const status = await waitForWhatsAppConnection();
+        if (!hasWhatsAppSession(status)) {
           // Open Settings connections tab to show QR
           useSettingsStore.getState().setActiveSidebarCategory('connections');
           const isSettingsOpen = useLayoutStore.getState().widgets['settings-window']?.isOpen;
@@ -425,7 +416,7 @@ export const whatsappTools: ActionTool[] = [
         }
 
         const data = await res.json();
-        if (data.logged_in) {
+        if (data.logged_in && data.connected) {
           return {
             success: true,
             data: {
@@ -442,7 +433,8 @@ export const whatsappTools: ActionTool[] = [
             data: {
               connected: true,
               logged_in: false,
-              message: 'WhatsApp Bridge is running, but requires phone pairing. Say "Authenticate WhatsApp" to view the QR code.',
+              has_session: hasWhatsAppSession(data),
+              message: hasWhatsAppSession(data) ? 'WhatsApp is linked but reconnecting. No QR scan is needed.' : 'WhatsApp requires phone pairing. Say "Authenticate WhatsApp" to view the QR code.',
             },
           };
         }

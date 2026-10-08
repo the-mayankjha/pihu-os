@@ -1,0 +1,726 @@
+[
+  {
+    "name": "searchSpotify",
+    "description": "Search for tracks, albums, artists, playlists, podcast episodes, or shows on Spotify. For episodes and shows, the query matches against title, description, and publisher. Use type \"episode\" to find individual podcast episodes by topic or guest name, and type \"show\" to find podcast series.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "The search query. Matches title, description, and publisher for podcasts."
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "track",
+            "album",
+            "artist",
+            "playlist",
+            "episode",
+            "show"
+          ],
+          "description": "The type of item to search for: track, album, artist, playlist, episode (podcast episode), or show (podcast series)"
+        },
+        "limit": {
+          "description": "Maximum number of results to return (default: 10, max: 10)",
+          "type": "number",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "offset": {
+          "description": "Index of the first result to return (default: 0). Combine with limit to page past the first 10 results.",
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "query",
+        "type"
+      ],
+      "$schema": "https://json-schema.org/draft/2020-12/schema"
+    }
+  },
+  {
+    "name": "getNowPlaying",
+    "description": "Get information about the currently playing track on Spotify, including device and volume info",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "$schema": "https://json-schema.org/draft/2020-12/schema"
+    }
+  },
+  {
+    "name": "getMyPlaylists",
+    "description": "Get a list of the current user's playlists on Spotify",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "description": "Maximum number of playlists to return (1-50)",
+          "type": "number",
+          "minimum": 1,
+          "maximum": 50
+        },
+        "offset": {
+          "description": "Offset for pagination (0-based index)",
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "$schema": "https://json-schema.org/draft/2020-12/schema"
+    }
+  },
+  {
+    "name": "getPlaylistTracks",
+    "description": "Get a list of tracks in a Spotify playlist",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "playlistId": {
+          "type": "string",
+          "description": "The Spotify ID of the playlist"
+        },
+        "limit": {
+          "description": "Maximum number of tracks to return (1-50)",
+          "type": "number",
+          "minimum": 1,
+          "maximum": 50
+        },
+        "offset": {
+          "description": "Offset for pagination (0-based index)",
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "playlistId"
+      ],
+      "$schema": "https://json-schema.org/draft/2020-12/schema"
+    }
+  },
+  {
+    "name": "getRecentlyPlayed",
+    "description": "Get a list of recently played tracks on Spotify",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "description": "Maximum number of tracks to return (1-50)",
+          "type": "number",
+          "minimum": 1,
+          "maximum": 50
+        }
+      },
+      "$schema": "https://json-schema.org/draft/2020-12/schema"
+    }
+  },
+  {
+    "name": "getUsersSavedTracks",
+    "description": "Get a list of tracks saved in the user's \"Liked Songs\" library",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "description": "Maximum number of tracks to return (1-50)",
+          "type": "number",
+          "minimum": 1,
+          "maximum": 50
+        },
+        "offset": {
+          "description": "Offset for pagination (0-based index)",
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "$schema": "https://json-schema.org/draft/2020-12/schema"
+    }
+  },
+  {
+    "name": "removeUsersSavedTracks",
+    "description": "Remove one or more tracks from the user's \"Liked Songs\" library (max 40 per request)",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "trackIds": {
+          "maxItems": 40,
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Array of Spotify track IDs to remove (max 40)"
+        }
+      },
+      "required": [
+        "trackIds"
+      ],
+      "$schema": "https://json-schema.org/draft/2020-12/schema"
+    }
+  },
+  {
+    "name": "getQueue",
+    "description": "Get a list of the currently playing track and the next items in your Spotify queue",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "description": "Maximum number of upcoming items to show (1-50)",
+          "type": "number",
+          "minimum": 1,
+          "maximum": 50
+        }
+      },
+      "$schema": "https://json-schema.org/draft/2020-12/schema"
+    }
+  },
+  {
+    "name": "getAvailableDevices",
+    "description": "Get information about the user's available Spotify Connect devices",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "$schema": "https://json-schema.org/draft/2020-12/schema"
+    }
+  },
+  {
+    "name": "getTopTracks",
+    "description": "Get the current user's top (most-played) tracks over a given time range. This is the closest thing Spotify exposes to listening statistics.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "timeRange": {
+          "description": "Time range: short_term (~4 weeks), medium_term (~6 months), or long_term (~1 year). Default: medium_term.",
+          "type": "string",
+          "enum": [
+            "short_term",
+            "medium_term",
+            "long_term"
+          ]
+        },
+        "limit": {
+          "description": "Maximum number of tracks to return (1-50)",
+          "type": "number",
+          "minimum": 1,
+          "maximum": 50
+        }
+      },
+      "$schema": "https://json-schema.org/draft/2020-12/schema"
+    }
+  },
+  {
+    "name": "getTopArtists",
+    "description": "Get the current user's top (most-played) artists over a given time range. This is the closest thing Spotify exposes to listening statistics.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "timeRange": {
+          "description": "Time range: short_term (~4 weeks), medium_term (~6 months), or long_term (~1 year). Default: medium_term.",
+          "type": "string",
+          "enum": [
+            "short_term",
+            "medium_term",
+            "long_term"
+          ]
+        },
+        "limit": {
+          "description": "Maximum number of artists to return (1-50)",
+          "type": "number",
+          "minimum": 1,
+          "maximum": 50
+        }
+      },
+      "$schema": "https://json-schema.org/draft/2020-12/schema"
+    }
+  },
+  {
+    "name": "playMusic",
+    "description": "Start playing a Spotify track, album, artist, or playlist. Pass a Spotify URI (e.g. spotify:track:xxx, spotify:album:xxx) via \"uri\". For albums/playlists you can also use \"context_uri\". Device is selected automatically \u2014 \"deviceId\" or \"device_id\" are optional.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "uri": {
+          "description": "Spotify URI to play (e.g. spotify:track:xxx, spotify:album:xxx)",
+          "type": "string"
+        },
+        "context_uri": {
+          "description": "Alias for uri \u2014 Spotify context URI for albums/playlists",
+          "type": "string"
+        },
+        "type": {
+          "description": "Type of item (only needed with id)",
+          "type": "string",
+          "enum": [
+            "track",
+            "album",
+            "artist",
+            "playlist"
+          ]
+        },
+        "id": {
+          "description": "Spotify ID of the item (use with type)",
+          "type": "string"
+        },
+        "deviceId": {
+          "description": "Spotify device ID to play on (auto-selected if omitted)",
+          "type": "string"
+        },
+        "device_id": {
+          "description": "Alias for deviceId",
+          "type": "string"
+        },
+        "offset": {
+          "description": "Track offset within album/playlist (0-based)",
+          "type": "number"
+        }
+      },
+      "$schema": "https://json-schema.org/draft/2020-12/schema"
+    }
+  },
+  {
+    "name": "pausePlayback",
+    "description": "Pause Spotify playback on the active device",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "deviceId": {
+          "description": "The Spotify device ID to pause playback on",
+          "type": "string"
+        }
+      },
+      "$schema": "https://json-schema.org/draft/2020-12/schema"
+    }
+  },
+  {
+    "name": "skipToNext",
+    "description": "Skip to the next track in the current Spotify playback queue",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "deviceId": {
+          "description": "The Spotify device ID to skip on",
+          "type": "string"
+        }
+      },
+      "$schema": "https://json-schema.org/draft/2020-12/schema"
+    }
+  },
+  {
+    "name": "skipToPrevious",
+    "description": "Skip to the previous track in the current Spotify playback queue",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "deviceId": {
+          "description": "The Spotify device ID to skip on",
+          "type": "string"
+        }
+      },
+      "$schema": "https://json-schema.org/draft/2020-12/schema"
+    }
+  },
+  {
+    "name": "createPlaylist",
+    "description": "Create a new playlist on Spotify",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the playlist"
+        },
+        "description": {
+          "description": "The description of the playlist",
+          "type": "string"
+        },
+        "public": {
+          "description": "Whether the playlist should be public",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "$schema": "https://json-schema.org/draft/2020-12/schema"
+    }
+  },
+  {
+    "name": "addTracksToPlaylist",
+    "description": "Add tracks or podcast episodes to a Spotify playlist. Accepts Spotify track IDs, episode IDs, or full Spotify URIs (e.g. spotify:episode:xxx).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "playlistId": {
+          "type": "string",
+          "description": "The Spotify ID of the playlist"
+        },
+        "trackIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Array of Spotify IDs or URIs to add. Plain IDs are assumed to be tracks. To add podcast episodes, pass full URIs: spotify:episode:{id}."
+        },
+        "position": {
+          "description": "Position to insert the items (0-based index)",
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "playlistId",
+        "trackIds"
+      ],
+      "$schema": "https://json-schema.org/draft/2020-12/schema"
+    }
+  },
+  {
+    "name": "resumePlayback",
+    "description": "Resume Spotify playback on the active device",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "deviceId": {
+          "description": "The Spotify device ID to resume playback on",
+          "type": "string"
+        }
+      },
+      "$schema": "https://json-schema.org/draft/2020-12/schema"
+    }
+  },
+  {
+    "name": "addToQueue",
+    "description": "Adds a track, album, artist or playlist to the playback queue",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "uri": {
+          "description": "The Spotify URI to play (overrides type and id)",
+          "type": "string"
+        },
+        "type": {
+          "description": "The type of item to play",
+          "type": "string",
+          "enum": [
+            "track",
+            "album",
+            "artist",
+            "playlist"
+          ]
+        },
+        "id": {
+          "description": "The Spotify ID of the item to play",
+          "type": "string"
+        },
+        "deviceId": {
+          "description": "The Spotify device ID to add the track to",
+          "type": "string"
+        }
+      },
+      "$schema": "https://json-schema.org/draft/2020-12/schema"
+    }
+  },
+  {
+    "name": "setVolume",
+    "description": "Set the playback volume to a specific percentage (0-100). Requires Spotify Premium.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "volumePercent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "The volume to set (0-100)"
+        },
+        "deviceId": {
+          "description": "The Spotify device ID to set volume on",
+          "type": "string"
+        }
+      },
+      "required": [
+        "volumePercent"
+      ],
+      "$schema": "https://json-schema.org/draft/2020-12/schema"
+    }
+  },
+  {
+    "name": "adjustVolume",
+    "description": "Adjust the playback volume up or down by a relative amount. Use positive values to increase, negative to decrease. Requires Spotify Premium.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "adjustment": {
+          "type": "number",
+          "minimum": -100,
+          "maximum": 100,
+          "description": "The amount to adjust volume by (-100 to 100). Positive increases, negative decreases."
+        },
+        "deviceId": {
+          "description": "The Spotify device ID to adjust volume on",
+          "type": "string"
+        }
+      },
+      "required": [
+        "adjustment"
+      ],
+      "$schema": "https://json-schema.org/draft/2020-12/schema"
+    }
+  },
+  {
+    "name": "getAlbums",
+    "description": "Get detailed information about one or more albums by their Spotify IDs",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "albumIds": {
+          "description": "A single album ID or array of album IDs (max 20)",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "maxItems": 20,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "ids": {
+          "description": "Alias for albumIds",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "maxItems": 20,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        }
+      },
+      "$schema": "https://json-schema.org/draft/2020-12/schema"
+    }
+  },
+  {
+    "name": "getAlbumTracks",
+    "description": "Get tracks from a specific album with pagination support",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "albumId": {
+          "type": "string",
+          "description": "The Spotify ID of the album"
+        },
+        "album_id": {
+          "description": "Alias for albumId",
+          "type": "string"
+        },
+        "limit": {
+          "description": "Maximum number of tracks to return (1-50)",
+          "type": "number",
+          "minimum": 1,
+          "maximum": 50
+        },
+        "offset": {
+          "description": "Offset for pagination (0-based index)",
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "albumId"
+      ],
+      "$schema": "https://json-schema.org/draft/2020-12/schema"
+    }
+  },
+  {
+    "name": "saveOrRemoveAlbumForUser",
+    "description": "Save or remove albums from the user's \"Your Music\" library",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "albumIds": {
+          "maxItems": 20,
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Array of Spotify album IDs (max 20)"
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "save",
+            "remove"
+          ],
+          "description": "Action to perform: save or remove albums"
+        }
+      },
+      "required": [
+        "albumIds",
+        "action"
+      ],
+      "$schema": "https://json-schema.org/draft/2020-12/schema"
+    }
+  },
+  {
+    "name": "checkUsersSavedAlbums",
+    "description": "Check if albums are saved in the user's \"Your Music\" library",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "albumIds": {
+          "maxItems": 20,
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Array of Spotify album IDs to check (max 20)"
+        }
+      },
+      "required": [
+        "albumIds"
+      ],
+      "$schema": "https://json-schema.org/draft/2020-12/schema"
+    }
+  },
+  {
+    "name": "getPlaylist",
+    "description": "Get details of a specific Spotify playlist including tracks count, description and owner",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "playlistId": {
+          "type": "string",
+          "description": "The Spotify ID of the playlist"
+        }
+      },
+      "required": [
+        "playlistId"
+      ],
+      "$schema": "https://json-schema.org/draft/2020-12/schema"
+    }
+  },
+  {
+    "name": "updatePlaylist",
+    "description": "Update the details of a Spotify playlist (name, description, public/private, collaborative)",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "playlistId": {
+          "type": "string",
+          "description": "The Spotify ID of the playlist"
+        },
+        "name": {
+          "description": "New name for the playlist",
+          "type": "string"
+        },
+        "description": {
+          "description": "New description for the playlist",
+          "type": "string"
+        },
+        "public": {
+          "description": "Whether the playlist should be public",
+          "type": "boolean"
+        },
+        "collaborative": {
+          "description": "Whether the playlist should be collaborative (requires public to be false)",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "playlistId"
+      ],
+      "$schema": "https://json-schema.org/draft/2020-12/schema"
+    }
+  },
+  {
+    "name": "removeTracksFromPlaylist",
+    "description": "Remove one or more tracks from a Spotify playlist (max 100 tracks per request)",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "playlistId": {
+          "type": "string",
+          "description": "The Spotify ID of the playlist"
+        },
+        "trackIds": {
+          "minItems": 1,
+          "maxItems": 100,
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Array of Spotify track IDs to remove (max 100)"
+        },
+        "snapshotId": {
+          "description": "The playlist snapshot ID to target a specific version (optional)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "playlistId",
+        "trackIds"
+      ],
+      "$schema": "https://json-schema.org/draft/2020-12/schema"
+    }
+  },
+  {
+    "name": "reorderPlaylistItems",
+    "description": "Reorder a range of tracks within a Spotify playlist by moving them to a new position",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "playlistId": {
+          "type": "string",
+          "description": "The Spotify ID of the playlist"
+        },
+        "rangeStart": {
+          "type": "number",
+          "minimum": 0,
+          "description": "The position of the first item to move (0-based index)"
+        },
+        "insertBefore": {
+          "type": "number",
+          "minimum": 0,
+          "description": "The position where the items should be inserted (0-based index)"
+        },
+        "rangeLength": {
+          "description": "Number of consecutive items to move (defaults to 1)",
+          "type": "number",
+          "minimum": 1
+        },
+        "snapshotId": {
+          "description": "The playlist snapshot ID to target a specific version (optional)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "playlistId",
+        "rangeStart",
+        "insertBefore"
+      ],
+      "$schema": "https://json-schema.org/draft/2020-12/schema"
+    }
+  },
+  {
+    "name": "unfollowPlaylist",
+    "description": "Remove a playlist from the current user's library (unfollow). Note: Spotify does not allow permanent deletion of playlists via the API.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "playlistId": {
+          "type": "string",
+          "description": "The Spotify ID of the playlist to unfollow"
+        }
+      },
+      "required": [
+        "playlistId"
+      ],
+      "$schema": "https://json-schema.org/draft/2020-12/schema"
+    }
+  }
+]

@@ -7,6 +7,7 @@ mod system_monitor;
 mod tts;
 mod automation;
 mod google_oauth;
+mod spotify_mcp;
 mod browser_mcp;
 mod vtop_credentials;
 mod spirits;
@@ -101,6 +102,7 @@ fn main() {
             stdin: std::sync::Mutex::new(None),
         })
         .manage(system_monitor::SystemMonitorState::new())
+        .manage(spotify_mcp::SpotifyMcpState::default())
         .invoke_handler(tauri::generate_handler![
             spirits::sync_spirits,
             wakeword::trigger_listening,
@@ -113,6 +115,7 @@ fn main() {
             automation::macos_app_action,
             automation::macos_ui_action,
             google_oauth::google_oauth_start,
+            spotify_mcp::spotify_mcp_action,
             browser_mcp::browser_mcp_action,
             vtop_credentials::vtop_credentials,
             automation::macos_frontmost_app,

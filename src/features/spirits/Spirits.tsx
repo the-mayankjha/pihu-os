@@ -42,7 +42,7 @@ export function SpiritsHost() {
   const { enabled, activeIds, size, customSpirits, setError, shortcuts, toolbar } = useSpiritsStore();
   const orb = useOrbStore(s => s.currentState);
   const pending = useVoiceStore(s => Boolean(s.pendingEmailAction || s.pendingProjectAction || s.pendingWhatsAppAction));
-  const reviewing = useVoiceStore(s => s.isCommandPaletteOpen);
+  const reviewing = useVoiceStore(s => s.isCommandPaletteOpen || Boolean(s.pendingWhatsAppAction));
   const processing = useVoiceStore(s => Boolean(s.processingStatus));
   const agent = useAgentActivityStore(s => s.status);
   const speaking = useTTSPlaybackStore(s => s.active.length > 0);
@@ -163,9 +163,9 @@ function SpiritCompanion({ id, size, animation, resting = false, speaking = fals
     const interval = idleEligible ? setInterval(() => setIdleMs(Date.now() - started), 250) : undefined;
     return () => { clearTimeout(reset); clearInterval(interval); };
   }, [idleEligible]);
-  const social = useSpiritSocial(id, size, animation !== 'idle' || resting || speaking || held || Boolean(dragging || interaction), element, (dx, dy) => setOffset(previous => ({ x: previous.x + dx, y: previous.y + dy })));
+  const social = useSpiritSocial(id, size, speaking || held || Boolean(dragging || interaction), element, (dx, dy) => setOffset(previous => ({ x: previous.x + dx, y: previous.y + dy })));
   const personal = id === 'pihu' ? pihuPose(animation, speaking, idleEligible ? idleMs : 0) : animation;
-  const shown = dragging ?? (speaking || animation !== 'idle' ? personal : interaction ?? social.animation ?? personal);
+  const shown = dragging ?? (speaking ? personal : interaction ?? social.animation ?? personal);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const hideShortcuts = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const revealShortcuts = () => {
@@ -264,7 +264,7 @@ function SpiritCompanion({ id, size, animation, resting = false, speaking = fals
       onPointerCancel={() => { setHeld(false); pointer.current.pressed = false; setDragging(null); }}
       onLostPointerCapture={() => { if (pointer.current.pressed) { setHeld(false); pointer.current.pressed = false; setDragging(null); } }}
       onClick={event => { if (event.detail === 0 || !pointer.current.dragged) play('waving'); }}>
-      <SpiritSprite id={id} size={size} animation={shown} pair={social.pair} resting={!dragging && !interaction && resting} direction={shown === 'idle' && !resting ? social.direction ?? direction : null} />
+      <SpiritSprite id={id} size={size} animation={shown} pair={social.pair} resting={!dragging && !interaction && !social.animation && resting} direction={shown === 'idle' && (!resting || social.animation) ? social.direction ?? direction : null} />
     </button>
     <SpiritToolbar name={name} size={size} shortcuts={shortcuts} disabled={Boolean(dragging)} onShortcut={shortcut => {
       setShortcutsOpen(false);

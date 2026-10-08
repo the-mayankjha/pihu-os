@@ -12,14 +12,14 @@ export interface SocialEncounter {
   action: typeof SOCIAL_ACTIONS[number];
 }
 export interface PairPose { action: SocialAction; column: 0 | 1; mirrored: boolean; started: number }
-export const SOCIAL_TIMING = { gaze: 1000, approach: 4000, action: 6800, talking: 11800, end: 12800, cooldown: 22000 };
+export const SOCIAL_TIMING = { gaze: 1000, approach: 4000, action: 6800, cooldown: 1000 };
 
 export function validEncounter(value: SocialEncounter, id: string, now: number): boolean {
   return Boolean(value && Array.isArray(value.members) && value.members.length === 2
     && value.members.includes(id) && value.members[0] !== value.members[1]
     && value.members.every(member => member === 'pihu' || member === 'mayank')
     && SOCIAL_ACTIONS.includes(value.action) && Number.isFinite(value.started)
-    && value.started <= now + 200 && now - value.started < SOCIAL_TIMING.end
+    && value.started >= 0 && value.started <= now + 200
     && Number.isFinite(value.x) && Number.isFinite(value.y)
     && Number.isFinite(value.size) && value.size >= 72 && value.size <= 192);
 }
@@ -41,4 +41,8 @@ export function socialAligned(self: SpiritPresence, peer: SpiritPresence, encoun
 export function socialFrame(started: number, now: number, talking = false) {
   // One shared clock, with a long contact hold and a gentle finish.
   return talking ? Math.max(0, Math.floor((now - started) / 400)) % 4 : Math.min(3, Math.max(0, Math.floor((now - started) / 700)));
+}
+
+export function socialNearby(self: { x: number; y: number; size: number }, peer: { x: number; y: number; size: number }) {
+  return Math.hypot(peer.x - self.x, peer.y - self.y) <= (self.size + peer.size) * 0.85;
 }

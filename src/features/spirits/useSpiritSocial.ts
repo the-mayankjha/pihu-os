@@ -5,7 +5,7 @@ import { emit, listen } from '@tauri-apps/api/event';
 import { getCurrentWindow, LogicalPosition } from '@tauri-apps/api/window';
 import { lookDirection, nearestSpirit } from './model';
 import type { SpiritAnimation, SpiritPresence } from './model';
-import { SOCIAL_ACTIONS, SOCIAL_TIMING, socialAligned, socialStep, socialTarget, validEncounter } from './socialModel';
+import { SOCIAL_ACTIONS, SOCIAL_TIMING, socialAligned, socialNearby, socialStep, socialTarget, validEncounter } from './socialModel';
 import type { PairPose, SocialEncounter } from './socialModel';
 
 const EVENT = 'pihu-spirit-presence';
@@ -33,11 +33,11 @@ export function useSpiritSocial(id: string, size: number, busy: boolean, element
       if (!busy && !value.busy && !encounter.current && now >= cooldown.current && validEncounter(value.encounter!, id, now)
         && value.encounter!.members.includes(value.id)) {
         encounter.current = value.encounter;
-        cooldown.current = value.encounter!.started + SOCIAL_TIMING.cooldown;
+        cooldown.current = 0;
       }
     };
     const localReceive = (event: Event) => receive((event as CustomEvent<Presence>).detail);
-    if (busy) encounter.current = undefined;
+    if (busy) { encounter.current = undefined; cooldown.current = Date.now() + SOCIAL_TIMING.cooldown; }
     if (isTauri()) void listen<Presence>(EVENT, event => receive(event.payload)).then(stop => { if (disposed) stop(); else unlisten = stop; }).catch(console.error);
     else window.addEventListener(EVENT, localReceive);
     const tick = async () => {
@@ -61,8 +61,8 @@ export function useSpiritSocial(id: string, size: number, busy: boolean, element
         for (const [key, peer] of peers.current) if (now - peer.at > 1600) peers.current.delete(key);
         let session = encounter.current;
         const peer = session ? peers.current.get(session.members.find(member => member !== id)!) : nearestSpirit(self, [...peers.current.values()], now);
-        if (session && (busy || !peer || peer.busy || Math.abs(peer.size - size) >= 2 || now - session.started >= SOCIAL_TIMING.end)) {
-          encounter.current = undefined; session = undefined;
+        if (session && (busy || !peer || peer.busy || Math.abs(peer.size - size) >= 2 || !socialNearby(self, peer))) {
+          encounter.current = undefined; session = undefined; cooldown.current = now + SOCIAL_TIMING.cooldown;
         }
         if (!session && !busy && peer && now >= cooldown.current && id.localeCompare(peer.id) < 0
           && [id, peer.id].every(member => member === 'pihu' || member === 'mayank') && Math.abs(size - peer.size) < 2) {
@@ -85,7 +85,7 @@ export function useSpiritSocial(id: string, size: number, busy: boolean, element
               self.x += step.x; self.y += step.y;
             }
           }
-          if (!motion.matches && elapsed >= SOCIAL_TIMING.approach && elapsed < SOCIAL_TIMING.talking && socialAligned(self, peer, session)) {
+          if (!motion.matches && elapsed >= SOCIAL_TIMING.approach && socialAligned(self, peer, session)) {
             next.pair = { action: elapsed < SOCIAL_TIMING.action ? session.action : 'talking', column: id === 'mayank' ? 0 : 1, mirrored: session.members[0] === 'pihu', started: session.started + (elapsed < SOCIAL_TIMING.action ? SOCIAL_TIMING.approach : SOCIAL_TIMING.action) };
           }
         } else if (!busy && peer) next = { animation: null, direction: lookDirection(peer.x - x, peer.y - y), pair: null };

@@ -1,3 +1,4 @@
+import { spotifyTools } from './spotifyTools';
 import { spiritTools } from './spiritTools';
 import { vtopTools } from './vtopTools';
 import { musicTools } from './musicTools';
@@ -21,6 +22,7 @@ import type { ActionTool, GeminiTool, ToolResult } from './types';
 export const ALL_TOOLS: ActionTool[] = [
   ...vtopTools,
   ...musicTools,
+  ...spotifyTools,
   ...widgetTools,
   ...todoTools,
   ...systemTools,

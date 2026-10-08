@@ -52,6 +52,7 @@
       "../models/wakeWord/*",
       "../bin/pihu-project-mcp.js",
       "../bin/browser-runtime/",
+      "../bin/spotify-runtime/",
       "pihu-first-launch.sh"
     ],
     "category": "Productivity",
