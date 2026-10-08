@@ -22,7 +22,7 @@ export function FrostSelect({value,options,onChange,label}:Props) {
     <button ref={button} type="button" role="combobox" aria-label={label} aria-expanded={open} aria-controls={id} aria-haspopup="listbox" aria-activedescendant={open?`${id}-${active}`:undefined}
       onClick={()=>{setActive(Math.max(0,options.findIndex(option=>option.value===value)));setOpen(!open);}}
       onKeyDown={event=>{
-        if(event.key==='Escape'){event.preventDefault();event.stopPropagation();setOpen(false);}
+        if(event.key==='Escape' && open){event.preventDefault();event.stopPropagation();setOpen(false);}
         else if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();if(!open){setActive(Math.max(0,options.findIndex(option=>option.value===value)));setOpen(true);}else setActive(index=>(index+(event.key==='ArrowDown'?1:-1)+options.length)%options.length);}
         else if(open&&(event.key==='Enter'||event.key===' ')){event.preventDefault();choose(active);}
         else if(event.key==='Tab')setOpen(false);

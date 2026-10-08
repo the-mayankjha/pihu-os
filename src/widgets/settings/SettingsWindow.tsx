@@ -1,3 +1,4 @@
+import { useVoiceStore } from '../../stores/voiceStore';
 import { ensureWhatsAppBridge, WHATSAPP_API_URL } from '../../core/services/whatsappBridge';
 import { GlassCard } from '../../shared/components/GlassCard/GlassCard';
 import React, { useState, useEffect } from 'react';
@@ -287,6 +288,7 @@ export const SettingsWindow: React.FC = () => {
     syncContacts();
   }, [contacts, contactsHydrated]);
 
+  const messageVoiceAlerts = useSettingsStore(state => state.messageVoiceAlerts);
   // Notification states
   const [bannerAlerts, setBannerAlerts] = useState(true);
   const [spokenVoiceAlerts, setSpokenVoiceAlerts] = useState(true);
@@ -771,8 +773,19 @@ export const SettingsWindow: React.FC = () => {
   };
 
   const handleClose = () => {
-    useLayoutStore.getState().toggleWidget('settings-window');
+    const layout = useLayoutStore.getState();
+    if (layout.widgets['settings-window']?.isOpen) layout.toggleWidget('settings-window');
   };
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.repeat || event.defaultPrevented || useVoiceStore.getState().isCommandPaletteOpen) return;
+      event.preventDefault();
+      handleClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   // 10 Streamlined Sidebar Menu Items as requested
   const sidebarItems = [
@@ -919,13 +932,7 @@ export const SettingsWindow: React.FC = () => {
               </p>
             </div>
 
-            {/* Top-Right Close Button */}
-            <button
-              onClick={handleClose}
-              className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-neutral-400 hover:text-white transition shadow-lg"
-            >
-              <X className="w-4 h-4" />
-            </button>
+
           </div>
 
           {/* Main Content Body */}
@@ -1625,6 +1632,7 @@ export const SettingsWindow: React.FC = () => {
             {activeSidebarCategory === 'notifications' && (
               <div className="space-y-4">
                 {[
+                  { title: 'WhatsApp & Gmail Voice Alerts', desc: 'Announce new messages and ask whether to open or read them aloud', state: messageVoiceAlerts, toggle: () => useSettingsStore.getState().setMessageVoiceAlerts(!useSettingsStore.getState().messageVoiceAlerts) },
                   { title: 'Spoken Voice Notifications', desc: 'Announce high-priority task completions and calendar reminders aloud', state: spokenVoiceAlerts, toggle: () => setSpokenVoiceAlerts(!spokenVoiceAlerts) },
                   { title: 'Desktop Banner Alerts', desc: 'Display floating glass notifications on desktop for background events', state: bannerAlerts, toggle: () => setBannerAlerts(!bannerAlerts) },
                   { title: 'Action Completion Chimes', desc: 'Play subtle harmonic tones when voice tools finish executing', state: soundChimes, toggle: () => setSoundChimes(!soundChimes) },

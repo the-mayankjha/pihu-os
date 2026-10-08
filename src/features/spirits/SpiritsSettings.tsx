@@ -3,12 +3,12 @@ import { useRef, useState } from 'react';
 import { Plus, Sparkles, Trash2, Upload } from 'lucide-react';
 import { bundledSpirits, saveSpiritSheet } from './catalog';
 import { SPIRIT_SHORTCUTS, SPIRIT_STATE_LABELS, validateSheetDimensions, validateSheetPixels } from './model';
-import type { SpiritShortcut } from './model';
+import type { SpiritShortcut, ToolbarMode } from './model';
 import { SpiritSprite } from './SpiritSprite';
 import { useSpiritsStore } from './store';
 
 export function SpiritsSettings() {
-  const { enabled, setEnabled, activeIds, customSpirits, size, setSize, add, remove, importSpirit, error, shortcuts, setShortcut } = useSpiritsStore();
+  const { enabled, setEnabled, activeIds, customSpirits, size, setSize, add, remove, importSpirit, error, shortcuts, setShortcut, toolbar, setToolbar } = useSpiritsStore();
   const [importError, setImportError] = useState('');
   const [importing, setImporting] = useState(false);
   const input = useRef<HTMLInputElement>(null);
@@ -48,6 +48,12 @@ export function SpiritsSettings() {
     <div className="rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl p-4 space-y-3">
       <h4 className="text-sm font-semibold">Hover shortcuts</h4>
       <p className="text-xs text-neutral-400">Choose the three shortcuts shown when you hover over a Spirit.</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-neutral-400">
+        <div>Visibility<FrostSelect label="Shortcut visibility" value={toolbar.mode} onChange={value => setToolbar({ ...toolbar, mode: value as ToolbarMode })}
+          options={[{ value: 'auto', label: 'Auto-hide' }, { value: 'hover', label: 'Hover only' }, { value: 'always', label: 'Always visible' }, { value: 'hidden', label: 'Hidden' }]} /></div>
+        {toolbar.mode === 'auto' && <div>Hide after<FrostSelect label="Shortcut hide delay" value={String(toolbar.delay)} onChange={value => setToolbar({ ...toolbar, delay: Number(value) })}
+          options={[{ value: '500', label: '0.5 seconds' }, { value: '1000', label: '1 second' }, { value: '2000', label: '2 seconds' }, { value: '4000', label: '4 seconds' }]} /></div>}
+      </div>
       <div className="grid grid-cols-3 gap-3">{shortcuts.map((shortcut, index) => <label key={index} className="text-xs text-neutral-400">Shortcut {index + 1}
         <FrostSelect label={`Shortcut ${index+1}`} value={shortcut} onChange={value=>setShortcut(index,value as SpiritShortcut)} options={Object.entries(SPIRIT_SHORTCUTS).map(([value,label])=>({value,label}))} />
       </label>)}</div>

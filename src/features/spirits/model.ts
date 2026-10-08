@@ -19,10 +19,27 @@ export const ANIMATIONS = {
   review: { row: 8, frames: 6, fps: 6 },
 } as const;
 export type SpiritAnimation = keyof typeof ANIMATIONS;
+export type SpiritPose = SpiritAnimation | 'cat-play' | 'hair-flip' | 'speaking';
+
+export function pihuPose(animation: SpiritAnimation, speaking: boolean, idleMs: number): SpiritPose {
+  if (speaking && animation !== 'failed') return 'speaking';
+  if (animation === 'running') return 'waiting';
+  if (animation !== 'idle') return animation;
+  if (idleMs >= 12000 && idleMs % 15000 >= 12000 && idleMs % 15000 < 13000) return 'hair-flip';
+  return idleMs >= 20000 ? 'cat-play' : 'idle';
+}
+
+export function poseConfig(pose: SpiritPose) {
+  if (pose === 'cat-play') return { ...ANIMATIONS.running, fps: 4 };
+  if (pose === 'hair-flip') return ANIMATIONS.review;
+  if (pose === 'speaking') return { row: 3, frames: 8, fps: 10 };
+  return ANIMATIONS[pose];
+}
 
 export interface SpiritActivity {
   animation: SpiritAnimation;
   resting: boolean;
+  speaking?: boolean;
 }
 
 export const SPIRIT_SHORTCUTS = {
@@ -55,16 +72,26 @@ export const SPIRIT_STATE_LABELS = [
   ['Dragging right', 'Running right'],
   ['Dragging left', 'Running left'],
   ['Cursor movement while idle', '16 look directions'],
+  ['Nearby idle Spirits', 'Mayank approaches Pihu, greets, then they talk; speech turns Pihu toward you'],
 ];
 
-export function spiritActivity(orb: string, agent: string, pending: boolean, reviewing: boolean, processing: boolean): SpiritActivity {
+export function spiritActivity(orb: string, agent: string, pending: boolean, reviewing: boolean, processing: boolean, speaking = false): SpiritActivity {
   let state = orb;
   if (agent === 'error' || orb === 'error') state = 'error';
+  else if (speaking || orb === 'speaking') state = 'speaking';
   else if (agent === 'thinking' || agent === 'executing') state = agent;
   else if (processing) state = 'executing';
   else if (pending) state = reviewing ? 'review' : 'waiting';
   else if (agent === 'success') state = 'success';
-  return { animation: AGENT_SPIRIT_MAP[state] ?? 'idle', resting: state === 'sleeping' };
+  return { animation: AGENT_SPIRIT_MAP[state] ?? 'idle', resting: state === 'sleeping', speaking: state === 'speaking' };
+}
+
+export interface SpiritPresence { id: string; x: number; y: number; size: number; busy: boolean; at: number; greetingAt?: number }
+export function nearestSpirit(self: SpiritPresence, peers: SpiritPresence[], now: number): SpiritPresence | undefined {
+  return peers.filter(peer => peer.id !== self.id && !peer.busy && now - peer.at < 1600
+    && Number.isFinite(peer.x) && Number.isFinite(peer.y)
+    && Math.hypot(peer.x - self.x, peer.y - self.y) <= (self.size + peer.size) * 0.85)
+    .sort((a, b) => Math.hypot(a.x - self.x, a.y - self.y) - Math.hypot(b.x - self.x, b.y - self.y) || a.id.localeCompare(b.id))[0];
 }
 
 export const LOOK_DIRECTIONS = ['up', 'up-right 22.5°', 'up-right 45°', 'up-right 67.5°', 'right', 'down-right 112.5°', 'down-right 135°', 'down-right 157.5°', 'down', 'down-left 202.5°', 'down-left 225°', 'down-left 247.5°', 'left', 'up-left 292.5°', 'up-left 315°', 'up-left 337.5°'];
@@ -112,4 +139,11 @@ export function validateSheetPixels(width: number, height: number, pixels: Uint8
       if (col >= counts[row] && artwork) throw new Error(`Unused frame ${col + 1} in row ${row + 1} must be transparent.`);
     }
   }
+}
+
+export type ToolbarMode = 'auto' | 'hover' | 'always' | 'hidden';
+export interface ToolbarPreferences { mode: ToolbarMode; delay: number }
+export function normalizeToolbar(value: unknown): ToolbarPreferences {
+  const saved = (value ?? {}) as Partial<ToolbarPreferences>;
+  return { mode: ['auto', 'hover', 'always', 'hidden'].includes(saved.mode ?? '') ? saved.mode! : 'auto', delay: [500, 1000, 2000, 4000].includes(saved.delay ?? 0) ? saved.delay! : 2000 };
 }

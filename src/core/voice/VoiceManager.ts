@@ -1,3 +1,4 @@
+import { messageNotifications } from '../services/messageNotifications';
 import { WHATSAPP_API_URL } from '../services/whatsappBridge';
 import { listen } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
@@ -34,6 +35,25 @@ export class VoiceManager {
     this.actionEngine = new ActionEngine();
 
     this.setupListeners();
+    messageNotifications.start(prompt => this.announceMessage(prompt));
+  }
+
+  private async announceMessage(prompt: string): Promise<boolean> {
+    if (this.isProcessing || this.ttsManager.isSpeaking || useVoiceStore.getState().isActive || useOrbStore.getState().currentState !== OrbState.IDLE) return false;
+    this.isProcessing = true;
+    this.speechInterrupted = false;
+    try {
+      await invoke('trigger_listening');
+      useVoiceStore.getState().setIsActive(true);
+      useVoiceStore.getState().setResponse(prompt);
+      await this.ttsManager.speak(prompt);
+      this.isProcessing = false;
+      if (!this.speechInterrupted) await this.startListening(true);
+      return true;
+    } catch {
+      this.resetToIdle();
+      return false;
+    }
   }
 
   public static getInstance(): VoiceManager {
@@ -173,6 +193,8 @@ export class VoiceManager {
       if (/\bwhatsapp\b/i.test(text)) this.startSafetyTimer(45000);
       if (parseBrowserIntent(text) || parseUIIntent(text)) this.startSafetyTimer(90000);
       if (sequence && !sequence.error) this.startSafetyTimer(sequence.steps.length * 20000 + 45000);
+
+      if (messageNotifications.awaitingReply) this.startSafetyTimer(150000);
 
       try {
         // ── THINKING phase ──────────────────────────────────────────────────

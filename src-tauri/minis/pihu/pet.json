@@ -6,7 +6,7 @@
   "atlas_sha256": "880000a9bbe650d60b44c05985dd436b4841b083a828f35ec7317d1ca7d670ed",
   "sprite_version": 2,
   "frames": 73,
-  "description": "Pihu — a cute, caring, and helpful companion who’s always ready to lend a hand. She’s friendly, supportive, and will always do her best to make your day a little easier.",
+  "description": "A cute, caring, and helpful companion who’s always ready to lend a hand. She’s friendly, supportive, and will always do her best to make your day a little easier.",
   "validation": "passed",
   "storage": "local files",
   "generation": "built-in imagegen"

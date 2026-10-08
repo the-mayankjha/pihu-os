@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { bundledSpirits } from './catalog';
-import { normalizeShortcuts, safeSpiritSize } from './model';
-import type { Spirit, SpiritShortcut } from './model';
+import { normalizeShortcuts, normalizeToolbar, safeSpiritSize } from './model';
+import type { Spirit, SpiritShortcut, ToolbarPreferences } from './model';
 
 interface SpiritsState {
   enabled: boolean;
@@ -10,6 +10,8 @@ interface SpiritsState {
   customSpirits: Spirit[];
   size: number;
   shortcuts: SpiritShortcut[];
+  toolbar: ToolbarPreferences;
+  setToolbar: (toolbar: ToolbarPreferences) => void;
   setShortcut: (index: number, shortcut: SpiritShortcut) => void;
   error: string | null;
   setEnabled: (enabled: boolean) => void;
@@ -25,6 +27,8 @@ export const useSpiritsStore = create<SpiritsState>()(persist((set) => ({
   activeIds: bundledSpirits.slice(0, 1).map(s => s.id),
   customSpirits: [],
   size: 128,
+  toolbar: normalizeToolbar(null),
+  setToolbar: toolbar => set({ toolbar: normalizeToolbar(toolbar) }),
   shortcuts: normalizeShortcuts(null),
   setShortcut: (index, shortcut) => set(s => ({ shortcuts: normalizeShortcuts(s.shortcuts.map((item, i) => i === index ? shortcut : item)) })),
   error: null,
@@ -36,9 +40,9 @@ export const useSpiritsStore = create<SpiritsState>()(persist((set) => ({
   setError: error => set({ error }),
 }), {
   name: 'pihu-spirits',
-  partialize: ({ enabled, activeIds, customSpirits, size, shortcuts }) => ({ enabled, activeIds, customSpirits, size, shortcuts }),
+  partialize: ({ enabled, activeIds, customSpirits, size, shortcuts, toolbar }) => ({ enabled, activeIds, customSpirits, size, shortcuts, toolbar }),
   merge: (persisted, current) => {
     const saved = (persisted ?? {}) as Partial<SpiritsState>;
-    return { ...current, ...saved, size: safeSpiritSize(saved.size ?? current.size), shortcuts: normalizeShortcuts(saved.shortcuts) };
+    return { ...current, ...saved, size: safeSpiritSize(saved.size ?? current.size), shortcuts: normalizeShortcuts(saved.shortcuts), toolbar: normalizeToolbar(saved.toolbar) };
   },
 }));

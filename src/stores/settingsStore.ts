@@ -20,6 +20,8 @@ export interface PihuContact {
 }
 
 export interface SettingsState {
+  messageVoiceAlerts: boolean;
+  setMessageVoiceAlerts: (enabled: boolean) => void;
   // PIHU Token Protocol (Gemini Keys)
   geminiApiKeys: string[];
   activeKeyIndex: number;
@@ -81,6 +83,8 @@ export interface SettingsState {
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set, get) => ({
+      messageVoiceAlerts: true,
+      setMessageVoiceAlerts: (messageVoiceAlerts) => set({ messageVoiceAlerts }),
       geminiApiKeys: [],
       activeKeyIndex: 0,
       exhaustedKeyIndices: [],

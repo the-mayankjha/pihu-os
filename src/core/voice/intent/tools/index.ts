@@ -1,3 +1,4 @@
+import { spiritTools } from './spiritTools';
 import { vtopTools } from './vtopTools';
 import { musicTools } from './musicTools';
 import { widgetTools } from './widgetTools';
@@ -23,6 +24,7 @@ export const ALL_TOOLS: ActionTool[] = [
   ...widgetTools,
   ...todoTools,
   ...systemTools,
+  ...spiritTools,
   ...fileMcpTools,
   ...googleWorkspaceTools,
   ...whatsappTools,

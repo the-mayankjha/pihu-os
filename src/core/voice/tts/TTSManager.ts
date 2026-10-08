@@ -1,3 +1,4 @@
+import { useTTSPlaybackStore } from './playbackStore';
 import { useVoiceStore } from '../../../stores/voiceStore';
 
 export class TTSManager {
@@ -11,6 +12,18 @@ export class TTSManager {
   private resumeInterval: ReturnType<typeof setTimeout> | null = null;
   private currentAudio: HTMLAudioElement | null = null;
   private resolveLocalSpeech: (() => void) | null = null;
+  private playbackTokens = new Set<string>();
+
+  private beginPlayback(token: string) {
+    this.playbackTokens.add(token);
+    useTTSPlaybackStore.getState().started(token);
+  }
+
+  private endPlayback(token: string) {
+    this.playbackTokens.delete(token);
+    useTTSPlaybackStore.getState().ended(token);
+  }
+
   private _isKokoroSpeaking: boolean = false;
 
   /** True if stop() was called (barge-in interrupt), false if speech ended naturally. */
@@ -58,6 +71,7 @@ export class TTSManager {
 
   public stop(): void {
     this.wasInterrupted = true;
+    for (const token of this.playbackTokens) this.endPlayback(token);
     this.resolveLocalSpeech?.();
     this.resolveLocalSpeech = null;
 
@@ -175,10 +189,12 @@ export class TTSManager {
                    return;
                  }
                  
+                 const playbackToken = crypto.randomUUID();
                  const audio = new Audio(audioUrl);
                  this.currentAudio = audio;
                  
                  const cleanup = () => {
+                     this.endPlayback(playbackToken);
                      URL.revokeObjectURL(audioUrl);
                      if (this.currentAudio === audio) {
                        this.currentAudio = null;
@@ -187,6 +203,8 @@ export class TTSManager {
                  };
                  
                  audio.onplay = () => {
+                     if (this.currentAudio !== audio || this.wasInterrupted) return;
+                     this.beginPlayback(playbackToken);
                      if (i === 0 && this.onSpeechStarted) this.onSpeechStarted();
                  };
                  
@@ -285,14 +303,18 @@ export class TTSManager {
         const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
         const url = URL.createObjectURL(blob);
 
+        const playbackToken = crypto.randomUUID();
         const audio = new Audio(url);
         this.currentAudio = audio;
         
         audio.onplay = () => {
+          if (this.currentAudio !== audio || this.wasInterrupted) return;
+          this.beginPlayback(playbackToken);
           if (this.onSpeechStarted) this.onSpeechStarted();
         };
 
         audio.onended = () => {
+          this.endPlayback(playbackToken);
           URL.revokeObjectURL(url);
           if (this.currentAudio === audio) this.currentAudio = null;
           if (this.onSpeechEnded) this.onSpeechEnded();
@@ -300,6 +322,7 @@ export class TTSManager {
         };
 
         audio.onerror = (e) => {
+          this.endPlayback(playbackToken);
           console.error('[TTSManager] Audio playback error:', e);
           URL.revokeObjectURL(url);
           if (this.currentAudio === audio) this.currentAudio = null;
@@ -324,6 +347,7 @@ export class TTSManager {
 
   private async localSpeak(text: string): Promise<void> {
     this.wasInterrupted = false;
+    const playbackToken = crypto.randomUUID();
     return new Promise((resolve) => {
       this.resolveLocalSpeech = resolve;
       useVoiceStore.getState().setActiveVoiceEngine('Local SpeechSynthesis');
@@ -339,7 +363,10 @@ export class TTSManager {
       this.currentUtterance.pitch = 1.1; // Slightly higher pitch for Pihu
       this.currentUtterance.volume = 1.0;
 
+      const utterance = this.currentUtterance;
       this.currentUtterance.onstart = () => {
+        if (this.currentUtterance !== utterance || this.wasInterrupted) return;
+        this.beginPlayback(playbackToken);
         if (this.onSpeechStarted) this.onSpeechStarted();
         
         // Chromium bug workaround: pause/resume every 14 seconds so long texts don't hang
@@ -352,15 +379,21 @@ export class TTSManager {
       };
 
       this.currentUtterance.onend = () => {
-        this.cleanupLocal();
-        if (this.onSpeechEnded) this.onSpeechEnded();
+        this.endPlayback(playbackToken);
+        if (this.currentUtterance === utterance) {
+          this.cleanupLocal();
+          if (!this.wasInterrupted && this.onSpeechEnded) this.onSpeechEnded();
+        }
         resolve();
       };
 
       this.currentUtterance.onerror = (e) => {
+        this.endPlayback(playbackToken);
         console.error('[TTSManager] Speech error:', e);
-        this.cleanupLocal();
-        if (!this.wasInterrupted && this.onSpeechEnded) this.onSpeechEnded();
+        if (this.currentUtterance === utterance) {
+          this.cleanupLocal();
+          if (!this.wasInterrupted && this.onSpeechEnded) this.onSpeechEnded();
+        }
         resolve(); // Resolve anyway so we don't block
       };
 

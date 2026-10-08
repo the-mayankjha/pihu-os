@@ -1,3 +1,6 @@
+import { parseSpiritCommand } from '../../../features/spirits/voiceControl';
+import { controlSpirit } from './tools/spiritTools';
+import { messageNotifications } from '../../services/messageNotifications';
 import { LLMManager } from '../../llm/LLMManager';
 import { PIHU_CORE_IDENTITY } from './systemPrompt';
 import { buildGeminiTools, executeTool as defaultExecuteTool } from './tools/index';
@@ -622,6 +625,15 @@ export class ActionEngine {
       if (!cleanText || cleanText === '[BLANK_AUDIO]') {
         return "";
       }
+
+      const spiritCommand = parseSpiritCommand(cleanText);
+      if (spiritCommand) {
+        onMode('executing');
+        const result = controlSpirit(spiritCommand);
+        return result.success ? result.data?.message || 'Updated Spirits.' : result.error || 'Could not update Spirits.';
+      }
+      const notificationReply = await messageNotifications.respond(cleanText);
+      if (notificationReply) return notificationReply;
 
       console.log('[ActionEngine] Processing intent:', cleanText);
 

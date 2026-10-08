@@ -1,0 +1,37 @@
+{
+  "ok": true,
+  "action": "talking",
+  "frames": 4,
+  "cell": [
+    384,
+    208
+  ],
+  "source_bounds": [
+    [
+      33,
+      78,
+      540,
+      661
+    ],
+    [
+      557,
+      78,
+      1067,
+      661
+    ],
+    [
+      1098,
+      79,
+      1602,
+      661
+    ],
+    [
+      1643,
+      78,
+      2149,
+      661
+    ]
+  ],
+  "extraction": "bundled connected pose groups, shared row scale and baseline",
+  "paired_rendering": "whole pair divided across adjacent native windows; never replace the 11-row pet atlas"
+}

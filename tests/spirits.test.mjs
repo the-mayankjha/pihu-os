@@ -1,8 +1,51 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { validateSheetDimensions, validateSheetPixels, safeSpiritSize } from '../src/features/spirits/model.ts';
-import { ANIMATIONS, spiritActivity, dragAnimation, lookDirection, lookCell, normalizeShortcuts } from '../src/features/spirits/model.ts';
+import { ANIMATIONS, spiritActivity, dragAnimation, lookDirection, lookCell, normalizeShortcuts, nearestSpirit, pihuPose, poseConfig } from '../src/features/spirits/model.ts';
 import { useAgentActivityStore } from '../src/core/agent/activityStore.ts';
+import { useTTSPlaybackStore } from '../src/core/voice/tts/playbackStore.ts';
+
+test('Pihu plays with the cat only after 20 seconds idle and occasionally flips her hair', () => {
+  assert.equal(pihuPose('idle', false, 19999), 'idle');
+  assert.equal(pihuPose('idle', false, 20000), 'cat-play');
+  assert.equal(pihuPose('idle', false, 12000), 'hair-flip');
+  assert.equal(pihuPose('idle', false, 13000), 'idle');
+  assert.equal(pihuPose('idle', false, 27000), 'hair-flip');
+  assert.equal(pihuPose('idle', false, 28000), 'cat-play');
+  assert.equal(poseConfig('cat-play').row, 7);
+  assert.equal(poseConfig('hair-flip').row, 8);
+});
+
+test('Pihu idle activities never replace speaking, failure, waiting or review', () => {
+  assert.equal(pihuPose('idle', true, 40000), 'speaking');
+  assert.equal(pihuPose('failed', true, 40000), 'failed');
+  assert.equal(pihuPose('waiting', false, 40000), 'waiting');
+  assert.equal(pihuPose('review', false, 40000), 'review');
+  assert.equal(pihuPose('running', false, 40000), 'waiting', 'Pihu work must not use the cat-play row');
+});
+
+test('actual TTS playback wins over processing and completion', () => {
+  assert.equal(spiritActivity('idle', 'success', false, false, true, true).animation, 'review');
+  assert.equal(spiritActivity('thinking', 'executing', true, true, true, true).animation, 'review');
+  assert.equal(spiritActivity('idle', 'error', false, false, true, true).animation, 'failed');
+  assert.equal(spiritActivity('idle', 'executing', false, false, true, false).animation, 'running');
+});
+
+test('an older playback ending cannot silence a newer playback', () => {
+  const store = useTTSPlaybackStore.getState();
+  store.started('old'); store.started('new'); store.ended('old');
+  assert.deepEqual(useTTSPlaybackStore.getState().active, ['new']);
+  store.ended('new');
+  assert.deepEqual(useTTSPlaybackStore.getState().active, []);
+});
+
+test('social proximity excludes self, busy, stale and distant Spirits', () => {
+  const self = { id: 'a', x: 0, y: 0, size: 128, busy: false, at: 5000 };
+  const peer = { ...self, id: 'b', x: 150 };
+  assert.equal(nearestSpirit(self, [self, peer], 5000)?.id, 'b');
+  assert.equal(nearestSpirit(self, [{ ...peer, busy: true }, { ...peer, id: 'stale', at: 2000 }, { ...peer, id: 'far', x: 900 }], 5000), undefined);
+  assert.equal(nearestSpirit(self, [peer, { ...peer, id: 'c', x: 100 }], 5000)?.id, 'c');
+});
 
 function sheet(rows = 11) {
   const width = 1536, height = rows * 208;
