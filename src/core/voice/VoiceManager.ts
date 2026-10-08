@@ -25,6 +25,7 @@ export class VoiceManager {
   private safetyTimer: ReturnType<typeof setTimeout> | null = null;
   private lastVadTimestamp: number = 0;  // Dedup guard for VAD events
   private hasGreeted: boolean = false;
+  private speechInterrupted = false;
 
   private constructor() {
     this.sttManager = new STTManager();
@@ -139,6 +140,7 @@ export class VoiceManager {
   /** Clean reset to IDLE state — stops browser mic, sets Orb IDLE, signals Python to resume wake word. */
   public resetToIdle() {
     console.log('[VOICE MANAGER] 🔄 Resetting to IDLE state.');
+    this.speechInterrupted = true;
     this.isProcessing = false;
     this.clearSafetyTimer();
     this.sttManager.stopListening();
@@ -150,30 +152,14 @@ export class VoiceManager {
   }
 
   private setupListeners() {
+    this.sttManager.onIdleTimeout = () => this.resetToIdle();
 
     // ── STT Transcription received ──────────────────────────────────────────
     this.sttManager.onTranscription = async (text) => {
       console.log(`[VOICE MANAGER] 📝 Received transcription from STT: "${text}"`);
       
       if (!text || text === '[BLANK_AUDIO]') {
-        console.log('[VOICE MANAGER] Transcription empty or blank. Preserving active response overlay.');
-        this.isProcessing = false;
-        this.clearSafetyTimer();
-        this.sttManager.stopListening();
-        this.setOrbState(OrbState.IDLE);
-        useVoiceStore.getState().setIsListening(false);
-        invoke('speech_done').catch(() => {});
-
-        // Auto-hide response overlay after 8 seconds of idle time if no new voice interaction
-        if (useVoiceStore.getState().response) {
-          setTimeout(() => {
-            if (useOrbStore.getState().currentState === OrbState.IDLE && !this.isProcessing) {
-              useVoiceStore.getState().reset();
-            }
-          }, 8000);
-        } else {
-          useVoiceStore.getState().reset();
-        }
+        this.resetToIdle();
         return;
       }
 
@@ -181,7 +167,8 @@ export class VoiceManager {
       useVoiceStore.getState().setTranscription(text);
       const { planSequence } = await import('./../automation/sequenceIntent');
       const sequence = planSequence(text);
-      if (/\b(?:project|run it|preview it|open it)\b/i.test(text)) this.startSafetyTimer(90000);
+      if (/\bvtop\b/i.test(text)) this.startSafetyTimer(150000);
+      else if (/\b(?:project|run it|preview it|open it)\b/i.test(text)) this.startSafetyTimer(90000);
       if (parseBrowserIntent(text) || parseUIIntent(text)) this.startSafetyTimer(90000);
       if (sequence && !sequence.error) this.startSafetyTimer(sequence.steps.length * 20000 + 45000);
 
@@ -201,21 +188,14 @@ export class VoiceManager {
 
         // ── SPEAKING phase ──────────────────────────────────────────────────
         console.log('[VOICE MANAGER] Playing TTS response...');
+        this.clearSafetyTimer(); // Playback duration must never be limited by the processing watchdog.
+        this.speechInterrupted = false;
         await this.ttsManager.speak(response);
 
-        // ── Post-speech: follow-up or idle ──────────────────────────────────
-        if (this.ttsManager.wasInterrupted) {
-          console.log('[VOICE MANAGER] TTS was stopped by user. Resetting to IDLE.');
-          this.resetToIdle();
-          return;
+        if (!this.speechInterrupted) {
+          this.isProcessing = false;
+          await this.startListening(true);
         }
-
-        console.log('[VOICE MANAGER] TTS finished naturally. Starting 10s follow-up listening.');
-        this.isProcessing = false;
-        this.clearSafetyTimer();
-        
-        // Enter 10s follow-up listening mode
-        this.startListening(true);
 
       } catch (error) {
         console.error('[VOICE MANAGER] ❌ Error in transcription handler:', error);
@@ -304,11 +284,15 @@ export class VoiceManager {
       catch (error) { console.debug('[VOICE MANAGER] Could not capture target app:', error); }
     }
     this.setOrbState(OrbState.WAKE);
-    useVoiceStore.getState().reset();
+    if (!isFollowUp) useVoiceStore.getState().reset();
+    else {
+      useVoiceStore.getState().setTranscription('');
+      useVoiceStore.getState().setProcessingStatus(null);
+    }
     useVoiceStore.getState().setIsActive(true);
 
-    // Idle timeout: 10s for follow-up, 6s for fresh wake word
-    this.sttManager.idleTimeoutMs = isFollowUp ? 10000 : 6000;
+    // Follow-up speech can begin within 15 seconds without another wake word.
+    this.sttManager.idleTimeoutMs = isFollowUp ? 15000 : 6000;
 
     // Tell Python to pause its mic capture stream
     try {
@@ -327,6 +311,25 @@ export class VoiceManager {
     if (!this.isProcessing) {
       this.resetToIdle();
     }
+  }
+
+  private finishSpeaking() {
+    this.isProcessing = false;
+    this.clearSafetyTimer();
+    this.sttManager.stopListening();
+    this.setOrbState(OrbState.IDLE);
+    useVoiceStore.getState().setIsListening(false);
+    invoke('speech_done').catch(() => {});
+  }
+
+  public handleEscape() {
+    if (this.ttsManager.isSpeaking || useOrbStore.getState().currentState === OrbState.SPEAKING) {
+      this.speechInterrupted = true;
+      this.ttsManager.stop();
+      this.finishSpeaking();
+      return;
+    }
+    this.stopAll();
   }
 
   public stopAll() {

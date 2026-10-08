@@ -703,24 +703,14 @@ export const googleWorkspaceTools: ActionTool[] = [
           };
         }
 
-        const startServerCmd = `python3 -c "import os, sys, subprocess; script = next((p for p in ['pihu_mcps/mcp/servers/google_oauth_server.py', 'src-tauri/pihu_mcps/mcp/servers/google_oauth_server.py', '/Users/mayankjha/Documents/projects/pihu-os/src-tauri/pihu_mcps/mcp/servers/google_oauth_server.py'] if os.path.exists(p)), None); subprocess.Popen(['python3', script, '${cId}', '${cSecret}']) if script else print('script not found')" > /tmp/google_oauth.log 2>&1 &`;
-        await invoke('execute_shell_command', { command: startServerCmd });
-
-        const scopes = encodeURIComponent('https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email');
-        const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${cId}&redirect_uri=http://localhost:8080/oauth2callback&response_type=code&scope=${scopes}&access_type=offline&prompt=select_account%20consent`;
-
-        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-        const cmd = isMac ? `open "${authUrl}"` : `start "" "${authUrl}"`;
-
-        await invoke('execute_shell_command', { command: cmd });
+        await invoke('google_oauth_start', { clientId: cId, clientSecret: cSecret });
         settings.setGoogleWorkspaceConfig(cId, cSecret, true);
 
         return {
           success: true,
           data: {
             action: 'launched_google_oauth',
-            auth_url: authUrl,
-            message: 'Started local OAuth listener on port 8080 and opened Google authorization page in your browser. Please approve permissions to complete account linking!',
+            message: 'Started a dedicated local Google OAuth listener and opened sign-in in your browser. Please approve permissions to complete account linking!',
           },
         };
       } catch (e: any) {

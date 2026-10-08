@@ -1,0 +1,61 @@
+{
+  "ok": true,
+  "strip": "/Users/mayankjha/Documents/Codex/2026-10-08/use-create-pet-to-create-and/work/mayank/decoded/look-cardinals.png",
+  "directions": [
+    "000",
+    "090",
+    "180",
+    "270"
+  ],
+  "errors": [],
+  "anchors": [
+    {
+      "direction": "000",
+      "source_box": [
+        0,
+        0,
+        543,
+        724
+      ],
+      "used_pixels": 165666,
+      "edge_pixels": 0,
+      "output": "/Users/mayankjha/Documents/Codex/2026-10-08/use-create-pet-to-create-and/work/mayank/qa/cardinal-anchors/000.png"
+    },
+    {
+      "direction": "090",
+      "source_box": [
+        543,
+        0,
+        1086,
+        724
+      ],
+      "used_pixels": 161382,
+      "edge_pixels": 0,
+      "output": "/Users/mayankjha/Documents/Codex/2026-10-08/use-create-pet-to-create-and/work/mayank/qa/cardinal-anchors/090.png"
+    },
+    {
+      "direction": "180",
+      "source_box": [
+        1086,
+        0,
+        1628,
+        724
+      ],
+      "used_pixels": 161255,
+      "edge_pixels": 0,
+      "output": "/Users/mayankjha/Documents/Codex/2026-10-08/use-create-pet-to-create-and/work/mayank/qa/cardinal-anchors/180.png"
+    },
+    {
+      "direction": "270",
+      "source_box": [
+        1628,
+        0,
+        2171,
+        724
+      ],
+      "used_pixels": 162986,
+      "edge_pixels": 0,
+      "output": "/Users/mayankjha/Documents/Codex/2026-10-08/use-create-pet-to-create-and/work/mayank/qa/cardinal-anchors/270.png"
+    }
+  ]
+}

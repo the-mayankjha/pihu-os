@@ -10,6 +10,7 @@ export class TTSManager {
   private currentUtterance: SpeechSynthesisUtterance | null = null;
   private resumeInterval: ReturnType<typeof setTimeout> | null = null;
   private currentAudio: HTMLAudioElement | null = null;
+  private resolveLocalSpeech: (() => void) | null = null;
   private _isKokoroSpeaking: boolean = false;
 
   /** True if stop() was called (barge-in interrupt), false if speech ended naturally. */
@@ -57,6 +58,8 @@ export class TTSManager {
 
   public stop(): void {
     this.wasInterrupted = true;
+    this.resolveLocalSpeech?.();
+    this.resolveLocalSpeech = null;
 
     if (this.synth.speaking) {
       this.synth.cancel();
@@ -208,6 +211,7 @@ export class TTSManager {
           this.onSpeechEnded();
       }
     } catch (err: any) {
+      if (this.wasInterrupted) return;
       console.error("[TTSManager] Kokoro speech failed:", err);
       this._isKokoroSpeaking = false;
       try {
@@ -226,6 +230,7 @@ export class TTSManager {
     try {
       await this.kokoroSpeak(text);
     } catch (e) {
+      if (this.wasInterrupted) return;
       console.warn('[TTSManager] Kokoro failed, falling back to ElevenLabs/Native', e);
       
       const apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY;
@@ -238,6 +243,7 @@ export class TTSManager {
           useVoiceStore.getState().setLastTTSError(null);
           await this.elevenLabsSpeak(text, apiKey, voiceId);
         } catch (error: any) {
+          if (this.wasInterrupted) return;
           console.error('[TTSManager] ElevenLabs failed, falling back to local TTS:', error);
           useVoiceStore.getState().setLastTTSError(error.message || String(error));
           await this.localSpeak(text);
@@ -275,6 +281,7 @@ export class TTSManager {
         }
 
         const arrayBuffer = await response.arrayBuffer();
+        if (this.wasInterrupted) { resolve(); return; }
         const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
         const url = URL.createObjectURL(blob);
 
@@ -318,6 +325,7 @@ export class TTSManager {
   private async localSpeak(text: string): Promise<void> {
     this.wasInterrupted = false;
     return new Promise((resolve) => {
+      this.resolveLocalSpeech = resolve;
       useVoiceStore.getState().setActiveVoiceEngine('Local SpeechSynthesis');
       useVoiceStore.getState().setActiveVoiceName(this.voice ? this.voice.name : 'Unknown Native Voice');
 
@@ -361,6 +369,7 @@ export class TTSManager {
   }
 
   private cleanupLocal() {
+    this.resolveLocalSpeech = null;
     this.currentUtterance = null;
     if (this.resumeInterval) {
       clearInterval(this.resumeInterval);

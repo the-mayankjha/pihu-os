@@ -1,6 +1,7 @@
 import { LLMManager } from '../../llm/LLMManager';
 import { PIHU_CORE_IDENTITY } from './systemPrompt';
-import { buildGeminiTools, executeTool } from './tools/index';
+import { buildGeminiTools, executeTool as defaultExecuteTool } from './tools/index';
+import { useAgentActivityStore } from '../../agent/activityStore';
 import { handlePendingWhatsAppConfirmation } from './tools/whatsappTools';
 import { handlePendingProjectConfirmation } from './tools/projectTools';
 import { handlePendingEmailConfirmation } from './tools/googleWorkspaceTools';
@@ -14,6 +15,7 @@ import type { GeminiContent } from '../../llm/types';
 import { planSequence, runSequence } from '../../automation/sequenceIntent';
 import { parseBrowserIntent } from '../../automation/browserIntent';
 import { parseUIIntent } from '../../automation/uiIntent';
+import { normalizeCommand } from '../../automation/normalizeCommand';
 import { parseAppIntent } from '../../automation/appIntent';
 
 export class ActionEngine {
@@ -178,8 +180,13 @@ export class ActionEngine {
     return options[Math.floor(Math.random() * options.length)];
   }
 
-  private async tryFastDirectIntent(text: string): Promise<string | null> {
+  private async tryFastDirectIntent(text: string, executeTool = defaultExecuteTool): Promise<string | null> {
     const lower = text.toLowerCase().trim();
+    const vtop = normalizeCommand(lower).match(/^(?:(set up|setup|configure)|(open|login to|log in to)|(continue|resume|finish))\s+vtop$/);
+    if (vtop) {
+      const result = await executeTool('vtop_login', {action:vtop[1]?'setup':vtop[2]?'open':'continue'});
+      return result.success ? result.data.message : `VTOP: ${result.error}`;
+    }
     const isHindi = /[\u0900-\u097F]/.test(text) || /\b(kya|tum|kr|karo|karti|karta|ho|hoon|kholo|chalao|band|badhao|kam|bhejo|sunao|abhi|kardo|kar do|dikhao|batao|bataiye|rok|roko|gaana|gana|waqt|samay|aaj)\b/i.test(lower);
 
     const browserIntent = navigator.platform.toUpperCase().includes('MAC') ? parseBrowserIntent(text) : null;
@@ -586,6 +593,29 @@ export class ActionEngine {
   }
 
   public async processIntent(text: string, onMode?: (mode: 'executing' | 'thinking') => void): Promise<string> {
+    if (!text.trim()) return '';
+    const activity = useAgentActivityStore.getState();
+    const runId = activity.begin();
+    let failed = false;
+    try {
+      return await this.processIntentInternal(text, mode => {
+        activity.phase(runId, mode);
+        onMode?.(mode);
+      }, async (name, args) => {
+        activity.phase(runId, 'executing');
+        const result = await defaultExecuteTool(name, args);
+        if (!result.success) failed = true;
+        return result;
+      }, () => { failed = true; });
+    } catch (error) {
+      failed = true;
+      throw error;
+    } finally {
+      activity.finish(runId, failed);
+    }
+  }
+
+  private async processIntentInternal(text: string, onMode: (mode: 'executing' | 'thinking') => void, executeTool: typeof defaultExecuteTool, onError: () => void): Promise<string> {
     try {
       // Step 1: Pre-LLM Normalization (STT -> Normalizer)
       const cleanText = this.normalizePreLLM(text);
@@ -600,7 +630,7 @@ export class ActionEngine {
       onMode?.('executing');
       const fastResponse = sequence && !sequence.error
         ? await runSequence(sequence, executeTool)
-        : sequence?.error ? null : await this.tryFastDirectIntent(cleanText);
+        : sequence?.error ? null : await this.tryFastDirectIntent(cleanText, executeTool);
       if (fastResponse) {
         console.log('[ActionEngine] Fast direct response:', fastResponse);
         this.conversationHistory.push({ role: 'user', parts: [{ text: cleanText }] });
@@ -676,6 +706,7 @@ export class ActionEngine {
 
     } catch (error: any) {
       console.error('[ActionEngine] Error processing intent:', error);
+      onError();
       useVoiceStore.getState().setProcessingStatus(null);
       const errMsg = error?.message || String(error);
       if (errMsg.includes('timed out')) {

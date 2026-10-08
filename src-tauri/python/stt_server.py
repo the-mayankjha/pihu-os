@@ -152,7 +152,9 @@ async def handle_client(websocket):
                 data = json.loads(message)
                 logger.info(f"Received JSON message: {data}")
                 
-                if data.get("type") == "process":
+                if data.get("type") == "reset":
+                    audio_accumulator.clear()
+                elif data.get("type") == "process":
                     if model and len(audio_accumulator) > 0:
                         logger.info("Processing accumulated audio...")
                         full_audio = np.concatenate(audio_accumulator)

@@ -1,0 +1,70 @@
+{
+  "ok": true,
+  "atlas": "/Users/mayankjha/Documents/Codex/2026-10-08/use-create-pet-to-create-and/outputs/mayank/spritesheet-extended.png",
+  "encoded_bytes": 2970393,
+  "sha256": "9600337a3808e17aee6f249e9dc66c9ec668cb0161bd745f2beb6a03fb2c1f8d",
+  "jump": {
+    "idle_baseline": 202,
+    "jump_baselines": [
+      202,
+      180,
+      154,
+      183,
+      202
+    ],
+    "airborne_lift_pixels": 48,
+    "landing_delta_pixels": 0
+  },
+  "look_registration": {
+    "neutral_center_x": 95.5,
+    "look_centers_x": [
+      96.5,
+      89.5,
+      88.5,
+      87.0,
+      88.0,
+      96.5,
+      100.5,
+      103.5,
+      97.0,
+      95.0,
+      91.5,
+      89.5,
+      98.5,
+      105.0,
+      107.5,
+      107.5
+    ],
+    "look_widths": [
+      105,
+      101,
+      103,
+      104,
+      102,
+      105,
+      105,
+      105,
+      94,
+      98,
+      99,
+      97,
+      95,
+      96,
+      95,
+      95
+    ],
+    "maximum_center_drift_pixels": 12.0,
+    "maximum_width_ratio": 1.1170212765957446
+  },
+  "errors": [],
+  "warnings": [
+    "look direction 112.5 accepted with a reviewed warning",
+    "090->112.5 diff is a local outlier (2213 pixels vs neighbor average 1356)",
+    "090->112.5 center shift is high (8.6px)",
+    "157.5->180 diff is a local outlier (2970 pixels vs neighbor average 1268)",
+    "157.5->180 center shift is high (8.2px)",
+    "247.5->270 center shift is high (9.0px)",
+    "337.5->000 diff is a local outlier (3153 pixels vs neighbor average 1816)",
+    "337.5->000 center shift is high (11.3px)"
+  ]
+}

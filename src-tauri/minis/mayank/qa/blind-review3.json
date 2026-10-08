@@ -1,0 +1,88 @@
+{
+  "pairs": [
+    {
+      "pair": "horizontal-1",
+      "A": "screen-right",
+      "B": "screen-left",
+      "reason": "A nose and face project right with visible left ear; B nose projects left with visible right ear."
+    },
+    {
+      "pair": "horizontal-2",
+      "A": "screen-left",
+      "B": "screen-right",
+      "reason": "A facial profile and nose point left; B face plane and nose point right."
+    },
+    {
+      "pair": "horizontal-3",
+      "A": "screen-right",
+      "B": "screen-left",
+      "reason": "A nose lies at right edge of face; B nose lies at left edge, with opposite near ears visible."
+    },
+    {
+      "pair": "horizontal-4",
+      "A": "screen-left",
+      "B": "screen-right",
+      "reason": "A face projects left beneath hair; B face and glasses project right."
+    },
+    {
+      "pair": "horizontal-5",
+      "A": "screen-right",
+      "B": "screen-left",
+      "reason": "A nose and far lens extend right; B bowed face projects left and near ear is on right."
+    },
+    {
+      "pair": "horizontal-6",
+      "A": "screen-right",
+      "B": "screen-left",
+      "reason": "Despite downward pitch, A nose is displaced right and B nose displaced left; opposite near ears support yaw."
+    },
+    {
+      "pair": "horizontal-7",
+      "A": "screen-right",
+      "B": "screen-left",
+      "reason": "Yaw is subtle under bowed heads: A nose/face center shifts right with left ear visible; B shifts left with right ear visible."
+    },
+    {
+      "pair": "vertical-1",
+      "A": "up",
+      "B": "down",
+      "reason": "A lifted chin, exposed lower face and raised pupils indicate up; B crown dominates and face points downward."
+    },
+    {
+      "pair": "vertical-2",
+      "A": "down",
+      "B": "up",
+      "reason": "A bowed crown with tucked chin; B extended neck and lifted face with upward pupils."
+    },
+    {
+      "pair": "vertical-3",
+      "A": "down",
+      "B": "up",
+      "reason": "A lowered face under crown and pupils down; B chin lifted and pupils raised."
+    },
+    {
+      "pair": "vertical-4",
+      "A": "down",
+      "B": "up",
+      "reason": "A modest downward pitch and lower pupils; B lifted face plane, higher pupils and exposed chin/neck."
+    },
+    {
+      "pair": "vertical-5",
+      "A": "down",
+      "B": "up",
+      "reason": "A face tucked below prominent crown; B chin lifted with face angled upward."
+    },
+    {
+      "pair": "vertical-6",
+      "A": "up",
+      "B": "down",
+      "reason": "A nose/face lifted with upward gaze; B lowered face and prominent top of head."
+    },
+    {
+      "pair": "vertical-7",
+      "A": "down",
+      "B": "up",
+      "reason": "A bowed profile and tucked chin; B lifted profile, exposed neck and higher pupils."
+    }
+  ]
+}

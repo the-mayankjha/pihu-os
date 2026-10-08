@@ -1,3 +1,5 @@
+import { VtopWorkflow } from './vtop.mjs';
+const vtopWorkflows = new WeakMap();
 import { chromium } from 'playwright';
 import { createConnection } from '@playwright/mcp';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -35,6 +37,10 @@ export async function connectBrowser(options = {}) {
   const [a, b] = InMemoryTransport.createLinkedPair();
   await server.connect(b);
   await client.connect(a);
+  vtopWorkflows.set(client, new VtopWorkflow(getContext, undefined, async page => {
+    const context=await getContext();
+    await call(client,'browser_tabs',{action:'select',index:context.pages().indexOf(page)});
+  }));
   return { client, close: async () => { await client.close(); await server.close(); if(context)await context.close(); } };
 }
 export async function call(client, name, args = {}) {
@@ -79,6 +85,9 @@ const media = p => {
 export async function perform(client, p) {
   if (!p || typeof p !== 'object') throw Error('Invalid browser request');
   const action = p.action;
+  if(action==='vtop_start')return vtopWorkflows.get(client).begin(p);
+  if(action==='vtop_prepare')return vtopWorkflows.get(client).prepare();
+  if(action==='vtop_verify')return vtopWorkflows.get(client).verify(p);
   if (action === 'tools') return { tools: (await client.listTools()).tools, message:'Playwright MCP connected.' };
   if (action === 'snapshot') return { snapshot: await call(client,'browser_snapshot'), message:'Read browser snapshot.' };
   if (action === 'navigate' || action === 'search') {
@@ -123,6 +132,16 @@ export async function perform(client, p) {
   if(action==='forward'){await evaluate(client,()=>history.forward());return {message:'Forward navigation requested.'};}
   if(action==='scroll'){if(!['up','down','left','right'].includes(p.direction))throw Error('Invalid scroll direction');await evaluate(client,p=>window.scrollBy({left:p.direction==='left'?-500:p.direction==='right'?500:0,top:p.direction==='up'?-500:p.direction==='down'?500:0}),p);return {message:`Scrolled ${p.direction}.`};}
   if(action==='click'){
+    const count=p.count??1;
+    if(!Number.isInteger(count)||count<1||count>30)throw Error('Click count must be from 1 to 30.');
+    if(count>1){
+      let completed=0;
+      // Resolve changing count labels again on each iteration.
+      const label=typeof p.label==='string'?p.label.replace(/\s*:\s*\d+$/,''):p.label;
+      try { for(;completed<count;completed++)await perform(client,{...p,label,count:1}); }
+      catch(error){throw Error(`Stopped after ${completed} of ${count} clicks: ${friendlyBrowserError(error)}`);}
+      return {message:`Clicked ${label||'selected element'} ${completed} times.`,clicks:completed};
+    }
     if(!p.ref && (typeof p.label!=='string'||!p.label.trim()))throw Error('Use a fresh snapshot ref or exact label');
     if(p.ref && (typeof p.ref!=='string'||!/^e\d+$/.test(p.ref)))throw Error('Invalid snapshot ref');
     let target=p.ref;

@@ -1,3 +1,4 @@
+import { vtopTools } from './vtopTools';
 import { musicTools } from './musicTools';
 import { widgetTools } from './widgetTools';
 import { todoTools } from './todoTools';
@@ -17,6 +18,7 @@ import type { ActionTool, GeminiTool, ToolResult } from './types';
 
 /** All tools available to the Intent Engine, grouped by domain. */
 export const ALL_TOOLS: ActionTool[] = [
+  ...vtopTools,
   ...musicTools,
   ...widgetTools,
   ...todoTools,

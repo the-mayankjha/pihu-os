@@ -1,5 +1,7 @@
+import { GlassCard } from '../../shared/components/GlassCard/GlassCard';
 import React, { useState, useEffect } from 'react';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { SpiritsSettings } from '../../features/spirits/SpiritsSettings';
 import { useLayoutStore } from '../../core/layout/LayoutStore';
 import {
   Settings,
@@ -78,6 +80,8 @@ export const SettingsWindow: React.FC = () => {
     setThemeAccent,
     blurIntensity,
     setBlurIntensity,
+    dockVisible,
+    setDockVisible,
     dockPosition,
     setDockPosition,
     dockMagnification,
@@ -811,6 +815,7 @@ export const SettingsWindow: React.FC = () => {
     { id: 'general', label: 'General', icon: Settings },
     { id: 'connections', label: 'Connections', icon: Briefcase, badge: 'MCP' },
     { id: 'widgets', label: 'Widgets', icon: LayoutGrid },
+    { id: 'spirits', label: 'Spirits', icon: Sparkles },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'voice', label: 'Voice & Speech', icon: Mic },
     { id: 'tokens', label: 'API & Tokens', icon: Key, badge: geminiApiKeys.length ? `${geminiApiKeys.length}` : undefined },
@@ -822,17 +827,15 @@ export const SettingsWindow: React.FC = () => {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 sm:p-6 select-none animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 backdrop-blur-sm p-4 sm:p-6 select-none animate-in fade-in duration-200">
       
       {/* Main Glass Window Frame */}
-      <div className="relative w-full max-w-5xl h-[680px] rounded-3xl bg-slate-950/80 backdrop-blur-3xl border border-white/10 shadow-[0_30px_90px_rgba(0,0,0,0.85)] overflow-hidden flex text-white font-sans">
+      <GlassCard blur="xl" frost="heavy" className="relative w-full max-w-5xl h-[min(760px,90vh)] rounded-3xl overflow-hidden flex text-white font-sans" style={{ backgroundColor: 'rgba(18,18,18,0.18)', backdropFilter: 'blur(40px) saturate(115%)', WebkitBackdropFilter: 'blur(40px) saturate(115%)', borderRadius: 24, border: '1px solid rgba(255,255,255,0.16)', boxShadow: '0 24px 80px rgba(0,0,0,0.35)' }}>
         
         {/* Ambient Neon Glow Accents */}
-        <div className="absolute -top-32 -left-32 w-80 h-80 bg-pink-500/15 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-32 -right-32 w-80 h-80 bg-rose-500/15 rounded-full blur-3xl pointer-events-none" />
 
         {/* ─── LEFT SIDEBAR ─────────────────────────────────────────── */}
-        <div className="w-64 min-w-64 border-r border-white/10 bg-black/40 flex flex-col p-4 z-10">
+        <div className="w-64 min-w-64 border-r border-white/15 bg-white/[0.09] backdrop-blur-3xl flex flex-col p-4 z-10 shadow-[inset_-1px_0_0_rgba(255,255,255,0.05)]">
           
           {/* macOS Traffic Lights Window Controls */}
           <div className="flex items-center gap-2 px-1 pt-1 pb-3">
@@ -860,7 +863,7 @@ export const SettingsWindow: React.FC = () => {
 
           {/* Logo & Workspace Title */}
           <div className="flex items-center gap-3 px-2 py-3 mb-3 border-b border-white/5">
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-pink-500 via-rose-500 to-purple-500 flex items-center justify-center text-white shadow-lg shadow-pink-500/30 ring-1 ring-white/20">
+            <div className="w-9 h-9 rounded-2xl bg-white/10    flex items-center justify-center text-white shadow-lg shadow-neutral-500/30 ring-1 ring-white/20">
               <Sparkles className="w-5 h-5 animate-pulse" />
             </div>
             <div>
@@ -886,17 +889,17 @@ export const SettingsWindow: React.FC = () => {
                   }}
                   className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition duration-150 ${
                     isActive
-                      ? 'bg-gradient-to-r from-pink-500/20 to-rose-500/10 border border-pink-500/30 text-pink-400 shadow-[0_0_15px_rgba(244,63,94,0.15)] font-semibold'
+                      ? 'bg-white/10   border border-white/20 text-white shadow-sm font-semibold'
                       : 'text-neutral-400 hover:text-neutral-200 hover:bg-white/5 border border-transparent'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <Icon className={`w-4 h-4 ${isActive ? 'text-pink-400' : 'text-neutral-400'}`} />
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-neutral-400' : 'text-neutral-400'}`} />
                     <span>{item.label}</span>
                   </div>
 
                   {item.badge && (
-                    <span className="px-2 py-0.5 rounded-full bg-pink-500/20 text-[10px] font-semibold text-pink-400">
+                    <span className="px-2 py-0.5 rounded-full bg-neutral-500/20 text-[10px] font-semibold text-neutral-400">
                       {item.badge}
                     </span>
                   )}
@@ -907,7 +910,7 @@ export const SettingsWindow: React.FC = () => {
 
           {/* Bottom Footer Info */}
           <div className="pt-3 mt-auto border-t border-white/5 flex items-center justify-between text-[11px] text-neutral-500 px-2">
-            <span>PIHU Protocol v1.0</span>
+            <span>Developed by Mayank Jha</span>
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span className="text-emerald-400 font-medium">Active</span>
@@ -917,7 +920,7 @@ export const SettingsWindow: React.FC = () => {
 
 
         {/* ─── RIGHT CONTENT AREA ───────────────────────────────────── */}
-        <div className="flex-1 flex flex-col min-w-0 bg-gradient-to-b from-white/[0.02] to-transparent z-10 overflow-hidden">
+        <div className="flex-1 flex flex-col min-w-0 bg-black/[0.08] z-10 overflow-hidden">
           
           {/* Header Bar */}
           <div className="flex items-center justify-between px-8 py-5 border-b border-white/10 bg-white/[0.01]">
@@ -926,6 +929,7 @@ export const SettingsWindow: React.FC = () => {
                 {activeSidebarCategory === 'general' && 'PIHU OS System Profile'}
                 {activeSidebarCategory === 'connections' && (activeMcpDetailId ? `${currentSelectedMcp?.name} • Tools Explorer` : 'Connections & MCP Servers')}
                 {activeSidebarCategory === 'widgets' && 'Active Desktop Widgets'}
+                {activeSidebarCategory === 'spirits' && 'Spirits'}
                 {activeSidebarCategory === 'notifications' && 'Notification Preferences'}
                 {activeSidebarCategory === 'voice' && 'Voice & Speech Engine'}
                 {activeSidebarCategory === 'tokens' && 'API & Token Protocol'}
@@ -939,6 +943,7 @@ export const SettingsWindow: React.FC = () => {
                 {activeSidebarCategory === 'general' && 'Operating system profile, runtime context, memory cache, and assistant persona.'}
                 {activeSidebarCategory === 'connections' && (activeMcpDetailId ? `Listing all ${currentSelectedMcp?.tools.length} executable tool declarations and parameters.` : 'Google Workspace OAuth, project MCP, file MCP, and external tool protocols.')}
                 {activeSidebarCategory === 'widgets' && 'Toggle canvas widgets, dock magnification, and screen layout.'}
+                {activeSidebarCategory === 'spirits' && 'Add animated companions to your desktop and make them your own.'}
                 {activeSidebarCategory === 'notifications' && 'Control voice spoken alerts, desktop banners, and chime sounds.'}
                 {activeSidebarCategory === 'voice' && 'Configure Kokoro Neural TTS, ElevenLabs voice models, and speech latency.'}
                 {activeSidebarCategory === 'tokens' && 'Multi-key failover protocol for uninterrupted Gemini AI operations.'}
@@ -967,10 +972,10 @@ export const SettingsWindow: React.FC = () => {
               <div className="space-y-6">
                 
                 {/* OS Identity & Salutation */}
-                <div className="p-5 rounded-3xl bg-black/30 border border-white/5 space-y-4">
+                <div className="p-5 rounded-3xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-500 flex items-center justify-center text-white shadow-lg shadow-pink-500/20">
+                      <div className="w-10 h-10 rounded-2xl bg-white/10   flex items-center justify-center text-white shadow-lg shadow-neutral-500/20">
                         <User className="w-5 h-5" />
                       </div>
                       <div>
@@ -978,7 +983,7 @@ export const SettingsWindow: React.FC = () => {
                         <p className="text-[11px] text-neutral-400">PIHU addresses you with this salutation across voice interactions</p>
                       </div>
                     </div>
-                    <span className="px-2.5 py-1 rounded-full bg-pink-500/20 text-pink-400 text-xs font-bold">
+                    <span className="px-2.5 py-1 rounded-full bg-neutral-500/20 text-neutral-400 text-xs font-bold">
                       Persona Active
                     </span>
                   </div>
@@ -991,7 +996,7 @@ export const SettingsWindow: React.FC = () => {
                         value={userName}
                         onChange={(e) => setUserName(e.target.value)}
                         placeholder="e.g. Sir Mayank"
-                        className="w-full px-3.5 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-pink-500 transition font-medium"
+                        className="w-full px-3.5 py-2 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-500 transition font-medium"
                       />
                     </div>
 
@@ -1002,19 +1007,19 @@ export const SettingsWindow: React.FC = () => {
                         value={workspacePath}
                         onChange={(e) => setWorkspacePath(e.target.value)}
                         placeholder="~/Documents/projects/pihu-os"
-                        className="w-full px-3.5 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-pink-500 transition font-mono"
+                        className="w-full px-3.5 py-2 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-500 transition font-mono"
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* Local AI Architecture Stack */}
-                <div className="p-5 rounded-3xl bg-black/30 border border-white/5 space-y-3">
+                <div className="p-5 rounded-3xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-3">
                   <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                    <Cpu className="w-4 h-4 text-pink-400" /> PIHU OS Local AI Engines
+                    <Cpu className="w-4 h-4 text-neutral-400" /> PIHU OS Local AI Engines
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-                    <div className="p-3.5 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between">
+                    <div className="p-3.5 rounded-2xl bg-black/[0.12] backdrop-blur-lg border border-white/5 flex items-center justify-between">
                       <div>
                         <span className="text-[10px] text-neutral-500 font-semibold block">STT Engine</span>
                         <span className="text-xs font-bold text-neutral-200">Whisper.cpp GGML Base</span>
@@ -1022,7 +1027,7 @@ export const SettingsWindow: React.FC = () => {
                       <span className="text-[10px] font-mono text-emerald-400 px-2 py-0.5 rounded-md bg-emerald-500/10">Local C++</span>
                     </div>
 
-                    <div className="p-3.5 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between">
+                    <div className="p-3.5 rounded-2xl bg-black/[0.12] backdrop-blur-lg border border-white/5 flex items-center justify-between">
                       <div>
                         <span className="text-[10px] text-neutral-500 font-semibold block">TTS Engine</span>
                         <span className="text-xs font-bold text-neutral-200">Kokoro Neural Synthesizer</span>
@@ -1030,7 +1035,7 @@ export const SettingsWindow: React.FC = () => {
                       <span className="text-[10px] font-mono text-emerald-400 px-2 py-0.5 rounded-md bg-emerald-500/10">Port 48126</span>
                     </div>
 
-                    <div className="p-3.5 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between">
+                    <div className="p-3.5 rounded-2xl bg-black/[0.12] backdrop-blur-lg border border-white/5 flex items-center justify-between">
                       <div>
                         <span className="text-[10px] text-neutral-500 font-semibold block">WakeWord Listener</span>
                         <span className="text-xs font-bold text-neutral-200">OpenWakeWord + Silero VAD</span>
@@ -1038,19 +1043,19 @@ export const SettingsWindow: React.FC = () => {
                       <span className="text-[10px] font-mono text-emerald-400 px-2 py-0.5 rounded-md bg-emerald-500/10">4 Models</span>
                     </div>
 
-                    <div className="p-3.5 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between">
+                    <div className="p-3.5 rounded-2xl bg-black/[0.12] backdrop-blur-lg border border-white/5 flex items-center justify-between">
                       <div>
                         <span className="text-[10px] text-neutral-500 font-semibold block">Web Project Port Allocator</span>
                         <span className="text-xs font-bold text-neutral-200">Port 5180+ Auto-Scanned</span>
                       </div>
-                      <span className="text-[10px] font-mono text-pink-400 px-2 py-0.5 rounded-md bg-pink-500/10">Reserved 5173</span>
+                      <span className="text-[10px] font-mono text-neutral-400 px-2 py-0.5 rounded-md bg-neutral-500/10">Reserved 5173</span>
                     </div>
                   </div>
                 </div>
 
                 {/* System Startup & Memory Cache Controls */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-5 rounded-3xl bg-black/30 border border-white/5 flex items-center justify-between">
+                  <div className="p-5 rounded-3xl bg-white/[0.045] backdrop-blur-md border border-white/5 flex items-center justify-between">
                     <div>
                       <h4 className="text-xs font-semibold text-white">Auto-Start on Boot</h4>
                       <p className="text-[11px] text-neutral-500">Launch PIHU OS daemon on login</p>
@@ -1058,7 +1063,7 @@ export const SettingsWindow: React.FC = () => {
                     <button
                       onClick={() => setAutoStartBoot(!autoStartBoot)}
                       className={`w-12 h-6 flex items-center rounded-full p-1 transition ${
-                        autoStartBoot ? 'bg-gradient-to-r from-pink-500 to-rose-500' : 'bg-neutral-800'
+                        autoStartBoot ? 'bg-white/10  ' : 'bg-neutral-800'
                       }`}
                     >
                       <div
@@ -1069,7 +1074,7 @@ export const SettingsWindow: React.FC = () => {
                     </button>
                   </div>
 
-                  <div className="p-5 rounded-3xl bg-black/30 border border-white/5 flex items-center justify-between">
+                  <div className="p-5 rounded-3xl bg-white/[0.045] backdrop-blur-md border border-white/5 flex items-center justify-between">
                     <div>
                       <h4 className="text-xs font-semibold text-white">Memory & Cache</h4>
                       <p className="text-[11px] text-neutral-500">Active project context & index</p>
@@ -1094,7 +1099,7 @@ export const SettingsWindow: React.FC = () => {
                 </div>
 
                 {/* Theme & Blur Controls */}
-                <div className="p-5 rounded-3xl bg-black/30 border border-white/5 space-y-4">
+                <div className="p-5 rounded-3xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="text-xs font-bold text-white uppercase tracking-wider">Theme & Glass Accent</h4>
@@ -1102,20 +1107,20 @@ export const SettingsWindow: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       {[
-                        { id: 'pink', color: 'bg-pink-500' },
-                        { id: 'purple', color: 'bg-purple-500' },
-                        { id: 'cyan', color: 'bg-cyan-500' },
-                        { id: 'emerald', color: 'bg-emerald-500' },
-                        { id: 'amber', color: 'bg-amber-500' },
+                        { id: 'pink', color: 'bg-white/10' },
+                        { id: 'purple', color: 'bg-white/10' },
+                        { id: 'cyan', color: 'bg-white/10' },
+                        { id: 'emerald', color: 'bg-white/10' },
+                        { id: 'amber', color: 'bg-white/10' },
                       ].map((t) => (
                         <button
                           key={t.id}
                           onClick={() => setThemeAccent(t.id as any)}
-                          className={`w-7 h-7 rounded-xl ${t.color} flex items-center justify-center transition ring-offset-2 ring-offset-slate-950 ${
+                          className={`px-2 h-7 text-[10px] capitalize rounded-lg ${t.color} flex items-center justify-center transition ring-offset-2 ring-offset-slate-950 ${
                             themeAccent === t.id ? 'ring-2 ring-white scale-110 shadow-md' : 'opacity-60 hover:opacity-100'
                           }`}
                         >
-                          {themeAccent === t.id && <Check className="w-3.5 h-3.5 text-white stroke-[3]" />}
+                          {t.id}
                         </button>
                       ))}
                     </div>
@@ -1124,7 +1129,7 @@ export const SettingsWindow: React.FC = () => {
                   <div className="space-y-1.5 pt-1">
                     <div className="flex justify-between text-xs text-neutral-300">
                       <span>Glassmorphism Blur</span>
-                      <span className="font-mono text-pink-400">{blurIntensity}px</span>
+                      <span className="font-mono text-neutral-400">{blurIntensity}px</span>
                     </div>
                     <input
                       type="range"
@@ -1132,7 +1137,7 @@ export const SettingsWindow: React.FC = () => {
                       max="48"
                       value={blurIntensity}
                       onChange={(e) => setBlurIntensity(Number(e.target.value))}
-                      className="w-full accent-pink-500 cursor-pointer"
+                      className="w-full accent-neutral-500 cursor-pointer"
                     />
                   </div>
                 </div>
@@ -1153,7 +1158,7 @@ export const SettingsWindow: React.FC = () => {
                     <div className="flex items-center justify-between flex-wrap gap-3 pb-2 border-b border-white/10">
                       <button
                         onClick={() => setActiveMcpDetailId(null)}
-                        className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-pink-400 transition hover:scale-105"
+                        className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-neutral-400 transition hover:scale-105"
                       >
                         <ArrowLeft className="w-3.5 h-3.5" /> Back to All MCP Servers
                       </button>
@@ -1166,15 +1171,15 @@ export const SettingsWindow: React.FC = () => {
                           placeholder="Search tools in this server..."
                           value={mcpSearchQuery}
                           onChange={(e) => setMcpSearchQuery(e.target.value)}
-                          className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-pink-500 transition font-medium"
+                          className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-500 transition font-medium"
                         />
                       </div>
                     </div>
 
                     {/* Active MCP Server Banner */}
-                    <div className="p-4 rounded-2xl bg-gradient-to-r from-pink-500/15 to-rose-500/5 border border-pink-500/30 flex items-center justify-between">
+                    <div className="p-4 rounded-2xl bg-white/10   border border-neutral-500/30 flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-2xl bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-pink-400 shadow-lg shadow-pink-500/20">
+                        <div className="w-10 h-10 rounded-2xl bg-neutral-500/20 border border-neutral-500/40 flex items-center justify-center text-neutral-400 shadow-lg shadow-neutral-500/20">
                           <Wrench className="w-5 h-5" />
                         </div>
                         <div>
@@ -1183,14 +1188,14 @@ export const SettingsWindow: React.FC = () => {
                             <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-[9px] font-bold text-emerald-400">
                               {currentSelectedMcp.status}
                             </span>
-                            <span className="px-2 py-0.5 rounded-full bg-pink-500/20 text-[9px] font-bold text-pink-400">
+                            <span className="px-2 py-0.5 rounded-full bg-neutral-500/20 text-[9px] font-bold text-neutral-400">
                               {currentSelectedMcp.tools.length} Tools
                             </span>
                           </div>
                           <p className="text-xs text-neutral-300 mt-0.5">{currentSelectedMcp.desc}</p>
                         </div>
                       </div>
-                      <span className="text-[11px] font-mono text-neutral-400 px-2.5 py-1 rounded-lg bg-black/40 border border-white/5">
+                      <span className="text-[11px] font-mono text-neutral-400 px-2.5 py-1 rounded-lg bg-black/[0.12] backdrop-blur-lg border border-white/5">
                         {currentSelectedMcp.transport}
                       </span>
                     </div>
@@ -1205,13 +1210,13 @@ export const SettingsWindow: React.FC = () => {
                         filteredMcpTools.map((tool, idx) => (
                           <div
                             key={idx}
-                            className="p-4 rounded-2xl bg-black/30 border border-white/5 hover:border-pink-500/20 hover:bg-black/40 transition group"
+                            className="p-4 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 hover:border-neutral-500/20 hover:bg-black/[0.12] backdrop-blur-lg transition group"
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <Code className="w-3.5 h-3.5 text-pink-400 shrink-0" />
-                                  <span className="font-mono text-xs font-bold text-pink-300 group-hover:text-pink-400 transition">
+                                  <Code className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                                  <span className="font-mono text-xs font-bold text-neutral-300 group-hover:text-neutral-400 transition">
                                     {tool.name}
                                   </span>
                                   <span className="px-2 py-0.5 rounded-full bg-white/5 text-[9px] font-medium text-neutral-400">
@@ -1263,7 +1268,7 @@ export const SettingsWindow: React.FC = () => {
                         <h3 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider">
                           Model Context Protocol (MCP) Servers
                         </h3>
-                        <span className="text-[11px] text-pink-400 font-medium">Click any server to list tools</span>
+                        <span className="text-[11px] text-neutral-400 font-medium">Click any server to list tools</span>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1274,11 +1279,11 @@ export const SettingsWindow: React.FC = () => {
                               setActiveMcpDetailId(mcp.id);
                               setMcpSearchQuery('');
                             }}
-                            className="w-full text-left p-4 rounded-2xl bg-black/30 border border-white/5 hover:border-pink-500/30 hover:bg-black/40 transition duration-200 flex flex-col justify-between group shadow-lg"
+                            className="w-full text-left p-4 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 hover:border-neutral-500/30 hover:bg-black/[0.12] backdrop-blur-lg transition duration-200 flex flex-col justify-between group shadow-lg"
                           >
                             <div className="flex items-center justify-between w-full">
                               <div className="flex items-center gap-2">
-                                <h4 className="text-xs font-bold text-white font-mono group-hover:text-pink-300 transition">
+                                <h4 className="text-xs font-bold text-white font-mono group-hover:text-neutral-300 transition">
                                   {mcp.name}
                                 </h4>
                                 <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-[9px] font-bold text-emerald-400">
@@ -1289,14 +1294,14 @@ export const SettingsWindow: React.FC = () => {
                                 <span className="text-[10px] font-mono text-neutral-500 px-2 py-0.5 rounded-lg bg-white/5">
                                   {mcp.port}
                                 </span>
-                                <ChevronRight className="w-4 h-4 text-neutral-500 group-hover:text-pink-400 group-hover:translate-x-0.5 transition" />
+                                <ChevronRight className="w-4 h-4 text-neutral-500 group-hover:text-neutral-400 group-hover:translate-x-0.5 transition" />
                               </div>
                             </div>
 
                             <p className="text-[11px] text-neutral-400 mt-1.5 line-clamp-2">{mcp.desc}</p>
 
                             <div className="flex items-center justify-between mt-3 pt-2 border-t border-white/5 text-[10px] text-neutral-500 w-full">
-                              <span className="text-pink-400 font-medium">{mcp.tools.length} Executable Tools</span>
+                              <span className="text-neutral-400 font-medium">{mcp.tools.length} Executable Tools</span>
                               <span className="font-mono text-neutral-400">{mcp.transport}</span>
                             </div>
                           </button>
@@ -1305,11 +1310,11 @@ export const SettingsWindow: React.FC = () => {
                     </div>
 
                     {/* Google Workspace OAuth Client Credentials */}
-                    <div className="p-5 rounded-2xl bg-black/30 border border-white/5 space-y-4">
+                    <div className="p-5 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-4">
                       <div className="flex items-center justify-between">
                         <div>
                           <h4 className="text-xs font-bold text-white flex items-center gap-2">
-                            <FolderGit2 className="w-4 h-4 text-pink-400" /> Google OAuth Credentials
+                            <FolderGit2 className="w-4 h-4 text-neutral-400" /> Google OAuth Credentials
                           </h4>
                           <p className="text-[11px] text-neutral-400 mt-0.5">Desktop Application OAuth Client for Workspace automation</p>
                         </div>
@@ -1323,7 +1328,7 @@ export const SettingsWindow: React.FC = () => {
                             placeholder="Google OAuth Client ID"
                             value={googleClientId}
                             onChange={(e) => setGoogleWorkspaceConfig(e.target.value, googleClientSecret, true)}
-                            className="w-full px-3.5 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-pink-500 transition font-mono"
+                            className="w-full px-3.5 py-2 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-500 transition font-mono"
                           />
                         </div>
 
@@ -1334,7 +1339,7 @@ export const SettingsWindow: React.FC = () => {
                             placeholder="Google OAuth Client Secret"
                             value={googleClientSecret}
                             onChange={(e) => setGoogleWorkspaceConfig(googleClientId, e.target.value, true)}
-                            className="w-full px-3.5 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-pink-500 transition font-mono"
+                            className="w-full px-3.5 py-2 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-500 transition font-mono"
                           />
                         </div>
                       </div>
@@ -1355,11 +1360,13 @@ export const SettingsWindow: React.FC = () => {
                               return;
                             }
                             const { invoke } = await import('@tauri-apps/api/core');
-                            const startServerCmd = `python3 -c "import os, sys, subprocess; script = next((p for p in ['pihu_mcps/mcp/servers/google_oauth_server.py', 'src-tauri/pihu_mcps/mcp/servers/google_oauth_server.py'] if os.path.exists(p)), None); subprocess.Popen(['python3', script, '${cId}', '${cSecret}']) if script else print('script not found')" > /tmp/google_oauth.log 2>&1 &`;
-                            await invoke('execute_shell_command', { command: startServerCmd }).catch(() => {});
-                            await invoke('execute_shell_command', { command: `open "http://localhost:8080/login"` }).catch(() => {});
+                            try {
+                              await invoke('google_oauth_start', { clientId: cId, clientSecret: cSecret });
+                            } catch (error) {
+                              alert(`Google sign-in could not start: ${String(error)}`);
+                            }
                           }}
-                          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white text-xs font-semibold shadow-lg shadow-pink-500/20 transition"
+                          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10   hover: hover: text-white text-xs font-semibold shadow-lg shadow-neutral-500/20 transition"
                         >
                           <Plus className="w-3.5 h-3.5" /> Link Another Account
                         </button>
@@ -1369,17 +1376,17 @@ export const SettingsWindow: React.FC = () => {
                         {connectedGoogleAccounts.map((account, idx) => (
                           <div
                             key={idx}
-                            className="flex items-center justify-between p-4 rounded-2xl bg-black/30 border border-white/5 hover:border-white/10 transition"
+                            className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 hover:border-white/10 transition"
                           >
                             <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-pink-500 to-rose-500 flex items-center justify-center text-xs font-bold text-white shadow">
+                              <div className="w-9 h-9 rounded-full bg-white/10   flex items-center justify-center text-xs font-bold text-white shadow">
                                 {account.name.slice(0, 2).toUpperCase()}
                               </div>
                               <div>
                                 <div className="flex items-center gap-2">
                                   <h4 className="text-xs font-semibold text-white">{account.name}</h4>
                                   {account.isPrimary && (
-                                    <span className="px-2 py-0.5 rounded-full bg-pink-500/20 text-[9px] font-bold text-pink-400">
+                                    <span className="px-2 py-0.5 rounded-full bg-neutral-500/20 text-[9px] font-bold text-neutral-400">
                                       PRIMARY
                                     </span>
                                   )}
@@ -1410,7 +1417,7 @@ export const SettingsWindow: React.FC = () => {
                     </div>
 
                     {/* WhatsApp MCP Device Pairing & QR Code Card */}
-                    <div className="p-5 rounded-2xl bg-black/30 border border-white/5 space-y-4">
+                    <div className="p-5 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-lg shadow-emerald-500/20">
@@ -1428,7 +1435,7 @@ export const SettingsWindow: React.FC = () => {
                               </span>
                             </div>
                             <p className="text-[11px] text-neutral-400 mt-0.5">
-                              Device: <span className="text-pink-400 font-mono">PIHU Desktop</span> • Bridge: <span className="font-mono text-neutral-300">FastMCP + whatsmeow</span>
+                              Device: <span className="text-neutral-400 font-mono">PIHU Desktop</span> • Bridge: <span className="font-mono text-neutral-300">FastMCP + whatsmeow</span>
                             </p>
                           </div>
                         </div>
@@ -1468,7 +1475,7 @@ export const SettingsWindow: React.FC = () => {
                             <button
                               onClick={handleScanQr}
                               disabled={waLoading}
-                              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:opacity-50 text-white text-xs font-semibold shadow-lg shadow-emerald-500/20 transition"
+                              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10 from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:opacity-50 text-white text-xs font-semibold shadow-lg shadow-emerald-500/20 transition"
                             >
                               <QrCode className="w-3.5 h-3.5" />
                               {waLoading ? 'Starting Bridge...' : (waQrCode ? 'Refresh QR Code' : 'Scan WhatsApp QR')}
@@ -1493,7 +1500,7 @@ export const SettingsWindow: React.FC = () => {
                         </div>
                       ) : (
                         /* If Not Authenticated: Display QR Pairing Code and Steps */
-                        <div className="p-4 rounded-xl bg-black/40 border border-white/10 space-y-4">
+                        <div className="p-4 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 space-y-4">
                           <div className="flex flex-col md:flex-row items-center gap-5">
                             <div className="flex flex-col items-center gap-2">
                               <div className="w-40 h-40 rounded-2xl bg-white p-2.5 flex items-center justify-center shadow-xl border border-white/20 shrink-0 overflow-hidden">
@@ -1546,7 +1553,7 @@ export const SettingsWindow: React.FC = () => {
                               </ol>
                               <div className="pt-2 flex items-center gap-3">
                                 <span className="text-[10px] text-neutral-500 font-mono">CLI Command:</span>
-                                <code className="px-2 py-0.5 rounded bg-black/60 text-[10px] font-mono text-pink-400 border border-white/5">
+                                <code className="px-2 py-0.5 rounded bg-black/60 text-[10px] font-mono text-neutral-400 border border-white/5">
                                   pihu mcp whatsapp auth
                                 </code>
                               </div>
@@ -1577,7 +1584,7 @@ export const SettingsWindow: React.FC = () => {
                     return (
                       <div
                         key={w.id}
-                        className="flex items-center justify-between p-4 rounded-2xl bg-black/30 border border-white/5"
+                        className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5"
                       >
                         <div>
                           <h4 className="text-xs font-semibold text-white">{w.name}</h4>
@@ -1587,7 +1594,7 @@ export const SettingsWindow: React.FC = () => {
                           onClick={() => useLayoutStore.getState().toggleWidget(w.id)}
                           className={`px-4 py-1.5 rounded-xl text-xs font-medium transition ${
                             isOpen
-                              ? 'bg-pink-500/20 text-pink-400 border border-pink-500/30'
+                              ? 'bg-neutral-500/20 text-neutral-400 border border-neutral-500/30'
                               : 'bg-white/5 text-neutral-400 hover:text-white'
                           }`}
                         >
@@ -1599,8 +1606,17 @@ export const SettingsWindow: React.FC = () => {
                 </div>
 
                 {/* Dock Position & Magnification */}
-                <div className="p-4 rounded-2xl bg-black/30 border border-white/5 space-y-4">
+                <div className="p-4 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-4">
                   <h4 className="text-xs font-semibold text-white">Dock Layout & Magnification</h4>
+                  <div className="flex items-center justify-between gap-4 pb-4 border-b border-white/10">
+                    <div><h5 className="text-sm font-medium text-white">Show dock</h5>
+                    <p className="text-xs text-neutral-400 mt-1">Hide the dock for a clear desktop. Press ⌘, or Ctrl+, to reopen Settings.</p></div>
+                    <button type="button" role="switch" aria-checked={dockVisible} aria-label="Show dock"
+                      onClick={() => setDockVisible(!dockVisible)}
+                      className={`shrink-0 w-12 h-7 rounded-full p-1 transition ${dockVisible ? 'bg-white/30' : 'bg-white/[0.045] backdrop-blur-md border border-white/15'}`}>
+                      <span className={`block w-5 h-5 rounded-full bg-white shadow transition-transform ${dockVisible ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
                   <div className="grid grid-cols-3 gap-3">
                     {['bottom', 'left', 'right'].map((pos) => (
                       <button
@@ -1608,8 +1624,8 @@ export const SettingsWindow: React.FC = () => {
                         onClick={() => setDockPosition(pos as any)}
                         className={`py-2 rounded-xl border text-xs font-semibold capitalize transition ${
                           dockPosition === pos
-                            ? 'bg-pink-500/20 border-pink-500/40 text-pink-400'
-                            : 'bg-black/30 border-white/5 text-neutral-400 hover:text-white'
+                            ? 'bg-white/15 border-white/25 text-white'
+                            : 'bg-white/[0.045] backdrop-blur-md border-white/5 text-neutral-400 hover:text-white'
                         }`}
                       >
                         {pos} Dock
@@ -1625,7 +1641,7 @@ export const SettingsWindow: React.FC = () => {
                     <button
                       onClick={() => setDockMagnification(!dockMagnification)}
                       className={`w-12 h-6 flex items-center rounded-full p-1 transition ${
-                        dockMagnification ? 'bg-gradient-to-r from-pink-500 to-rose-500' : 'bg-neutral-800'
+                        dockMagnification ? 'bg-white/10  ' : 'bg-neutral-800'
                       }`}
                     >
                       <div
@@ -1649,7 +1665,7 @@ export const SettingsWindow: React.FC = () => {
                   { title: 'Action Completion Chimes', desc: 'Play subtle harmonic tones when voice tools finish executing', state: soundChimes, toggle: () => setSoundChimes(!soundChimes) },
                   { title: 'Do Not Disturb', desc: 'Silence all audio cues and spoken responses during meetings or focus hours', state: doNotDisturb, toggle: () => setDoNotDisturb(!doNotDisturb) },
                 ].map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-4 rounded-2xl bg-black/30 border border-white/5">
+                  <div key={idx} className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5">
                     <div>
                       <h4 className="text-xs font-semibold text-white">{item.title}</h4>
                       <p className="text-[11px] text-neutral-500">{item.desc}</p>
@@ -1657,7 +1673,7 @@ export const SettingsWindow: React.FC = () => {
                     <button
                       onClick={item.toggle}
                       className={`w-12 h-6 flex items-center rounded-full p-1 transition ${
-                        item.state ? 'bg-gradient-to-r from-pink-500 to-rose-500' : 'bg-neutral-800'
+                        item.state ? 'bg-white/10  ' : 'bg-neutral-800'
                       }`}
                     >
                       <div
@@ -1682,7 +1698,7 @@ export const SettingsWindow: React.FC = () => {
                     placeholder="sk_..."
                     value={elevenLabsApiKey}
                     onChange={(e) => setElevenLabsConfig(e.target.value, elevenLabsVoiceId)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-pink-500 transition"
+                    className="w-full px-4 py-2.5 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-500 transition"
                   />
                 </div>
 
@@ -1692,15 +1708,15 @@ export const SettingsWindow: React.FC = () => {
                     type="text"
                     value={elevenLabsVoiceId}
                     onChange={(e) => setElevenLabsConfig(elevenLabsApiKey, e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-pink-500 transition font-mono"
+                    className="w-full px-4 py-2.5 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-500 transition font-mono"
                   />
                 </div>
 
                 {/* Speed Slider */}
-                <div className="p-4 rounded-2xl bg-black/30 border border-white/5 space-y-2">
+                <div className="p-4 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-2">
                   <div className="flex justify-between text-xs text-neutral-300">
                     <span className="font-semibold">Speech Rate Multiplier</span>
-                    <span className="text-pink-400 font-mono">{ttsSpeed}x</span>
+                    <span className="text-neutral-400 font-mono">{ttsSpeed}x</span>
                   </div>
                   <input
                     type="range"
@@ -1709,16 +1725,16 @@ export const SettingsWindow: React.FC = () => {
                     step="0.05"
                     value={ttsSpeed}
                     onChange={(e) => setTtsSpeed(Number(e.target.value))}
-                    className="w-full accent-pink-500 cursor-pointer"
+                    className="w-full accent-neutral-500 cursor-pointer"
                   />
                 </div>
 
                 {/* Default TTS Strategy */}
-                <div className="p-5 rounded-2xl bg-black/30 border border-white/5 space-y-3">
+                <div className="p-5 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-3">
                   <h4 className="text-xs font-bold text-neutral-200">Default TTS Fallback Strategy:</h4>
                   <ol className="space-y-2 text-xs text-neutral-400 list-decimal list-inside">
-                    <li><strong className="text-pink-400">Kokoro Neural TTS</strong> (Local On-Device AI — Port 48126)</li>
-                    <li><strong className="text-purple-400">ElevenLabs API</strong> (Cloud High-Fidelity Backup)</li>
+                    <li><strong className="text-neutral-400">Kokoro Neural TTS</strong> (Local On-Device AI — Port 48126)</li>
+                    <li><strong className="text-neutral-400">ElevenLabs API</strong> (Cloud High-Fidelity Backup)</li>
                     <li><strong className="text-neutral-300">Native OS SpeechSynthesis</strong> (Offline Fallback)</li>
                   </ol>
                 </div>
@@ -1729,10 +1745,10 @@ export const SettingsWindow: React.FC = () => {
             {/* ══════ SECTION 6: API & TOKENS (PIHU Token Protocol) ══════ */}
             {activeSidebarCategory === 'tokens' && (
               <div className="space-y-6">
-                <div className="p-4 rounded-2xl bg-pink-500/10 border border-pink-500/20 text-xs text-pink-200/90 leading-relaxed flex items-start gap-3">
-                  <Key className="w-5 h-5 text-pink-400 shrink-0 mt-0.5" />
+                <div className="p-4 rounded-2xl bg-neutral-500/10 border border-neutral-500/20 text-xs text-neutral-200/90 leading-relaxed flex items-start gap-3">
+                  <Key className="w-5 h-5 text-neutral-400 shrink-0 mt-0.5" />
                   <div>
-                    <span className="font-bold text-pink-400">PIHU Token Failover Protocol Active:</span> When a Gemini key encounters rate limits (429) or quota exhaustion (403), PIHU automatically rotates to the next available API key in real-time.
+                    <span className="font-bold text-neutral-400">PIHU Token Failover Protocol Active:</span> When a Gemini key encounters rate limits (429) or quota exhaustion (403), PIHU automatically rotates to the next available API key in real-time.
                   </div>
                 </div>
 
@@ -1743,11 +1759,11 @@ export const SettingsWindow: React.FC = () => {
                     placeholder="Enter Gemini API Key (AIzaSy...)"
                     value={newKeyInput}
                     onChange={(e) => setNewKeyInput(e.target.value)}
-                    className="flex-1 px-4 py-2.5 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-pink-500 transition font-mono"
+                    className="flex-1 px-4 py-2.5 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-500 transition font-mono"
                   />
                   <button
                     type="submit"
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white text-xs font-semibold shadow-lg shadow-pink-500/20 transition"
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/10   hover: hover: text-white text-xs font-semibold shadow-lg shadow-neutral-500/20 transition"
                   >
                     <Plus className="w-4 h-4" /> Add Key
                   </button>
@@ -1761,7 +1777,7 @@ export const SettingsWindow: React.FC = () => {
                   {exhaustedKeyIndices.length > 0 && (
                     <button
                       onClick={resetExhaustedKeys}
-                      className="flex items-center gap-1.5 text-xs text-pink-400 hover:text-pink-300 transition"
+                      className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-300 transition"
                     >
                       <RotateCcw className="w-3.5 h-3.5" /> Reset Exhausted Status
                     </button>
@@ -1785,22 +1801,22 @@ export const SettingsWindow: React.FC = () => {
                           key={idx}
                           className={`flex items-center justify-between p-4 rounded-2xl border transition ${
                             isActive
-                              ? 'bg-pink-500/10 border-pink-500/40 text-white shadow-[0_0_15px_rgba(244,63,94,0.1)]'
+                              ? 'bg-neutral-500/10 border-neutral-500/40 text-white shadow-[0_0_15px_rgba(244,63,94,0.1)]'
                               : isExhausted
                               ? 'bg-red-500/5 border-red-500/20 text-neutral-400'
-                              : 'bg-black/30 border-white/5 text-neutral-300 hover:border-white/10'
+                              : 'bg-white/[0.045] backdrop-blur-md border-white/5 text-neutral-300 hover:border-white/10'
                           }`}
                         >
                           <div className="flex items-center gap-3">
                             <button
                               onClick={() => setActiveKeyIndex(idx)}
-                              className="text-left font-mono text-xs hover:text-pink-400 transition"
+                              className="text-left font-mono text-xs hover:text-neutral-400 transition"
                             >
                               {maskedKey}
                             </button>
 
                             {isActive && (
-                              <span className="px-2.5 py-0.5 rounded-full bg-pink-500/20 border border-pink-500/40 text-[10px] font-bold text-pink-400">
+                              <span className="px-2.5 py-0.5 rounded-full bg-neutral-500/20 border border-neutral-500/40 text-[10px] font-bold text-neutral-400">
                                 ACTIVE
                               </span>
                             )}
@@ -1845,9 +1861,9 @@ export const SettingsWindow: React.FC = () => {
                 <h3 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider">Engine Health Matrix</h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-4 rounded-2xl bg-black/30 border border-white/5 flex items-center justify-between">
+                  <div className="p-4 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-pink-500/10 text-pink-400 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-xl bg-neutral-500/10 text-neutral-400 flex items-center justify-center">
                         <Cpu className="w-4 h-4" />
                       </div>
                       <div>
@@ -1860,9 +1876,9 @@ export const SettingsWindow: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-black/30 border border-white/5 flex items-center justify-between">
+                  <div className="p-4 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-xl bg-neutral-500/10 text-neutral-400 flex items-center justify-center">
                         <Mic className="w-4 h-4" />
                       </div>
                       <div>
@@ -1875,9 +1891,9 @@ export const SettingsWindow: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-black/30 border border-white/5 flex items-center justify-between">
+                  <div className="p-4 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-xl bg-neutral-500/10 text-neutral-400 flex items-center justify-center">
                         <Volume2 className="w-4 h-4" />
                       </div>
                       <div>
@@ -1890,7 +1906,7 @@ export const SettingsWindow: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-black/30 border border-white/5 flex items-center justify-between">
+                  <div className="p-4 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center">
                         <Activity className="w-4 h-4" />
@@ -1906,9 +1922,9 @@ export const SettingsWindow: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between text-xs text-neutral-400">
+                <div className="p-4 rounded-2xl bg-black/[0.12] backdrop-blur-lg border border-white/5 flex items-center justify-between text-xs text-neutral-400">
                   <span>Python Runtime Environment:</span>
-                  <span className="font-mono text-pink-400">~/.pihu-os/venv/bin/python (3.10)</span>
+                  <span className="font-mono text-neutral-400">~/.pihu-os/venv/bin/python (3.10)</span>
                 </div>
               </div>
             )}
@@ -1927,7 +1943,7 @@ export const SettingsWindow: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-black/30 border border-white/5 flex items-center justify-between">
+                <div className="p-4 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 flex items-center justify-between">
                   <div>
                     <h4 className="text-xs font-semibold text-white">API Key Masking & Storage</h4>
                     <p className="text-[11px] text-neutral-500">Keys are encrypted in browser local storage</p>
@@ -1952,11 +1968,11 @@ export const SettingsWindow: React.FC = () => {
                   { keys: ['⌘', 'M'], action: 'Toggle YouTube Music Player' },
                   { keys: ['Esc'], action: 'Dismiss active voice overlay' },
                 ].map((sc, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-3.5 rounded-2xl bg-black/30 border border-white/5">
+                  <div key={idx} className="flex items-center justify-between p-3.5 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5">
                     <span className="text-xs text-neutral-300 font-medium">{sc.action}</span>
                     <div className="flex items-center gap-1.5">
                       {sc.keys.map((k, i) => (
-                        <kbd key={i} className="px-2.5 py-1 rounded-lg bg-white/10 border border-white/15 text-xs font-mono font-bold text-pink-300">
+                        <kbd key={i} className="px-2.5 py-1 rounded-lg bg-white/10 border border-white/15 text-xs font-mono font-bold text-neutral-300">
                           {k}
                         </kbd>
                       ))}
@@ -1980,7 +1996,7 @@ export const SettingsWindow: React.FC = () => {
                       placeholder="Search people by name, email, or phone..."
                       value={contactSearchQuery}
                       onChange={(e) => setContactSearchQuery(e.target.value)}
-                      className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-pink-500 transition font-medium"
+                      className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-500 transition font-medium"
                     />
                   </div>
 
@@ -1990,33 +2006,33 @@ export const SettingsWindow: React.FC = () => {
                       setContactForm({ name: '', nickname: '', email: '', phone: '', notes: '' });
                       setIsContactModalOpen(true);
                     }}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white text-xs font-semibold shadow-lg shadow-pink-500/20 transition hover:scale-105"
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10   hover: hover: text-white text-xs font-semibold shadow-lg shadow-neutral-500/20 transition hover:scale-105"
                   >
                     <Plus className="w-3.5 h-3.5" /> Add New Person
                   </button>
                 </div>
 
                 {/* AI Routing Info Banner */}
-                <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-transparent border border-purple-500/20 flex items-center justify-between">
+                <div className="p-4 rounded-2xl bg-white/10    border border-neutral-500/20 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-300">
+                    <div className="w-9 h-9 rounded-xl bg-neutral-500/20 border border-neutral-500/40 flex items-center justify-center text-neutral-300">
                       <Sparkles className="w-4 h-4" />
                     </div>
                     <div>
                       <h4 className="text-xs font-bold text-white">Autonomous Agent Dispatch</h4>
                       <p className="text-[11px] text-neutral-300 mt-0.5">
-                        Say <span className="text-pink-300 font-mono font-bold">"pihu send email to [Name]"</span> (Gmail) or <span className="text-emerald-300 font-mono font-bold">"pihu send message to [Name] on whatsapp"</span>.
+                        Say <span className="text-neutral-300 font-mono font-bold">"pihu send email to [Name]"</span> (Gmail) or <span className="text-emerald-300 font-mono font-bold">"pihu send message to [Name] on whatsapp"</span>.
                       </p>
                     </div>
                   </div>
-                  <span className="text-[10px] font-mono text-neutral-400 px-2.5 py-1 rounded-lg bg-black/40 border border-white/5">
+                  <span className="text-[10px] font-mono text-neutral-400 px-2.5 py-1 rounded-lg bg-black/[0.12] backdrop-blur-lg border border-white/5">
                     ~/.pihu/contacts.json
                   </span>
                 </div>
 
                 {/* Contacts List Grid */}
                 {contacts.length === 0 ? (
-                  <div className="p-12 text-center rounded-3xl bg-black/30 border border-white/5 space-y-3">
+                  <div className="p-12 text-center rounded-3xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-3">
                     <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-neutral-500 mx-auto">
                       <Users className="w-6 h-6" />
                     </div>
@@ -2030,7 +2046,7 @@ export const SettingsWindow: React.FC = () => {
                         setContactForm({ name: '', nickname: '', email: '', phone: '', notes: '' });
                         setIsContactModalOpen(true);
                       }}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-pink-500/20 hover:bg-pink-500/30 border border-pink-500/40 text-pink-300 text-xs font-semibold transition"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-neutral-500/20 hover:bg-neutral-500/30 border border-neutral-500/40 text-neutral-300 text-xs font-semibold transition"
                     >
                       <Plus className="w-3.5 h-3.5" /> Add Your First Contact
                     </button>
@@ -2050,20 +2066,20 @@ export const SettingsWindow: React.FC = () => {
                         return (
                           <div
                             key={c.id}
-                            className="p-4 rounded-2xl bg-black/30 border border-white/5 hover:border-pink-500/30 transition duration-200 flex flex-col justify-between space-y-3 group shadow-lg"
+                            className="p-4 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 hover:border-neutral-500/30 transition duration-200 flex flex-col justify-between space-y-3 group shadow-lg"
                           >
                             <div className="flex items-start justify-between">
                               <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-pink-500 to-purple-500 flex items-center justify-center text-xs font-bold text-white shadow-md">
+                                <div className="w-10 h-10 rounded-2xl bg-white/10   flex items-center justify-center text-xs font-bold text-white shadow-md">
                                   {initials}
                                 </div>
                                 <div>
                                   <div className="flex items-center gap-2">
-                                    <h4 className="text-xs font-bold text-white group-hover:text-pink-300 transition">
+                                    <h4 className="text-xs font-bold text-white group-hover:text-neutral-300 transition">
                                       {c.name}
                                     </h4>
                                     {c.nickname && (
-                                      <span className="px-2 py-0.5 rounded-md bg-purple-500/20 border border-purple-500/30 text-[9px] font-bold text-purple-300 font-mono">
+                                      <span className="px-2 py-0.5 rounded-md bg-neutral-500/20 border border-neutral-500/30 text-[9px] font-bold text-neutral-300 font-mono">
                                         {c.nickname}
                                       </span>
                                     )}
@@ -2107,7 +2123,7 @@ export const SettingsWindow: React.FC = () => {
                               {c.email && (
                                 <div className="flex items-center justify-between text-neutral-300">
                                   <div className="flex items-center gap-2">
-                                    <Mail className="w-3.5 h-3.5 text-pink-400 shrink-0" />
+                                    <Mail className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
                                     <span className="font-mono text-[11px] truncate max-w-[200px]">{c.email}</span>
                                   </div>
                                   <span className="text-[9px] text-neutral-500 font-semibold uppercase">Gmail</span>
@@ -2135,7 +2151,7 @@ export const SettingsWindow: React.FC = () => {
                     <div className="relative w-full max-w-md rounded-3xl bg-slate-950 border border-white/10 p-6 space-y-4 shadow-2xl text-white">
                       <div className="flex items-center justify-between border-b border-white/10 pb-3">
                         <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-xl bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-pink-400">
+                          <div className="w-8 h-8 rounded-xl bg-neutral-500/20 border border-neutral-500/40 flex items-center justify-center text-neutral-400">
                             <User className="w-4 h-4" />
                           </div>
                           <h3 className="text-sm font-bold text-white">
@@ -2178,7 +2194,7 @@ export const SettingsWindow: React.FC = () => {
                       >
                         <div>
                           <label className="block text-[11px] font-semibold text-neutral-300 mb-1">
-                            Full Name <span className="text-pink-400">*</span>
+                            Full Name <span className="text-neutral-400">*</span>
                           </label>
                           <input
                             type="text"
@@ -2186,7 +2202,7 @@ export const SettingsWindow: React.FC = () => {
                             placeholder="e.g. Anin, Rahul Sharma, Mayank"
                             value={contactForm.name}
                             onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
-                            className="w-full px-3.5 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-pink-500 transition"
+                            className="w-full px-3.5 py-2 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-500 transition"
                           />
                         </div>
 
@@ -2198,7 +2214,7 @@ export const SettingsWindow: React.FC = () => {
                               placeholder="e.g. Lead, Friend, Boss"
                               value={contactForm.nickname}
                               onChange={(e) => setContactForm({ ...contactForm, nickname: e.target.value })}
-                              className="w-full px-3.5 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-pink-500 transition"
+                              className="w-full px-3.5 py-2 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-500 transition"
                             />
                           </div>
 
@@ -2209,7 +2225,7 @@ export const SettingsWindow: React.FC = () => {
                               placeholder="e.g. 919876543210"
                               value={contactForm.phone}
                               onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
-                              className="w-full px-3.5 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-pink-500 transition font-mono"
+                              className="w-full px-3.5 py-2 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-500 transition font-mono"
                             />
                           </div>
                         </div>
@@ -2221,7 +2237,7 @@ export const SettingsWindow: React.FC = () => {
                             placeholder="e.g. anin@example.com"
                             value={contactForm.email}
                             onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
-                            className="w-full px-3.5 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-pink-500 transition font-mono"
+                            className="w-full px-3.5 py-2 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-500 transition font-mono"
                           />
                         </div>
 
@@ -2232,7 +2248,7 @@ export const SettingsWindow: React.FC = () => {
                             placeholder="e.g. Message regarding project proposals, send updates here"
                             value={contactForm.notes}
                             onChange={(e) => setContactForm({ ...contactForm, notes: e.target.value })}
-                            className="w-full px-3.5 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-pink-500 transition resize-none"
+                            className="w-full px-3.5 py-2 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-500 transition resize-none"
                           />
                         </div>
 
@@ -2246,7 +2262,7 @@ export const SettingsWindow: React.FC = () => {
                           </button>
                           <button
                             type="submit"
-                            className="px-5 py-2 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white text-xs font-semibold shadow-lg shadow-pink-500/20 transition"
+                            className="px-5 py-2 rounded-xl bg-white/10   hover: hover: text-white text-xs font-semibold shadow-lg shadow-neutral-500/20 transition"
                           >
                             {editingContactId ? 'Save Changes' : 'Add Person'}
                           </button>
@@ -2262,8 +2278,8 @@ export const SettingsWindow: React.FC = () => {
 
             {/* ══════ SECTION 11: ABOUT PIHU ══════ */}
             {activeSidebarCategory === 'about' && (
-              <div className="p-8 rounded-3xl bg-black/30 border border-white/5 space-y-4 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-pink-500 via-rose-500 to-purple-500 flex items-center justify-center text-white mx-auto shadow-2xl shadow-pink-500/30">
+              <div className="p-8 rounded-3xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-4 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-white/10    flex items-center justify-center text-white mx-auto shadow-2xl shadow-neutral-500/30">
                   <Sparkles className="w-8 h-8" />
                 </div>
                 <div>
@@ -2272,17 +2288,19 @@ export const SettingsWindow: React.FC = () => {
                     Created with ❤️ by <strong>Mayank Jha</strong>
                   </p>
                 </div>
-                <div className="p-4 rounded-2xl bg-black/40 border border-white/5 text-[11px] font-mono text-pink-300 max-w-md mx-auto">
+                <div className="p-4 rounded-2xl bg-black/[0.12] backdrop-blur-lg border border-white/5 text-[11px] font-mono text-neutral-300 max-w-md mx-auto">
                   Tauri v2 • React 19 • Python 3.10 • Rust Core • MCP Suite
                 </div>
               </div>
             )}
 
+            {activeSidebarCategory === 'spirits' && <SpiritsSettings />}
+
           </div>
 
         </div>
 
-      </div>
+      </GlassCard>
 
     </div>
   );

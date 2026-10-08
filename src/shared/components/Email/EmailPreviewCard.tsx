@@ -82,14 +82,14 @@ export const EmailPreviewCard: React.FC<EmailPreviewCardProps> = ({
   };
 
   return (
-    <div className={`p-4 sm:p-5 rounded-2xl bg-slate-900/95 border border-purple-500/30 shadow-2xl backdrop-blur-xl relative overflow-hidden transition-all text-white ${className}`}>
+    <div className={`p-4 sm:p-5 rounded-2xl bg-neutral-900/95 border border-neutral-500/30 shadow-2xl backdrop-blur-xl relative overflow-hidden transition-all text-white ${className}`}>
       {/* Background Accent Glow */}
-      <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-purple-600/15 via-cyan-500/10 to-transparent blur-2xl pointer-events-none" />
+      <div className="absolute top-0 right-0 w-64 h-64 bg-white/[0.06] backdrop-blur-xl    blur-2xl pointer-events-none" />
 
       {/* Header Bar */}
       <div className="flex items-center justify-between gap-3 mb-4 pb-3 border-b border-white/10">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-300 shadow-inner">
+          <div className="w-8 h-8 rounded-xl bg-neutral-500/20 border border-neutral-500/40 flex items-center justify-center text-neutral-300 shadow-inner">
             <Mail className="w-4 h-4" />
           </div>
           <div>
@@ -99,14 +99,14 @@ export const EmailPreviewCard: React.FC<EmailPreviewCardProps> = ({
                 Review & Edit
               </span>
             </h4>
-            <p className="text-[11px] text-slate-400">Review full email body below. You can edit before sending.</p>
+            <p className="text-[11px] text-neutral-400">Review full email body below. You can edit before sending.</p>
           </div>
         </div>
 
         <button
           onClick={handleCancel}
           disabled={isSending}
-          className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
+          className="w-7 h-7 rounded-lg flex items-center justify-center text-neutral-400 hover:text-neutral-400 hover:bg-neutral-500/10 transition cursor-pointer"
           title="Cancel Draft"
         >
           <XCircle className="w-4 h-4" />
@@ -114,9 +114,9 @@ export const EmailPreviewCard: React.FC<EmailPreviewCardProps> = ({
       </div>
 
       {error && (
-        <div className="mb-3 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div className="mb-3 p-3 rounded-xl bg-neutral-500/10 border border-neutral-500/30 text-neutral-300 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-400" />
+            <AlertCircle className="w-4 h-4 flex-shrink-0 text-neutral-400" />
             <span>
               {error.includes('401') || error.includes('credentials') || error.includes('token') || error.includes('OAuth')
                 ? 'Google Account is not linked or the session expired. Please connect in Settings.'
@@ -132,7 +132,7 @@ export const EmailPreviewCard: React.FC<EmailPreviewCardProps> = ({
                 const isOpen = useLayoutStore.getState().widgets['settings-window']?.isOpen;
                 if (!isOpen) useLayoutStore.getState().toggleWidget('settings-window');
               }}
-              className="px-2.5 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-500/40 text-[11px] font-medium transition cursor-pointer flex-shrink-0 self-start sm:self-auto"
+              className="px-2.5 py-1 rounded-lg bg-neutral-500/20 hover:bg-neutral-500/30 text-neutral-200 border border-neutral-500/40 text-[11px] font-medium transition cursor-pointer flex-shrink-0 self-start sm:self-auto"
             >
               Open Settings → Connections
             </button>
@@ -144,8 +144,8 @@ export const EmailPreviewCard: React.FC<EmailPreviewCardProps> = ({
       <div className="space-y-3">
         {/* Recipient Field */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3 bg-white/5 border border-white/10 rounded-xl px-3 py-2">
-          <span className="text-xs font-mono text-slate-400 flex items-center gap-1.5 w-16 flex-shrink-0">
-            <User className="w-3.5 h-3.5 text-purple-400" />
+          <span className="text-xs font-mono text-neutral-400 flex items-center gap-1.5 w-16 flex-shrink-0">
+            <User className="w-3.5 h-3.5 text-neutral-400" />
             <span>To:</span>
           </span>
           <input
@@ -154,17 +154,17 @@ export const EmailPreviewCard: React.FC<EmailPreviewCardProps> = ({
             onChange={(e) => handleFieldChange('toEmail', e.target.value)}
             placeholder="recipient@example.com"
             disabled={isSending}
-            className="flex-1 bg-transparent text-sm text-purple-200 placeholder-slate-500 focus:outline-none font-sans"
+            className="flex-1 bg-transparent text-sm text-neutral-200 placeholder-neutral-500 focus:outline-none font-sans"
           />
           {to && to !== toEmail && (
-            <span className="text-[11px] font-mono text-slate-400 truncate max-w-[150px]">({to})</span>
+            <span className="text-[11px] font-mono text-neutral-400 truncate max-w-[150px]">({to})</span>
           )}
         </div>
 
         {/* Subject Field */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3 bg-white/5 border border-white/10 rounded-xl px-3 py-2">
-          <span className="text-xs font-mono text-slate-400 flex items-center gap-1.5 w-16 flex-shrink-0">
-            <Edit3 className="w-3.5 h-3.5 text-cyan-400" />
+          <span className="text-xs font-mono text-neutral-400 flex items-center gap-1.5 w-16 flex-shrink-0">
+            <Edit3 className="w-3.5 h-3.5 text-neutral-400" />
             <span>Subject:</span>
           </span>
           <input
@@ -173,15 +173,15 @@ export const EmailPreviewCard: React.FC<EmailPreviewCardProps> = ({
             onChange={(e) => handleFieldChange('subject', e.target.value)}
             placeholder="Subject line..."
             disabled={isSending}
-            className="flex-1 bg-transparent text-sm font-medium text-white placeholder-slate-500 focus:outline-none"
+            className="flex-1 bg-transparent text-sm font-medium text-white placeholder-neutral-500 focus:outline-none"
           />
         </div>
 
         {/* Full Editable Body Field */}
-        <div className="flex flex-col bg-slate-950/70 border border-white/10 rounded-xl p-3 focus-within:border-purple-500/50 transition">
+        <div className="flex flex-col bg-black/15/70 border border-white/10 rounded-xl p-3 focus-within:border-neutral-500/50 transition">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-mono text-slate-400">Email Body:</span>
-            <span className="text-[10px] text-slate-500 font-mono">Editable</span>
+            <span className="text-xs font-mono text-neutral-400">Email Body:</span>
+            <span className="text-[10px] text-neutral-500 font-mono">Editable</span>
           </div>
           <textarea
             value={body}
@@ -189,14 +189,14 @@ export const EmailPreviewCard: React.FC<EmailPreviewCardProps> = ({
             placeholder="Write your email body here..."
             disabled={isSending}
             rows={5}
-            className="w-full bg-transparent text-sm text-slate-200 placeholder-slate-500 focus:outline-none resize-y min-h-[90px] max-h-[220px] font-sans leading-relaxed scrollbar-thin scrollbar-thumb-white/20"
+            className="w-full bg-transparent text-sm text-neutral-200 placeholder-neutral-500 focus:outline-none resize-y min-h-[90px] max-h-[220px] font-sans leading-relaxed scrollbar-thin scrollbar-thumb-white/20"
           />
         </div>
       </div>
 
       {/* Action Footer & Voice Hint */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 pt-3 border-t border-white/10">
-        <div className="text-[11px] text-slate-400 font-mono text-center sm:text-left">
+        <div className="text-[11px] text-neutral-400 font-mono text-center sm:text-left">
           Say <strong className="text-emerald-400">"Send it"</strong> or <strong className="text-emerald-400">"Bhej do"</strong> or click Send.
         </div>
 
@@ -204,16 +204,16 @@ export const EmailPreviewCard: React.FC<EmailPreviewCardProps> = ({
           <button
             onClick={handleCancel}
             disabled={isSending}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-medium border border-white/10 transition cursor-pointer"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-neutral-300 text-xs font-medium border border-white/10 transition cursor-pointer"
           >
-            <XCircle className="w-3.5 h-3.5 text-rose-400" />
+            <XCircle className="w-3.5 h-3.5 text-neutral-400" />
             <span>Cancel</span>
           </button>
 
           <button
             onClick={handleSend}
             disabled={isSending}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white text-xs font-semibold shadow-lg shadow-purple-950/50 transition cursor-pointer disabled:opacity-50"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-1.5 rounded-xl bg-white/[0.06] backdrop-blur-xl  via-indigo-600  hover: hover: text-white text-xs font-semibold shadow-lg shadow-neutral-950/50 transition cursor-pointer disabled:opacity-50"
           >
             {isSending ? (
               <>

@@ -6,7 +6,11 @@ mod stt;
 mod system_monitor;
 mod tts;
 mod automation;
+mod google_oauth;
 mod browser_mcp;
+mod vtop_credentials;
+mod spirits;
+use tauri::Manager;
 
 pub fn get_python_cmd() -> String {
     // 1. Check ~/.pihu-os/venv (installed app)
@@ -85,7 +89,10 @@ fn run_first_launch_setup() {
 }
 
 fn main() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    #[cfg(target_os = "macos")]
+    let builder = builder.plugin(tauri_nspanel::init());
+    builder
         .manage(browser_mcp::BrowserMcpState::default())
         .manage(wakeword::WakewordState {
             stdin: std::sync::Mutex::new(None),
@@ -95,6 +102,7 @@ fn main() {
         })
         .manage(system_monitor::SystemMonitorState::new())
         .invoke_handler(tauri::generate_handler![
+            spirits::sync_spirits,
             wakeword::trigger_listening,
             wakeword::speech_done,
             wakeword::resume_wakeword,
@@ -104,11 +112,19 @@ fn main() {
             system_monitor::write_contacts,
             automation::macos_app_action,
             automation::macos_ui_action,
+            google_oauth::google_oauth_start,
             browser_mcp::browser_mcp_action,
+            vtop_credentials::vtop_credentials,
             automation::macos_frontmost_app,
             automation::macos_browser_navigate,
             automation::macos_list_apps
         ])
+        .on_window_event(|window, event| {
+            if window.label() == "main" && matches!(event, tauri::WindowEvent::CloseRequested { .. }) {
+                spirits::release_all(window.app_handle());
+                window.app_handle().exit(0);
+            }
+        })
         .setup(|app| {
             // Auto-setup on first launch (installs Python venv, models, credentials)
             run_first_launch_setup();

@@ -23,6 +23,7 @@ export class STTManager {
   public onTranscription: ((text: string) => void) | null = null;
   public onError: ((error: string) => void) | null = null;
   public onSpeechEnded: (() => void) | null = null;  // fired when browser VAD detects end-of-speech
+  public onIdleTimeout: (() => void) | null = null;
   public onSpeechStarted: (() => void) | null = null; // fired as soon as user starts speaking
 
   constructor() {
@@ -117,6 +118,7 @@ export class STTManager {
 
     // Ensure WebSocket is live before opening mic
     await this.ensureConnected();
+    this.ws?.send(JSON.stringify({ type: 'reset' }));
 
     try {
       console.log('[SPEECH ENGINE - STT] 🎤 Requesting microphone access with AEC...');
@@ -190,12 +192,16 @@ export class STTManager {
             const idleDuration = now - this.sessionStart;
             if (idleDuration >= this.idleTimeoutMs) {
               console.log('[SPEECH ENGINE - STT] ⏳ Idle timeout — no speech detected, aborting session');
-              this.triggerVADEnd();
+              this.vadTriggered = true;
+              this.stopListening();
+              this.ws?.send(JSON.stringify({ type: 'reset' }));
+              this.onIdleTimeout?.();
             }
           }
         }
       };
 
+      this.sessionStart = Date.now();
       this.isRecording = true;
       console.log('[SPEECH ENGINE - STT] 🎙️ Streaming audio + running browser VAD');
     } catch (err) {

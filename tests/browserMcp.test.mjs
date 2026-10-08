@@ -39,6 +39,11 @@ test('real Playwright MCP: navigate, snapshot, click, type, tabs, video order an
     await perform(client,{action:'click',label:'interactive counter by doing'});
     assert.equal(await evaluate(client,()=>document.querySelector('#counter').textContent),'Interactive Count: 3');
 
+    const repeated=await perform(client,{action:'click',label:'interactive count button',count:10});
+    assert.equal(repeated.clicks,10);
+    assert.equal(await evaluate(client,()=>document.querySelector('#counter').textContent),'Interactive Count: 13');
+    await assert.rejects(()=>perform(client,{action:'click',label:'interactive count',count:0}),/Click count/);
+
     const videos=await perform(client,{action:'videos'});
     assert.equal(videos.items.length,3);
     assert.equal(videos.items[2].title,'Third video');

@@ -40,6 +40,7 @@ export interface SettingsState {
   blurIntensity: number;
   dockPosition: 'bottom' | 'left' | 'right';
   dockMagnification: boolean;
+  dockVisible: boolean;
   soundEffects: boolean;
   focusModeActive: boolean;
   ttsSpeed: number;
@@ -63,6 +64,7 @@ export interface SettingsState {
   setBlurIntensity: (val: number) => void;
   setDockPosition: (pos: 'bottom' | 'left' | 'right') => void;
   setDockMagnification: (enabled: boolean) => void;
+  setDockVisible: (visible: boolean) => void;
   setSoundEffects: (enabled: boolean) => void;
   setFocusMode: (enabled: boolean) => void;
   setTtsSpeed: (speed: number) => void;
@@ -92,16 +94,18 @@ export const useSettingsStore = create<SettingsState>()(
       blurIntensity: 24,
       dockPosition: 'bottom',
       dockMagnification: true,
+      dockVisible: true,
       soundEffects: true,
       focusModeActive: false,
       ttsSpeed: 1.0,
-      activeSidebarCategory: 'ui-components',
+      activeSidebarCategory: 'general',
       contacts: [],
 
       setThemeAccent: (accent) => set({ themeAccent: accent }),
       setBlurIntensity: (blurIntensity) => set({ blurIntensity }),
       setDockPosition: (dockPosition) => set({ dockPosition }),
       setDockMagnification: (dockMagnification) => set({ dockMagnification }),
+      setDockVisible: (dockVisible) => set({ dockVisible }),
       setSoundEffects: (soundEffects) => set({ soundEffects }),
       setFocusMode: (focusModeActive) => set({ focusModeActive }),
       setTtsSpeed: (ttsSpeed) => set({ ttsSpeed }),

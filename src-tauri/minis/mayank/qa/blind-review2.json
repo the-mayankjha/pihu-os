@@ -1,0 +1,88 @@
+{
+  "pairs": [
+    {
+      "pair": "horizontal-1",
+      "A": "screen-right",
+      "B": "screen-left",
+      "reason": "A nose and face plane project right with left ear visible; B nose projects left with right ear visible."
+    },
+    {
+      "pair": "horizontal-2",
+      "A": "screen-left",
+      "B": "screen-right",
+      "reason": "A leftward nose and exposed right ear; B rightward nose and exposed left ear."
+    },
+    {
+      "pair": "horizontal-3",
+      "A": "screen-right",
+      "B": "screen-left",
+      "reason": "A face outline and nose lead right; B face outline and nose lead left."
+    },
+    {
+      "pair": "horizontal-4",
+      "A": "screen-left",
+      "B": "screen-right",
+      "reason": "A left-facing profile with right ear visible; B right-facing cheek and nose with left ear visible."
+    },
+    {
+      "pair": "horizontal-5",
+      "A": "screen-right",
+      "B": "screen-left",
+      "reason": "A nose sits toward right edge of face and left ear is exposed; B lowered face projects left and right ear is exposed."
+    },
+    {
+      "pair": "horizontal-6",
+      "A": "screen-right",
+      "B": "screen-left",
+      "reason": "A lowered face and nose turn right with visible left ear; B lowered face turns left with prominent right ear."
+    },
+    {
+      "pair": "horizontal-7",
+      "A": "screen-right",
+      "B": "screen-left",
+      "reason": "A lowered head has nose and face shifted right relative to scalp and exposed left ear; B has a subtler leftward face shift with right ear exposed."
+    },
+    {
+      "pair": "vertical-1",
+      "A": "up",
+      "B": "down",
+      "reason": "A raised face exposes broad lower face and chin with eyes high; B crown dominates and face is tucked below fringe."
+    },
+    {
+      "pair": "vertical-2",
+      "A": "down",
+      "B": "up",
+      "reason": "A head bows with scalp prominent and chin tucked; B head lifts with nose and pupils raised and chin exposed."
+    },
+    {
+      "pair": "vertical-3",
+      "A": "down",
+      "B": "up",
+      "reason": "A face angles below crown with lowered eye line; B raised face and pupils reveal more chin and underside."
+    },
+    {
+      "pair": "vertical-4",
+      "A": "down",
+      "B": "up",
+      "reason": "A mild downward tilt places eyes under larger crown and tucks chin; B lifts nose, eyes and chin toward upper right."
+    },
+    {
+      "pair": "vertical-5",
+      "A": "down",
+      "B": "up",
+      "reason": "A bowed head has face compressed beneath fringe; B raised left-facing nose and visible chin indicate upward tilt."
+    },
+    {
+      "pair": "vertical-6",
+      "A": "up",
+      "B": "down",
+      "reason": "A nose and pupils point upper left with exposed chin; B nose and eye line angle below the large crown with tucked chin."
+    },
+    {
+      "pair": "vertical-7",
+      "A": "down",
+      "B": "up",
+      "reason": "A bowed left-facing head has lowered nose and face under crown; B lifts its left-facing nose and pupils and exposes chin."
+    }
+  ]
+}

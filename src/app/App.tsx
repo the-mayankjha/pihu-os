@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { SpiritsHost } from '../features/spirits/Spirits';
 import { ClockWidget } from '../widgets/clock/ClockWidget';
 import { OrbWidget } from '../widgets/orb/OrbWidget';
 import { MusicWidget } from '../widgets/music/MusicWidget';
@@ -124,6 +125,7 @@ export default function App() {
       <WidgetDrawer />
       <VoiceOverlay />
       <CommandPalette />
+      <SpiritsHost />
     </div>
   );
 }

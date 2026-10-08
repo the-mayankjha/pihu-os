@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { VoiceManager } from './VoiceManager';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { useVoiceStore } from '../../stores/voiceStore';
 import { useOrbStore } from '../orb/OrbStore';
 import { OrbState } from '../../shared/components/Orb/states';
@@ -15,22 +16,36 @@ import { EmailPreviewCard } from '../../shared/components/Email/EmailPreviewCard
 import { WhatsAppConfirmationCard } from '../../shared/components/WhatsApp/WhatsAppConfirmationCard';
 
 export const VoiceOverlay: React.FC = () => {
-  const { 
-    isActive, 
-    isListening, 
-    transcription, 
-    response, 
-    processingStatus, 
-    activeProject, 
-    pendingProjectAction, 
-    pendingEmailAction, 
+  const {
+    isActive,
+    isListening,
+    transcription,
+    response,
+    processingStatus,
+    activeProject,
+    pendingProjectAction,
+    pendingEmailAction,
     pendingWhatsAppAction,
-    setPendingProjectAction 
+    setPendingProjectAction
   } = useVoiceStore();
   const orbState = useOrbStore(state => state.currentState);
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedFileIndex, setSelectedFileIndex] = useState(0);
   const [isApplying, setIsApplying] = useState(false);
+  const dragControls = useDragControls();
+  const wasDragged = useRef(false);
+
+  useEffect(() => {
+    if (!isActive) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.repeat) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      VoiceManager.getInstance().handleEscape();
+    };
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  }, [isActive]);
 
   // Auto-expand when code blocks, staged project actions, staged emails, or WhatsApp confirmations are present
   useEffect(() => {
@@ -46,17 +61,27 @@ export const VoiceOverlay: React.FC = () => {
     }
   }, [isListening]);
 
-  const getThinkingOrbState = (): 'idle' | 'listening' | 'thinking' | 'speaking' => {
+  const getThinkingOrbState = (): 'idle' | 'listening' | 'thinking' | 'solving' | 'searching' | 'speaking' => {
     if (isListening) return 'listening';
-    if (orbState === OrbState.THINKING) return 'thinking';
     if (orbState === OrbState.SPEAKING) return 'speaking';
+    if (orbState === OrbState.THINKING) {
+      return /solv|analys|analyz|compar|plan|formulat/i.test(processingStatus || '') ? 'solving' : 'thinking';
+    }
+    if (orbState === OrbState.EXECUTING) {
+      return /search|check|find|read/i.test(processingStatus || '') ? 'searching' : 'solving';
+    }
     return 'idle';
   };
 
+  const orbLabel = {
+    idle: 'PIHU Ready', listening: 'PIHU Listening', thinking: 'Thinking',
+    solving: 'Solving', searching: 'Searching', speaking: 'PIHU Speaking',
+  }[getThinkingOrbState()];
+
   const getDisplayText = () => {
-    if (isListening) return transcription ? `"${transcription}"` : 'Listening...';
+    if (isListening) return transcription ? `"${transcription}"` : 'PIHU Listening';
     if (orbState === OrbState.EXECUTING) return processingStatus || 'Executing...';
-    if (orbState === OrbState.THINKING) return processingStatus || 'Thinking & formulating changes...';
+    if (orbState === OrbState.THINKING) return processingStatus || 'Thinking...';
     if (pendingEmailAction) return `Email Preview: ${pendingEmailAction.subject || 'Draft ready'}`;
     if (pendingProjectAction) return `Awaiting Confirmation: ${pendingProjectAction.title}`;
     if (orbState === OrbState.SPEAKING) return response ? response.slice(0, 70) + (response.length > 70 ? '...' : '') : 'Speaking...';
@@ -91,51 +116,62 @@ export const VoiceOverlay: React.FC = () => {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -40, scale: 0.95 }}
           transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-          className="fixed top-5 left-1/2 -translate-x-1/2 z-50 px-4 flex flex-col items-center pointer-events-auto"
+          className="fixed top-5 inset-x-0 z-50 px-4 flex flex-col items-center pointer-events-none"
         >
           {/* Main Dynamic Island Capsule */}
-          <motion.div 
-            layout 
+          <motion.div
+            layout
+            drag
+            dragControls={dragControls}
+            dragListener={false}
+            dragMomentum={false}
+            onDragStart={() => { wasDragged.current = true; }}
+            data-testid="voice-overlay"
+            style={{ backdropFilter: 'blur(24px) saturate(115%)', WebkitBackdropFilter: 'blur(24px) saturate(115%)' }}
             transition={{ duration: 0.3, type: "spring", bounce: 0.15 }}
-            className={`bg-slate-950/90 backdrop-blur-2xl border border-white/15 shadow-[0_12px_40px_rgba(0,0,0,0.6)] text-white relative overflow-hidden ${
-              isExpanded ? 'w-[760px] max-w-[94vw] rounded-3xl p-5' : 'w-auto min-w-[320px] max-w-[560px] rounded-full px-4 py-2.5'
+            className={`bg-white/[0.065] backdrop-blur-[24px] border border-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_12px_40px_rgba(0,0,0,0.25)] text-white relative overflow-hidden pointer-events-auto ${
+              isExpanded ? 'w-[760px] max-w-[94vw] rounded-3xl p-5' : 'w-auto min-w-[320px] max-w-[640px] rounded-full px-4 py-2.5'
             }`}
           >
-            {/* Ambient Multi-Color Glow */}
-            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-purple-500/10 to-pink-500/10 opacity-80 blur-xl pointer-events-none" />
-
             {/* Dynamic Island Header Bar */}
-            <div 
-              className="relative flex items-center justify-between gap-3 cursor-pointer select-none"
+            <div
+              className="relative flex items-center justify-between gap-3 cursor-grab active:cursor-grabbing select-none"
+              style={{ touchAction: 'none' }}
+              data-testid="voice-overlay-handle"
+              onPointerDown={(event) => {
+                wasDragged.current = false;
+                dragControls.start(event);
+              }}
               onClick={() => {
+                if (wasDragged.current) return;
                 if (response || processingStatus || pendingProjectAction || (transcription && transcription.length > 25)) {
                   setIsExpanded(!isExpanded);
                 }
               }}
             >
               {/* Thinking Orb Indicator Icon */}
-              <div className="flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-full bg-white/5 border border-white/10 shadow-inner">
-                <ThinkingOrb state={getThinkingOrbState()} size={24} />
+              <div className="flex-shrink-0 flex items-center justify-center w-12 h-12">
+                <ThinkingOrb state={getThinkingOrbState()} size={48} label={orbLabel} />
               </div>
 
               {/* Status Text / Transcription */}
               <div className="flex-1 min-w-0 flex items-center gap-2">
-                <p className="text-white/90 text-sm font-medium truncate">
+                <p role="status" className="text-white/90 text-sm font-medium truncate">
                   {getDisplayText()}
                 </p>
                 {activeProject && !isExpanded && !pendingProjectAction && (
-                  <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-mono text-purple-300 bg-purple-500/15 border border-purple-500/30 px-2.5 py-0.5 rounded-full flex-shrink-0">
-                    <Folder className="w-3 h-3 text-purple-300" />
+                  <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-mono text-neutral-300 bg-neutral-500/15 border border-neutral-500/30 px-2.5 py-0.5 rounded-full flex-shrink-0">
+                    <Folder className="w-3 h-3 text-neutral-300" />
                     <span>{activeProject.name}</span>
                   </span>
                 )}
                 {pendingProjectAction && !isExpanded && (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-mono text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full flex-shrink-0 animate-pulse">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-mono text-neutral-300 bg-neutral-500/15 border border-neutral-500/30 px-2 py-0.5 rounded-full flex-shrink-0 animate-pulse">
                     <span>Needs Confirmation</span>
                   </span>
                 )}
                 {pendingEmailAction && !isExpanded && (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-mono text-cyan-300 bg-cyan-500/15 border border-cyan-500/30 px-2 py-0.5 rounded-full flex-shrink-0 animate-pulse">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-mono text-neutral-300 bg-neutral-500/15 border border-neutral-500/30 px-2 py-0.5 rounded-full flex-shrink-0 animate-pulse">
                     <span>Email Draft</span>
                   </span>
                 )}
@@ -161,20 +197,20 @@ export const VoiceOverlay: React.FC = () => {
                 >
                   {/* Full User Request */}
                   {transcription && (
-                    <div className="mb-3 text-xs text-slate-400 font-mono flex items-center gap-2">
-                      <Terminal className="w-3.5 h-3.5 text-purple-400" />
-                      <span className="text-purple-400">User Prompt:</span> "{transcription}"
+                    <div className="mb-3 text-xs text-neutral-400 font-mono flex items-center gap-2">
+                      <Terminal className="w-3.5 h-3.5 text-neutral-400" />
+                      <span className="text-neutral-400">User Prompt:</span> "{transcription}"
                     </div>
                   )}
 
                   {/* Active Project Badge in Expanded Mode */}
                   {activeProject && (
-                    <div className="mb-3 text-xs font-mono text-purple-300 bg-purple-500/10 border border-purple-500/20 px-3 py-1.5 rounded-xl flex items-center justify-between">
+                    <div className="mb-3 text-xs font-mono text-neutral-300 bg-neutral-500/10 border border-neutral-500/20 px-3 py-1.5 rounded-xl flex items-center justify-between">
                       <span className="flex items-center gap-1.5">
-                        <Folder className="w-3.5 h-3.5 text-purple-300" />
+                        <Folder className="w-3.5 h-3.5 text-neutral-300" />
                         <span>Active Project: <strong>{activeProject.name}</strong></span>
                       </span>
-                      <span className="text-slate-400 text-[11px] truncate max-w-[280px]">{activeProject.dir}</span>
+                      <span className="text-neutral-400 text-[11px] truncate max-w-[280px]">{activeProject.dir}</span>
                     </div>
                   )}
 
@@ -190,13 +226,13 @@ export const VoiceOverlay: React.FC = () => {
 
                   {/* ─── PENDING PROJECT / CODE MODIFICATION CONFIRMATION CARD ─── */}
                   {pendingProjectAction && (
-                    <div className="mb-4 p-4 rounded-2xl bg-slate-900/90 border border-purple-500/30 shadow-2xl">
+                    <div className="mb-4 p-4 rounded-2xl bg-white/[0.045] backdrop-blur-xl border border-neutral-500/30 shadow-2xl">
                       <div className="flex items-center justify-between gap-3 mb-3">
-                        <div className="flex items-center gap-2 text-purple-300 font-medium text-sm">
-                          <Sparkles className="w-4 h-4 text-purple-400" />
+                        <div className="flex items-center gap-2 text-neutral-300 font-medium text-sm">
+                          <Sparkles className="w-4 h-4 text-neutral-400" />
                           <span>{pendingProjectAction.title}</span>
                         </div>
-                        <span className="text-xs font-mono text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-md">
+                        <span className="text-xs font-mono text-neutral-300 bg-neutral-500/15 border border-neutral-500/30 px-2 py-0.5 rounded-md">
                           {pendingProjectAction.files.length} file(s) staged
                         </span>
                       </div>
@@ -210,11 +246,11 @@ export const VoiceOverlay: React.FC = () => {
                               onClick={() => setSelectedFileIndex(idx)}
                               className={`flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
                                 selectedFileIndex === idx
-                                  ? 'bg-purple-600/30 border-purple-500/60 text-purple-200'
-                                  : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
+                                  ? 'bg-neutral-600/30 border-neutral-500/60 text-neutral-200'
+                                  : 'bg-white/5 border-white/10 text-neutral-400 hover:text-white'
                               }`}
                             >
-                              <FileCode className="w-3 h-3 text-purple-400" />
+                              <FileCode className="w-3 h-3 text-neutral-400" />
                               <span className="truncate max-w-[150px]">{file.path.split('/').pop()}</span>
                             </button>
                           ))}
@@ -233,7 +269,7 @@ export const VoiceOverlay: React.FC = () => {
 
                       {/* Action Confirmation Buttons */}
                       <div className="flex items-center justify-between gap-3 mt-4 pt-3 border-t border-white/10">
-                        <div className="text-[11px] text-slate-400 font-mono">
+                        <div className="text-[11px] text-neutral-400 font-mono">
                           Say <strong className="text-emerald-400">"Yes / Apply"</strong> or click to confirm.
                         </div>
 
@@ -241,16 +277,16 @@ export const VoiceOverlay: React.FC = () => {
                           <button
                             onClick={handleCancelChanges}
                             disabled={isApplying}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-medium border border-white/10 transition cursor-pointer"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-neutral-300 text-xs font-medium border border-white/10 transition cursor-pointer"
                           >
-                            <XCircle className="w-3.5 h-3.5 text-rose-400" />
+                            <XCircle className="w-3.5 h-3.5 text-neutral-400" />
                             <span>Cancel</span>
                           </button>
 
                           <button
                             onClick={handleApplyChanges}
                             disabled={isApplying}
-                            className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-semibold shadow-lg shadow-emerald-950 transition cursor-pointer"
+                            className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-semibold shadow-lg shadow-black/20 transition cursor-pointer"
                           >
                             {isApplying ? (
                               <ThinkingOrb state="thinking" size={14} />
@@ -266,7 +302,7 @@ export const VoiceOverlay: React.FC = () => {
 
                   {/* Processing Status Banner when details requested */}
                   {processingStatus && !response && (
-                    <div className="py-2.5 px-4 bg-slate-900/60 border border-purple-500/20 rounded-2xl text-xs text-purple-200 flex items-center gap-3">
+                    <div className="py-2.5 px-4 bg-white/[0.045] backdrop-blur-xl border border-neutral-500/20 rounded-2xl text-xs text-neutral-200 flex items-center gap-3">
                       <ThinkingOrb state={orbState === OrbState.THINKING ? "thinking" : "idle"} size={20} />
                       <span>{processingStatus}</span>
                     </div>
@@ -280,8 +316,8 @@ export const VoiceOverlay: React.FC = () => {
                         rehypePlugins={[rehypeKatex]}
                         components={{
                           p: ({node, ...props}) => <p className="m-0 mb-2" {...props} />,
-                          ul: ({node, ...props}) => <ul className="list-disc pl-5 space-y-1 my-2 text-slate-200" {...props} />,
-                          ol: ({node, ...props}) => <ol className="list-decimal pl-5 space-y-1 my-2 text-slate-200" {...props} />,
+                          ul: ({node, ...props}) => <ul className="list-disc pl-5 space-y-1 my-2 text-neutral-200" {...props} />,
+                          ol: ({node, ...props}) => <ol className="list-decimal pl-5 space-y-1 my-2 text-neutral-200" {...props} />,
                           li: ({node, ...props}) => <li className="pl-0.5" {...props} />,
                           strong: ({node, ...props}) => <strong className="font-semibold text-white" {...props} />,
                           h1: ({node, ...props}) => <h1 className="text-lg font-bold mt-3 mb-1 text-white" {...props} />,
@@ -300,7 +336,7 @@ export const VoiceOverlay: React.FC = () => {
                             }
 
                             return (
-                              <code className="bg-white/10 rounded px-1.5 py-0.5 font-mono text-xs text-purple-300" {...props}>
+                              <code className="bg-white/10 rounded px-1.5 py-0.5 font-mono text-xs text-neutral-300" {...props}>
                                 {children}
                               </code>
                             );

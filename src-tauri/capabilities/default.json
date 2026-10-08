@@ -9,6 +9,8 @@
   "permissions": [
     "core:event:default",
     "core:window:default",
+    "core:window:allow-set-position",
+    "core:window:allow-cursor-position",
     "core:window:allow-create",
     "core:webview:allow-create-webview-window"
   ]

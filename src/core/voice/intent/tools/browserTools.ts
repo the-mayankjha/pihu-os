@@ -50,6 +50,7 @@ export const browserTools: ActionTool[] = [{
     parameters: { type: 'OBJECT', properties: {
       action: { type: 'STRING', enum: ['search', 'search_play', 'focus_search', 'open_video', 'play', 'pause', 'mute', 'unmute', 'volume', 'seek', 'fullscreen', 'exit_fullscreen', 'reload', 'back', 'forward', 'state', 'snapshot', 'navigate', 'videos', 'tabs', 'click', 'type', 'scroll'] },
       app: { type: 'STRING', description: 'Omit for Pihu’s Playwright Chrome session. Safari explicitly uses native macOS controls.' },
+      count: { type: 'INTEGER', description: 'Click repetitions, 1 to 30.' },
       url: { type: 'STRING' }, ref: { type: 'STRING', description: 'Fresh snapshot element ref for MCP click/type.' }, label: { type: 'STRING' }, text: { type: 'STRING' }, submit: { type: 'BOOLEAN' }, direction: { type: 'STRING', enum: ['up','down','left','right'] }, tab_action: { type: 'STRING', enum: ['list','new','close','select'] }, query: { type: 'STRING' }, site: { type: 'STRING', enum: ['youtube', 'google', 'current'] },
       index: { type: 'INTEGER', description: 'One-based visible video result index.' },
       value: { type: 'NUMBER', description: 'Volume percent 0–100, or seek offset in seconds; negative to rewind.' },

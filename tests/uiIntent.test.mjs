@@ -20,3 +20,8 @@ test('on browser qualifier does not become part of label', () => {
   assert.deepEqual(parseUIIntent('Click YouTube on Safari.'), { action: 'click', label: 'YouTube', app: 'Safari' });
   assert.deepEqual(parseUIIntent('click on YouTube'), { action: 'click', label: 'YouTube' });
 });
+
+test('repeated clicks retain label and exact count', () => {
+  assert.deepEqual(parseUIIntent('click interactive count button 10 times'), {action:'click',label:'interactive count button',count:10});
+  assert.equal(parseUIIntent('click on the counter ten times in Chrome').count,10);
+});

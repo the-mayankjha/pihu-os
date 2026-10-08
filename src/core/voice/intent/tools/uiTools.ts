@@ -18,7 +18,16 @@ export async function controlUI(args: Record<string, unknown>): Promise<ToolResu
       const data = await invoke('browser_mcp_action', { payload: { ...payload, action } });
       return { success: true, data };
     }
-    const data = await invoke('macos_ui_action', { payload });
+    const count = payload.count ?? 1;
+    if (payload.action === 'click' && (!Number.isInteger(count) || Number(count) < 1 || Number(count) > 30))
+      return { success: false, error: 'Click count must be from 1 to 30.' };
+    let data: any;
+    let completed = 0;
+    try {
+      for (; completed < (payload.action === 'click' ? Number(count) : 1); completed++)
+        data = await invoke('macos_ui_action', { payload: { ...payload, count: 1 } });
+    } catch (error) { return { success: false, error: `Stopped after ${completed} clicks: ${String(error)}` }; }
+    if (Number(count) > 1) data = { ...data, message: `Clicked ${payload.label || 'selected element'} ${completed} times.`, clicks: completed };
     rememberTarget(payload.app as string);
     return { success: true, data };
   } catch (error) { return { success: false, error: String(error) }; }
@@ -33,6 +42,7 @@ export const uiTools: ActionTool[] = [{
       direction: { type: 'STRING', enum: ['up', 'down', 'left', 'right'] },
       amount: { type: 'INTEGER', description: 'Scroll lines, 1 to 20; default 5.' },
       label: { type: 'STRING', description: 'Exact visible accessible label, or scroll area label.' },
+      count: { type: 'INTEGER', description: 'Number of consecutive clicks, 1 to 30. Stop if a click fails.' },
       index: { type: 'INTEGER', description: 'One-based index; with label, occurrence among exact matches.' },
       kind: { type: 'STRING', enum: ['control', 'result', 'link', 'button', 'item', 'video'] },
     }, required: ['action'] },
