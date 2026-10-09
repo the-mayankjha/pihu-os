@@ -10,6 +10,9 @@ export class STTManager {
   private processor: ScriptProcessorNode | null = null;
   private isRecording: boolean = false;
   private isConnecting: boolean = false;
+  private captureWatchdog: ReturnType<typeof setInterval> | null = null;
+  private lastAudioFrame = 0;
+  private sessionGeneration = 0;
 
   // Browser-side VAD state
   private speechDetected: boolean = false;
@@ -37,13 +40,15 @@ export class STTManager {
   public async ensureConnected(): Promise<void> {
     if (this.ws?.readyState === WebSocket.OPEN) return;
     if (this.isConnecting) {
-      return new Promise((resolve) => {
+      return new Promise<void>((resolve) => {
         const id = setInterval(() => {
           if (this.ws?.readyState === WebSocket.OPEN || !this.isConnecting) {
             clearInterval(id);
             resolve();
           }
         }, 50);
+      }).then(() => {
+        if (this.ws?.readyState !== WebSocket.OPEN) throw new Error('STT server is unavailable');
       });
     }
     return this.connect();
@@ -59,8 +64,16 @@ export class STTManager {
         reject(e);
         return;
       }
+      const connectionTimeout = setTimeout(() => {
+        if (this.isConnecting) {
+          this.isConnecting = false;
+          this.ws?.close();
+          reject(new Error('STT connection timed out'));
+        }
+      }, 10000);
 
       this.ws.onopen = () => {
+        clearTimeout(connectionTimeout);
         this.isConnecting = false;
         console.log('[SPEECH ENGINE - STT] 🟢 Connected to STT WebSocket server');
         resolve();
@@ -82,6 +95,7 @@ export class STTManager {
       };
 
       this.ws.onerror = (error) => {
+        clearTimeout(connectionTimeout);
         this.isConnecting = false;
         console.error('[SPEECH ENGINE - STT] ❌ WebSocket error:', error);
         if (this.onError) this.onError('WebSocket connection error');
@@ -89,6 +103,8 @@ export class STTManager {
       };
 
       this.ws.onclose = () => {
+        clearTimeout(connectionTimeout);
+        reject(new Error('STT connection closed'));
         this.isConnecting = false;
         console.log('[SPEECH ENGINE - STT] 🔴 WebSocket closed. Will reconnect on next session.');
         // If we were recording when the socket dropped, notify VoiceManager
@@ -115,25 +131,39 @@ export class STTManager {
     this.silenceStart = 0;
     this.sessionStart = Date.now();
     this.vadTriggered = false;
+    const generation = ++this.sessionGeneration;
 
     // Ensure WebSocket is live before opening mic
     await this.ensureConnected();
     this.ws?.send(JSON.stringify({ type: 'reset' }));
 
     try {
+      // WKWebView can create a suspended context when a wake-word event starts
+      // capture outside a click handler. Resume it explicitly before streaming.
+      const context = new (window.AudioContext || (window as any).webkitAudioContext)();
+      this.audioContext = context;
       console.log('[SPEECH ENGINE - STT] 🎤 Requesting microphone access with AEC...');
-      this.mediaStream = await navigator.mediaDevices.getUserMedia({
+      const microphone = navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true
         }
       });
+      // Permission requests may remain pending; late grants must not leak a mic.
+      microphone.then(stream => {
+        if (generation !== this.sessionGeneration) stream.getTracks().forEach(track => track.stop());
+      }).catch(() => {});
+      const stream = await Promise.race([
+        microphone,
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Microphone permission timed out')), 15000)),
+      ]);
+      if (generation !== this.sessionGeneration) return;
+      this.mediaStream = stream;
       console.log('[SPEECH ENGINE - STT] ✅ Microphone access granted (AEC active)!');
 
       // Don't force 16kHz — most devices can't honour it and produce garbage.
       // We resample in the processing callback instead.
-      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       const nativeSampleRate = this.audioContext.sampleRate;
 
       const source = this.audioContext.createMediaStreamSource(this.mediaStream);
@@ -141,10 +171,18 @@ export class STTManager {
 
       source.connect(this.processor);
       this.processor.connect(this.audioContext.destination);
+      // Requesting the mic first also unlocks audio in WebKit configurations
+      // that require active capture before a non-gesture resume can succeed.
+      await Promise.race([
+        context.resume(),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Microphone audio context did not start')), 5000)),
+      ]);
+      if (generation !== this.sessionGeneration) return;
 
       this.processor.onaudioprocess = (e) => {
         if (!this.isRecording || this.ws?.readyState !== WebSocket.OPEN) return;
         if (this.vadTriggered) return; // session already ending
+        this.lastAudioFrame = Date.now();
 
         const inputData = e.inputBuffer.getChannelData(0);
 
@@ -202,11 +240,31 @@ export class STTManager {
       };
 
       this.sessionStart = Date.now();
+      this.lastAudioFrame = this.sessionStart;
       this.isRecording = true;
+      // Use wall time, independently of ScriptProcessor callbacks. A stopped
+      // WebKit capture graph must never leave the voice UI stuck listening.
+      this.captureWatchdog = setInterval(() => {
+        if (!this.isRecording || this.vadTriggered) return;
+        const now = Date.now();
+        if (now - this.lastAudioFrame > 5000) {
+          this.stopListening();
+          this.onError?.('Microphone audio stopped. Check microphone permission and try again.');
+        } else if (!this.speechDetected && now - this.sessionStart >= this.idleTimeoutMs) {
+          this.vadTriggered = true;
+          this.stopListening();
+          this.ws?.send(JSON.stringify({ type: 'reset' }));
+          this.onIdleTimeout?.();
+        } else if (this.speechDetected && (now - this.sessionStart >= 60000 || (this.silenceStart > 0 && now - this.silenceStart >= SILENCE_AFTER_SPEECH_MS))) {
+          this.triggerVADEnd();
+        }
+      }, 250);
       console.log('[SPEECH ENGINE - STT] 🎙️ Streaming audio + running browser VAD');
     } catch (err) {
+      if (generation !== this.sessionGeneration) return;
+      this.stopListening();
       console.error('[SPEECH ENGINE - STT] ❌ Error accessing microphone:', err);
-      if (this.onError) this.onError('Failed to access microphone');
+      if (this.onError) this.onError(err instanceof Error ? err.message : 'Failed to access microphone');
     }
   }
 
@@ -226,8 +284,10 @@ export class STTManager {
   }
 
   public stopListening() {
-    if (!this.isRecording) return;
+    ++this.sessionGeneration;
     this.isRecording = false;
+    if (this.captureWatchdog) clearInterval(this.captureWatchdog);
+    this.captureWatchdog = null;
 
     if (this.processor) {
       this.processor.disconnect();

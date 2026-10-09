@@ -1,0 +1,20 @@
+{
+  "ok": true,
+  "input": "/Users/mayankjha/Documents/Codex/2026-10-08/pets-plugin-work-pets-openai-curated-4/outputs/piyu/interactions/talking/frames-raw/01.png",
+  "output": "/Users/mayankjha/Documents/Codex/2026-10-08/pets-plugin-work-pets-openai-curated-4/outputs/piyu/interactions/talking/frames/01.png",
+  "chroma_key": "#FF00FF",
+  "algorithm": "edge-local-chroma-spill-suppression",
+  "strength": 1,
+  "edge_radius": 5,
+  "spill_tolerance": 0.15,
+  "minimum_saturation": 0.1,
+  "changed_pixels": 2147,
+  "decontaminated_pixels": 2092,
+  "spill_suppressed_pixels": 2147,
+  "rejected_pixels": 0,
+  "changed_by_cell": {
+    "r0c0": 1137,
+    "r0c1": 1010
+  },
+  "alpha_preserved": true
+}

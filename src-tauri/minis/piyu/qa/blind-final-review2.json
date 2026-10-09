@@ -1,0 +1,89 @@
+{
+  "reviewer": "2",
+  "pairs": [
+    {
+      "pair": "horizontal-1",
+      "A": "screen-left",
+      "B": "screen-right",
+      "evidence": "A nose projects left with right ear visible and ponytail right; B nose lies right of facial center with left ear exposed."
+    },
+    {
+      "pair": "horizontal-2",
+      "A": "screen-left",
+      "B": "screen-right",
+      "evidence": "A face points left and right ear is exposed; B face points right and left ear is exposed."
+    },
+    {
+      "pair": "horizontal-3",
+      "A": "screen-left",
+      "B": "screen-right",
+      "evidence": "A left-facing nose silhouette and right ear; B right-facing nose silhouette and left ear."
+    },
+    {
+      "pair": "horizontal-4",
+      "A": "screen-left",
+      "B": "screen-right",
+      "evidence": "A nose protrudes to the left with hair behind on right; B nose protrudes right with hair behind on left."
+    },
+    {
+      "pair": "horizontal-5",
+      "A": "screen-right",
+      "B": "screen-left",
+      "evidence": "A lowered face projects right with left ear visible; B lowered face projects left with right ear visible."
+    },
+    {
+      "pair": "horizontal-6",
+      "A": "screen-right",
+      "B": "screen-left",
+      "evidence": "A bowed face is offset right and left ear exposed; B bowed face is offset left and right ear exposed."
+    },
+    {
+      "pair": "horizontal-7",
+      "A": "screen-right",
+      "B": "screen-left",
+      "evidence": "A nose and chin clearly lie right of crown center and left ear shows; B nose/chin lie left with right ear exposed."
+    },
+    {
+      "pair": "vertical-1",
+      "A": "up",
+      "B": "down",
+      "evidence": "A high pupils and lifted chin with exposed neck; B downcast eyes, crown visible above bowed face and tucked chin."
+    },
+    {
+      "pair": "vertical-2",
+      "A": "down",
+      "B": "up",
+      "evidence": "A bows chin near neckline with eyes lowered; B raises chin and pupils toward upper eyelids."
+    },
+    {
+      "pair": "vertical-3",
+      "A": "down",
+      "B": "up",
+      "evidence": "A chin tucked and eyelids lowered; B upward pupils and chin extended upward with visible neck."
+    },
+    {
+      "pair": "vertical-4",
+      "A": "up",
+      "B": "down",
+      "evidence": "A lifted chin and pupils high under brow; B face pitches down, eyes lowered and crown dominant."
+    },
+    {
+      "pair": "vertical-5",
+      "A": "up",
+      "B": "down",
+      "evidence": "A chin rises above neck and eyes aim upward; B bows head with nose angled down and chin tucked."
+    },
+    {
+      "pair": "vertical-6",
+      "A": "up",
+      "B": "down",
+      "evidence": "A side profile lifts chin and looks above eye level; B side profile bends toward chest with lowered eyes."
+    },
+    {
+      "pair": "vertical-7",
+      "A": "down",
+      "B": "ambiguous",
+      "evidence": "A downcast pupils and bowed chin are clear; B predominantly looks left with roughly level chin, so upward pitch is not decisive."
+    }
+  ]
+}

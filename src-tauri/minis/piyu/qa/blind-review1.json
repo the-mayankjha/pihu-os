@@ -1,0 +1,19 @@
+{
+  "reviewer": "1",
+  "pairs": [
+    {"pair":"horizontal-1","A":"screen-right","B":"screen-left","evidence":"A nose and gaze sit slightly to the right of face center; B nose projects left with curls behind the right side.","confidence":"medium"},
+    {"pair":"horizontal-2","A":"screen-right","B":"screen-left","evidence":"A face and eyes angle right; B exposes a left-pointing nose and left gaze.","confidence":"high"},
+    {"pair":"horizontal-3","A":"screen-left","B":"screen-right","evidence":"A nose protrudes left with hair mass on right; B nose protrudes right with hair mass on left.","confidence":"high"},
+    {"pair":"horizontal-4","A":"screen-left","B":"screen-right","evidence":"Both show strong profiles, A nose pointing left and B nose pointing right.","confidence":"high"},
+    {"pair":"horizontal-5","A":"screen-left","B":"screen-right","evidence":"Downturned A profile projects left; downturned B profile projects right.","confidence":"high"},
+    {"pair":"horizontal-6","A":"screen-right","B":"screen-left","evidence":"A bowed face has nose toward right cheek edge; B bowed profile has nose toward left edge.","confidence":"medium"},
+    {"pair":"horizontal-7","A":"ambiguous","B":"screen-left","evidence":"A face is bowed and nearly centered, with no clear lateral nose projection; B nose and cheek profile clearly point left.","confidence":"medium"},
+    {"pair":"vertical-1","A":"down","B":"up","evidence":"A eyelids and nose point down into chest with crown visible; B eyes look above the viewer and face is lifted.","confidence":"high"},
+    {"pair":"vertical-2","A":"down","B":"up","evidence":"A chin is tucked and eyes lowered; B chin and gaze rise with open upward eyes.","confidence":"high"},
+    {"pair":"vertical-3","A":"up","B":"down","evidence":"A eyes gaze upward with raised chin; B face tilts downward toward shoulder/chest.","confidence":"high"},
+    {"pair":"vertical-4","A":"up","B":"down","evidence":"A profile has raised nose/chin and upward gaze; B profile drops nose and gaze.","confidence":"high"},
+    {"pair":"vertical-5","A":"down","B":"up","evidence":"A nose angles toward floor and chin tucks; B nose angles upward with lifted face.","confidence":"high"},
+    {"pair":"vertical-6","A":"up","B":"down","evidence":"A left profile lifts nose and eyes; B left profile lowers nose with brow and crown dominant.","confidence":"high"},
+    {"pair":"vertical-7","A":"up","B":"down","evidence":"A left profile has upward eyes and raised chin; B left profile is bowed with lowered gaze.","confidence":"high"}
+  ]
+}

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validEncounter, socialStep, socialTarget, socialAligned, socialFrame, socialNearby } from '../src/features/spirits/socialModel.ts';
+import { validEncounter, socialStep, socialTarget, socialAligned, socialFrame, socialNearby, socialPhase, socialCompanion } from '../src/features/spirits/socialModel.ts';
 const encounter = { members: ['mayank','pihu'], started: 10000, x: 250, y: 200, size: 128, action: 'hug' };
 test('encounters require both known partners, finite coordinates and a valid shared clock', () => {
  assert.equal(validEncounter(encounter,'pihu',11000),true);
@@ -35,4 +35,19 @@ test("social sessions stay nearby until a companion is moved away", () => {
  assert.equal(socialNearby(self,{x:228,y:200,size:128}),true);
  assert.equal(socialNearby(self,{x:400,y:200,size:128}),false);
  assert.equal(socialNearby(self,{x:228,y:500,size:128}),false);
+});
+
+test('Mayank supports Pihu or Piyu with isolated partner artwork', () => {
+ assert.equal(socialCompanion(['mayank','piyu']),'piyu');
+ assert.equal(validEncounter({...encounter,members:['piyu','mayank']},'piyu',11000),true);
+ assert.equal(socialCompanion(['pihu','piyu']),null);
+ assert.equal(validEncounter({...encounter,members:['pihu','piyu']},'pihu',11000),false);
+});
+test('Piyu cycles detailed interactions forever with a shared phase clock', () => {
+ const e={...encounter,members:['mayank','piyu']};
+ const actions=new Set();
+ for(let elapsed=6800;elapsed<32800;elapsed+=100) actions.add(socialPhase(e,e.started+elapsed).action);
+ assert.deepEqual([...actions],['talking','looking','cheek-touch','laughing','smiling','hug','handshake','high-five']);
+ assert.equal(socialPhase(e,e.started+1000000).action,socialPhase(e,e.started+1000000+24200).action);
+ assert.equal(socialPhase(encounter,1000000).action,'talking');
 });

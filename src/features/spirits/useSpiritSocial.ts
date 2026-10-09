@@ -5,7 +5,7 @@ import { emit, listen } from '@tauri-apps/api/event';
 import { getCurrentWindow, LogicalPosition } from '@tauri-apps/api/window';
 import { lookDirection, nearestSpirit } from './model';
 import type { SpiritAnimation, SpiritPresence } from './model';
-import { SOCIAL_ACTIONS, SOCIAL_TIMING, socialAligned, socialNearby, socialStep, socialTarget, validEncounter } from './socialModel';
+import { SOCIAL_ACTIONS, SOCIAL_TIMING, socialAligned, socialCompanion, socialPhase, socialNearby, socialStep, socialTarget, validEncounter } from './socialModel';
 import type { PairPose, SocialEncounter } from './socialModel';
 
 const EVENT = 'pihu-spirit-presence';
@@ -65,10 +65,10 @@ export function useSpiritSocial(id: string, size: number, busy: boolean, element
           encounter.current = undefined; session = undefined; cooldown.current = now + SOCIAL_TIMING.cooldown;
         }
         if (!session && !busy && peer && now >= cooldown.current && id.localeCompare(peer.id) < 0
-          && [id, peer.id].every(member => member === 'pihu' || member === 'mayank') && Math.abs(size - peer.size) < 2) {
+          && socialCompanion([id, peer.id]) !== null && Math.abs(size - peer.size) < 2) {
           session = { members: x <= peer.x ? [id, peer.id] : [peer.id, id], started: now,
-            x: (id === 'pihu' ? x : peer.x) + ((x <= peer.x ? id : peer.id) === 'pihu' ? 1 : -1) * size / 2,
-            y: id === 'pihu' ? y : peer.y, size, action: SOCIAL_ACTIONS[sequence.current++ % SOCIAL_ACTIONS.length] };
+            x: (id !== 'mayank' ? x : peer.x) + ((x <= peer.x ? id : peer.id) !== 'mayank' ? 1 : -1) * size / 2,
+            y: id !== 'mayank' ? y : peer.y, size, action: SOCIAL_ACTIONS[sequence.current++ % SOCIAL_ACTIONS.length] };
           encounter.current = session; cooldown.current = now + SOCIAL_TIMING.cooldown;
         }
         let next: SocialPose = EMPTY;
@@ -86,7 +86,7 @@ export function useSpiritSocial(id: string, size: number, busy: boolean, element
             }
           }
           if (!motion.matches && elapsed >= SOCIAL_TIMING.approach && socialAligned(self, peer, session)) {
-            next.pair = { action: elapsed < SOCIAL_TIMING.action ? session.action : 'talking', column: id === 'mayank' ? 0 : 1, mirrored: session.members[0] === 'pihu', started: session.started + (elapsed < SOCIAL_TIMING.action ? SOCIAL_TIMING.approach : SOCIAL_TIMING.action) };
+            next.pair = { ...socialPhase(session, now), companion: socialCompanion(session.members)!, column: id === 'mayank' ? 0 : 1, mirrored: session.members[0] !== 'mayank' };
           }
         } else if (!busy && peer) next = { animation: null, direction: lookDirection(peer.x - x, peer.y - y), pair: null };
         self.encounter = encounter.current;

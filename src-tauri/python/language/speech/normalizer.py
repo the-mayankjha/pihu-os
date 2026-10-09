@@ -33,7 +33,7 @@ class SpeechNormalizer:
         "working": "वर्किंग",
         "bro": "ब्रो",
         "api": "एपीआई",
-        "pihu": "पीहू",
+        "pihu": "PIHU",
         "gemini": "जेमिनी",
         "computer": "कंप्यूटर",
         "laptop": "लैपटॉप",

@@ -2,20 +2,20 @@ import { useEffect, useRef, useState } from 'react';
 import { loadSpiritSheet, spiritTalkingFrames, spiritSocialFrames } from './catalog';
 import { CELL_HEIGHT, CELL_WIDTH, lookCell, LOOK_DIRECTIONS, poseConfig } from './model';
 import type { SpiritPose } from './model';
-import { SOCIAL_RENDER_ACTIONS, socialFrame } from './socialModel';
-import type { PairPose, SocialAction } from './socialModel';
+import { SOCIAL_RENDER_ACTIONS, socialFrame, socialLooping } from './socialModel';
+import type { PairPose } from './socialModel';
 
 export function SpiritSprite({ id, size = 128, animation = 'idle', direction = null, resting = false, pair = null }: { id: string; size?: number; animation?: SpiritPose; direction?: number | null; resting?: boolean; pair?: PairPose | null }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const [source, setSource] = useState<{ id: string; image?: HTMLImageElement; error?: string }>();
   const [talking, setTalking] = useState<{ id: string; frames: HTMLImageElement[] }>();
-  const [socialImages, setSocialImages] = useState<Partial<Record<SocialAction, HTMLImageElement[]>>>({});
+  const [socialImages, setSocialImages] = useState<Record<string, HTMLImageElement[]>>({});
   useEffect(() => {
     let cancelled = false;
-    void Promise.all(SOCIAL_RENDER_ACTIONS.map(async action => {
-      const frames = await Promise.all(spiritSocialFrames(action).map(async url => { const frame = new Image(); frame.src = url; await frame.decode(); return frame; }));
-      return [action, frames] as const;
-    })).then(entries => { if (!cancelled) setSocialImages(Object.fromEntries(entries)); }).catch(console.error);
+    void Promise.all((['pihu', 'piyu'] as const).flatMap(companion => SOCIAL_RENDER_ACTIONS.map(async action => {
+      const frames = await Promise.all(spiritSocialFrames(action, companion).map(async url => { const frame = new Image(); frame.src = url; await frame.decode(); return frame; }));
+      return [`${companion}:${action}`, frames] as const;
+    }))).then(entries => { if (!cancelled) setSocialImages(Object.fromEntries(entries)); }).catch(console.error);
     return () => { cancelled = true; };
   }, []);
   const image = source?.id === id ? source.image : undefined;
@@ -54,8 +54,8 @@ export function SpiritSprite({ id, size = 128, animation = 'idle', direction = n
         ? lookCell(gaze.current) : { row: config.row, column: frame };
       context.clearRect(0, 0, CELL_WIDTH, CELL_HEIGHT);
       const mouth = animation === 'speaking' && talking?.id === id ? talking.frames[frame % talking.frames.length] : undefined;
-      const pairFrames = pair ? socialImages[pair.action] : undefined;
-      const pairImage = pairFrames?.[socialFrame(pair!.started, Date.now(), pair!.action === 'talking')];
+      const pairFrames = pair ? socialImages[`${pair.companion}:${pair.action}`] : undefined;
+      const pairImage = pairFrames?.[socialFrame(pair!.started, Date.now(), socialLooping(pair!.action))];
       if (pairImage && pair && !motion.matches) {
         context.save();
         if (pair.mirrored) { context.translate(CELL_WIDTH, 0); context.scale(-1, 1); }
@@ -73,14 +73,14 @@ export function SpiritSprite({ id, size = 128, animation = 'idle', direction = n
         idleHold += 1000 / config.fps;
       } else idleHold = 0;
       draw();
-      timer = setTimeout(tick, pair ? Math.max(16, (pair.action === 'talking' ? 400 : 700) - ((Date.now() - pair.started) % (pair.action === 'talking' ? 400 : 700))) : 1000 / config.fps);
+      timer = setTimeout(tick, pair ? Math.max(16, (socialLooping(pair.action) ? 400 : 700) - ((Date.now() - pair.started) % (socialLooping(pair.action) ? 400 : 700))) : 1000 / config.fps);
     };
     const start = () => {
       clearTimeout(timer);
       frame = 0;
       idleHold = 0;
       draw();
-      if (!motion.matches && !resting) timer = setTimeout(tick, pair ? Math.max(16, (pair.action === 'talking' ? 400 : 700) - ((Date.now() - pair.started) % (pair.action === 'talking' ? 400 : 700))) : 1000 / config.fps);
+      if (!motion.matches && !resting) timer = setTimeout(tick, pair ? Math.max(16, (socialLooping(pair.action) ? 400 : 700) - ((Date.now() - pair.started) % (socialLooping(pair.action) ? 400 : 700))) : 1000 / config.fps);
     };
     start();
     motion.addEventListener('change', start);

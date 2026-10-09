@@ -328,7 +328,12 @@ export class VoiceManager {
 
     this.setOrbState(OrbState.LISTENING);
     useVoiceStore.getState().setIsListening(true);
-    await this.sttManager.startListening();
+    try {
+      await this.sttManager.startListening();
+    } catch (error) {
+      console.error('[VOICE MANAGER] STT startup failed:', error);
+      this.resetToIdle();
+    }
   }
 
   public stopListening() {

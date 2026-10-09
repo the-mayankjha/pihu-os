@@ -1,0 +1,19 @@
+{
+  "ok": true,
+  "input": "/Users/mayankjha/Documents/Codex/2026-10-08/pets-plugin-work-pets-openai-curated-4/outputs/piyu/tts-visemes-raw/01.png",
+  "output": "/Users/mayankjha/Documents/Codex/2026-10-08/pets-plugin-work-pets-openai-curated-4/outputs/piyu/final/tts-visemes/01.png",
+  "chroma_key": "#FF00FF",
+  "algorithm": "edge-local-chroma-spill-suppression",
+  "strength": 1,
+  "edge_radius": 5,
+  "spill_tolerance": 0.15,
+  "minimum_saturation": 0.1,
+  "changed_pixels": 1237,
+  "decontaminated_pixels": 1227,
+  "spill_suppressed_pixels": 1237,
+  "rejected_pixels": 0,
+  "changed_by_cell": {
+    "r0c0": 1237
+  },
+  "alpha_preserved": true
+}

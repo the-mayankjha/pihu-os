@@ -60,7 +60,7 @@ def is_hindi_or_hinglish(text: str) -> bool:
         'nana', 'nani', 'bhabhi', 'jiju', 'haan', 'han', 'nahi', 'nhi', 'acha',
         'achha', 'theek', 'thik', 'karo', 'karna', 'karti', 'karta', 'karunga', 'karungi',
         'karenge', 'karengi', 'kholo', 'chalao', 'chala', 'chalo', 'badhao', 'rok', 'roko',
-        'batao', 'bataiye', 'bol', 'sun', 'sunao', 'pihu', 'main', 'mai', 'maine', 'mera',
+        'batao', 'bataiye', 'bol', 'sun', 'sunao', 'main', 'mai', 'maine', 'mera',
         'meri', 'mere', 'tum', 'aap', 'ap', 'aapka', 'aapki', 'aapke', 'tera', 'teri', 'tere',
         'hum', 'ham', 'yeh', 'ye', 'woh', 'vo', 'abhi', 'badme', 'kya', 'kyun', 'kaise',
         'kaha', 'kidhar', 'kaun', 'hai', 'hain', 'ho', 'hoon', 'hu', 'tha', 'thi', 'the',
@@ -104,6 +104,23 @@ def synthesize_speech(text: str, requested_voice: str = 'auto', speed: float = 1
         return None
 
     is_indic = is_hindi_or_hinglish(cleaned) or requested_voice.startswith('hf_') or requested_voice.startswith('hm_')
+
+    # Keep the brand name in English, even within a Hindi response.
+    name_pattern = r'(\bPIHU\b|पीहू|पिहू|पिहु)'
+    if re.search(name_pattern, cleaned, re.IGNORECASE):
+        if is_indic and pipeline_en is not None:
+            chunks = []
+            for part in re.split(name_pattern, cleaned, flags=re.IGNORECASE):
+                if not part.strip():
+                    continue
+                is_name = bool(re.fullmatch(name_pattern, part, re.IGNORECASE))
+                audio = synthesize_speech('Pee hoo' if is_name else part,
+                                          'af_bella' if is_name else requested_voice, speed)
+                if audio is None:
+                    return None
+                chunks.append(audio)
+            return np.concatenate(chunks) if chunks else None
+        cleaned = re.sub(name_pattern, 'Pee hoo', cleaned, flags=re.IGNORECASE)
 
     if is_indic and pipeline_hi is not None:
         speech_text = normalizer.to_hindi_segment(cleaned) if normalizer else cleaned
