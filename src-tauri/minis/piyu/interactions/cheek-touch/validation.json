@@ -1,0 +1,35 @@
+{
+  "ok": true,
+  "frames": 4,
+  "cell": [
+    384,
+    208
+  ],
+  "extraction": "bundled connected components with shared scale and baseline",
+  "source_bounds": [
+    [
+      77,
+      43,
+      522,
+      688
+    ],
+    [
+      599,
+      41,
+      1056,
+      688
+    ],
+    [
+      1138,
+      42,
+      1584,
+      688
+    ],
+    [
+      1669,
+      43,
+      2119,
+      688
+    ]
+  ]
+}

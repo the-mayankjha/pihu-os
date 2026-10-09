@@ -1,0 +1,19 @@
+{
+  "reviewer": "3",
+  "pairs": [
+    {"pair":"horizontal-1","A":"screen-right","B":"screen-left","evidence":"A has a slight rightward nose and gaze bias; B's raised face and nose point left with hair gathered behind to the right."},
+    {"pair":"horizontal-2","A":"screen-right","B":"screen-left","evidence":"A's eyes and nose turn right; B shows the mirrored leftward face with the visible ear behind the nose on the right."},
+    {"pair":"horizontal-3","A":"screen-left","B":"screen-right","evidence":"Clear opposing three-quarter faces: A nose projects left, B nose projects right."},
+    {"pair":"horizontal-4","A":"screen-left","B":"screen-right","evidence":"A's facial profile and nose face left; B's face projects right, with the ear on its left."},
+    {"pair":"horizontal-5","A":"screen-left","B":"screen-right","evidence":"Both heads are lowered; A's nose and gaze slope left and B's slope right."},
+    {"pair":"horizontal-6","A":"screen-right","B":"screen-left","evidence":"Lowered A face has nose toward the right and visible ear on the left; B reverses those features."},
+    {"pair":"horizontal-7","A":"ambiguous","B":"screen-left","evidence":"A appears almost frontal with lowered eyelids and no reliable horizontal nose displacement; B's lowered nose and face clearly turn left."},
+    {"pair":"vertical-1","A":"down","B":"up","evidence":"A bows its head with eyelids low and crown prominent; B raises its gaze and chin with an open, taller face."},
+    {"pair":"vertical-2","A":"down","B":"up","evidence":"A's eyelids and nose are directed down; B looks above eye level with the chin lifted."},
+    {"pair":"vertical-3","A":"up","B":"down","evidence":"A's rightward face is tipped upward with eyes high; B's rightward face is bowed with eyelids low."},
+    {"pair":"vertical-4","A":"up","B":"down","evidence":"A's sideward gaze rises and chin lifts; B's eyes and nose are lower and the crown is more exposed."},
+    {"pair":"vertical-5","A":"down","B":"up","evidence":"A's leftward head bows toward the chest; B's leftward face lifts with an upward gaze and raised chin."},
+    {"pair":"vertical-6","A":"up","B":"down","evidence":"A looks left and upward with a raised face; B looks left and downward with eyelids lowered."},
+    {"pair":"vertical-7","A":"up","B":"down","evidence":"A's left-facing eyes are lifted and chin projects forward above the neck; B's left-facing head bows with eyes aimed down."}
+  ]
+}

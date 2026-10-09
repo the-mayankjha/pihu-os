@@ -1,8 +1,10 @@
 import type { SpiritPresence } from './model';
 
 export const SOCIAL_ACTIONS = ['hug', 'high-five', 'handshake'] as const;
-export type SocialAction = typeof SOCIAL_ACTIONS[number] | 'talking';
-export const SOCIAL_RENDER_ACTIONS = [...SOCIAL_ACTIONS, 'talking'] as const;
+export type SocialCompanion = 'pihu' | 'piyu';
+export const PIYU_SOCIAL_ACTIONS = ['talking', 'looking', 'cheek-touch', 'laughing', 'smiling', 'hug', 'handshake', 'high-five'] as const;
+export type SocialAction = typeof SOCIAL_ACTIONS[number] | typeof PIYU_SOCIAL_ACTIONS[number];
+export const SOCIAL_RENDER_ACTIONS = [...new Set([...SOCIAL_ACTIONS, ...PIYU_SOCIAL_ACTIONS])] as const;
 export interface SocialEncounter {
   members: [string, string];
   started: number;
@@ -11,13 +13,13 @@ export interface SocialEncounter {
   size: number;
   action: typeof SOCIAL_ACTIONS[number];
 }
-export interface PairPose { action: SocialAction; column: 0 | 1; mirrored: boolean; started: number }
+export interface PairPose { companion: SocialCompanion; action: SocialAction; column: 0 | 1; mirrored: boolean; started: number }
 export const SOCIAL_TIMING = { gaze: 1000, approach: 4000, action: 6800, cooldown: 1000 };
 
 export function validEncounter(value: SocialEncounter, id: string, now: number): boolean {
   return Boolean(value && Array.isArray(value.members) && value.members.length === 2
     && value.members.includes(id) && value.members[0] !== value.members[1]
-    && value.members.every(member => member === 'pihu' || member === 'mayank')
+    && socialCompanion(value.members) !== null
     && SOCIAL_ACTIONS.includes(value.action) && Number.isFinite(value.started)
     && value.started >= 0 && value.started <= now + 200
     && Number.isFinite(value.x) && Number.isFinite(value.y)
@@ -45,4 +47,26 @@ export function socialFrame(started: number, now: number, talking = false) {
 
 export function socialNearby(self: { x: number; y: number; size: number }, peer: { x: number; y: number; size: number }) {
   return Math.hypot(peer.x - self.x, peer.y - self.y) <= (self.size + peer.size) * 0.85;
+}
+
+export function socialCompanion(members: readonly string[]): SocialCompanion | null {
+  if (members.length !== 2 || !members.includes('mayank')) return null;
+  return members.includes('pihu') ? 'pihu' : members.includes('piyu') ? 'piyu' : null;
+}
+export function socialPhase(encounter: SocialEncounter, now: number): { action: SocialAction; started: number } {
+  const greetingEnd = encounter.started + SOCIAL_TIMING.action;
+  if (now < greetingEnd) return { action: encounter.action, started: encounter.started + SOCIAL_TIMING.approach };
+  if (socialCompanion(encounter.members) !== 'piyu') return { action: 'talking', started: greetingEnd };
+  const durations = [5000, 2400, 2800, 2800, 2800, 2800, 2800, 2800];
+  const cycle = durations.reduce((sum, duration) => sum + duration, 0);
+  const completed = Math.floor((now - greetingEnd) / cycle);
+  let offset = 0;
+  for (let i = 0; i < durations.length; i++) {
+    if (now - greetingEnd - completed * cycle < offset + durations[i]) return { action: PIYU_SOCIAL_ACTIONS[i], started: greetingEnd + completed * cycle + offset };
+    offset += durations[i];
+  }
+  return { action: 'talking', started: greetingEnd + completed * cycle };
+}
+export function socialLooping(action: SocialAction) {
+  return ['talking', 'looking', 'laughing', 'smiling'].includes(action);
 }

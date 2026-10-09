@@ -40,8 +40,6 @@
     ],
     "resources": [
       "pihu_mcps/mcp/servers/google_oauth_server.py",
-      "pihu_mcps/mcp/servers/google_oauth_page.html",
-      "pihu_mcps/mcp/servers/pihu-logo.png",
       "pihu_mcps/mcp/servers/google_api_client.py",
       "python/stt_server.py",
       "python/tts_server.py",

@@ -1,0 +1,8 @@
+{
+  "uniform_entire_strip_scale": 1.1602373887240356,
+  "median_source_pose_heights": [
+    586.5,
+    505.5
+  ],
+  "reason": "same generated character rendered at different source resolution; match row9 source pixels before applying the same bundled registration transform"
+}

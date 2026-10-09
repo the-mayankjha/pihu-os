@@ -164,7 +164,7 @@ function SpiritCompanion({ id, size, animation, resting = false, speaking = fals
     return () => { clearTimeout(reset); clearInterval(interval); };
   }, [idleEligible]);
   const social = useSpiritSocial(id, size, speaking || held || Boolean(dragging || interaction), element, (dx, dy) => setOffset(previous => ({ x: previous.x + dx, y: previous.y + dy })));
-  const personal = id === 'pihu' ? pihuPose(animation, speaking, idleEligible ? idleMs : 0) : animation;
+  const personal = id === 'piyu' && speaking ? 'speaking' : id === 'pihu' ? pihuPose(animation, speaking, idleEligible ? idleMs : 0) : animation;
   const shown = dragging ?? (speaking ? personal : interaction ?? social.animation ?? personal);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const hideShortcuts = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);

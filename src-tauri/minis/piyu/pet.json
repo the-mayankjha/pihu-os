@@ -1,0 +1,14 @@
+{
+  "id": "pet_6ac8444f94648191be25493538b7afcb",
+  "name": "Piyu",
+  "description": "Piyu \u2014 a cheerful, caring companion who brings warmth, encouragement, and playful energy to your day.",
+  "is_custom": true,
+  "is_active": false,
+  "atlas_sha256": "a0f144390ea896d82b80d0a9d76c657fc774fc9c4bb9357f4369e3a9ae4e679f",
+  "sprite_version": 2,
+  "frames": 73,
+  "extra_speaking_frames": 8,
+  "paired_interaction_frames": 32,
+  "validation": "passed",
+  "generation": "built-in imagegen"
+}

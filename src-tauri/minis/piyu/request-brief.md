@@ -1,0 +1,4 @@
+# Piyu
+Create a ChatGPT Pets companion from /Users/mayankjha/Downloads/piyu.png. Name Piyu. Pink glasses, curly ponytail, warm complexion, black workout crop top/joggers, white sneakers, white outline, full body.
+Standard v2: idle/blink, right/left gait, wave, success jump, failure/error, waiting, work, review, sixteen gaze directions. Extra front-facing plain speaking. Mayank pairs: mutual gaze/blink, talk, handshake, hug, cheek touch, laughter, smiles, high-five. Pair artwork extends pihu-os outside the fixed ChatGPT atlas.
+Interactions repeat while nearby, Mayank approaches, Piyu remains anchored; dragging apart or TTS cancels. TTS faces the user. Pihu retains her own pair artwork. Save locally and copy src-tauri/minis/piyu/ in pihu-os. Create a ChatGPT pet after QA. No requested change to currently selected ChatGPT pet.

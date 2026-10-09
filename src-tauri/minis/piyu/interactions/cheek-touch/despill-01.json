@@ -1,0 +1,20 @@
+{
+  "ok": true,
+  "input": "/Users/mayankjha/Documents/Codex/2026-10-08/pets-plugin-work-pets-openai-curated-4/outputs/piyu/interactions/cheek-touch/frames-raw/01.png",
+  "output": "/Users/mayankjha/Documents/Codex/2026-10-08/pets-plugin-work-pets-openai-curated-4/outputs/piyu/interactions/cheek-touch/frames/01.png",
+  "chroma_key": "#FF00FF",
+  "algorithm": "edge-local-chroma-spill-suppression",
+  "strength": 1,
+  "edge_radius": 5,
+  "spill_tolerance": 0.15,
+  "minimum_saturation": 0.1,
+  "changed_pixels": 1793,
+  "decontaminated_pixels": 1772,
+  "spill_suppressed_pixels": 1793,
+  "rejected_pixels": 0,
+  "changed_by_cell": {
+    "r0c0": 998,
+    "r0c1": 795
+  },
+  "alpha_preserved": true
+}

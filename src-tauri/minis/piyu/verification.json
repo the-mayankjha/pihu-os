@@ -1,0 +1,19 @@
+{
+  "tests": 22,
+  "typescript": "passed",
+  "eslint": "passed",
+  "vite_build": "passed",
+  "pet_quality": "passed with reviewed intermediate gaze warnings",
+  "pets_mcp_preflight": "valid",
+  "blind_direction_majority": "passed all28 axes",
+  "browser": [
+    "eight synchronized pair actions",
+    "Piyu anchored / Mayank approaches",
+    "TTS interruption",
+    "nearby resumption",
+    "separation cancellation",
+    "no page errors"
+  ],
+  "native_window_movement": "code inspected; not native automated-tested",
+  "library": "No Library connector available; all artifacts saved locally."
+}

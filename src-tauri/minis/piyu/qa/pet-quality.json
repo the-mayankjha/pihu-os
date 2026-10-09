@@ -1,0 +1,77 @@
+{
+  "ok": true,
+  "atlas": "/Users/mayankjha/Documents/Codex/2026-10-08/pets-plugin-work-pets-openai-curated-4/outputs/piyu/final/spritesheet-extended.png",
+  "encoded_bytes": 2696541,
+  "sha256": "a0f144390ea896d82b80d0a9d76c657fc774fc9c4bb9357f4369e3a9ae4e679f",
+  "jump": {
+    "idle_baseline": 202,
+    "jump_baselines": [
+      202,
+      201,
+      164,
+      195,
+      202
+    ],
+    "airborne_lift_pixels": 38,
+    "landing_delta_pixels": 0
+  },
+  "look_registration": {
+    "neutral_center_x": 96.0,
+    "look_centers_x": [
+      94.5,
+      89.0,
+      87.5,
+      87.5,
+      87.5,
+      90.5,
+      90.5,
+      92.5,
+      94.5,
+      94.5,
+      96.5,
+      98.0,
+      101.5,
+      103.5,
+      106.0,
+      104.5
+    ],
+    "look_widths": [
+      73,
+      86,
+      89,
+      89,
+      87,
+      81,
+      79,
+      75,
+      67,
+      73,
+      77,
+      80,
+      85,
+      85,
+      90,
+      87
+    ],
+    "maximum_center_drift_pixels": 10.0,
+    "maximum_width_ratio": 1.3432835820895523
+  },
+  "errors": [],
+  "warnings": [
+    "look direction 022.5 accepted with a reviewed warning",
+    "look direction 045 accepted with a reviewed warning",
+    "look direction 067.5 accepted with a reviewed warning",
+    "look direction 112.5 accepted with a reviewed warning",
+    "look direction 202.5 accepted with a reviewed warning",
+    "look direction 225 accepted with a reviewed warning",
+    "look direction 247.5 accepted with a reviewed warning",
+    "look direction 292.5 accepted with a reviewed warning",
+    "look direction 315 accepted with a reviewed warning",
+    "look direction 337.5 accepted with a reviewed warning",
+    "090->112.5 diff is a local outlier (1619 pixels vs neighbor average 1096)",
+    "157.5->180 diff is a local outlier (2102 pixels vs neighbor average 1139)",
+    "247.5->270 diff is a local outlier (1634 pixels vs neighbor average 1082)",
+    "337.5->000 diff is a local outlier (3240 pixels vs neighbor average 1890)",
+    "337.5->000 center shift is high (10.3px)"
+  ]
+}
