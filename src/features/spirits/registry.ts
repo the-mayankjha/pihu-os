@@ -66,25 +66,50 @@ function registryResource(path: string) {
 }
 
 export async function loadSpiritRegistry(): Promise<RegistrySpirit[]> {
-  const [registryResponse, marketResponse] = await Promise.all([
-    fetch(REGISTRY_URL, { headers: { Accept: 'application/json' } }),
-    fetch(`${MARKET_API_URL}/catalog?type=spirits&limit=100`, { headers: { Accept: 'application/json' } }),
-  ]);
+  const registryResponse = await fetch(REGISTRY_URL, { headers: { Accept: 'application/json' } });
   if (!registryResponse.ok) throw new Error(`Could not load the Spirits registry (${registryResponse.status}).`);
-  if (!marketResponse.ok) throw new Error(`Could not load Spirits from the PIHU Market API (${marketResponse.status}).`);
   const length = Number(registryResponse.headers.get('content-length') ?? 0);
   if (length > MAX_INDEX_BYTES) throw new Error('The Spirits registry catalog is too large.');
   const registry = parseIndex(await registryResponse.json()).packages;
-  const market = await marketResponse.json() as { packages?: Array<Record<string, unknown>> };
-  const marketById = new Map((market.packages ?? []).map(item => [String(item.id), item]));
   const apiOrigin = new URL(MARKET_API_URL).origin;
-  return registry.map(entry => {
-    const item = marketById.get(entry.id);
-    if (!item || typeof item.preview_url !== 'string' || typeof item.author !== 'string') return null;
-    const preview = new URL(item.preview_url);
-    if (preview.origin !== apiOrigin || !preview.pathname.startsWith('/api/v2/packages/')) return null;
-    return { ...entry, author: item.author, preview_url: preview.toString() };
-  }).filter((entry): entry is RegistrySpirit => entry !== null);
+  const previews = new Map<string, { author: string; preview_url: string }>();
+
+  // The registry is the source of truth for what can be installed. The Market
+  // API enriches it with preview URLs, but a not-yet-deployed API route should
+  // not make the entire Spirits catalog disappear from the desktop app.
+  try {
+    const marketResponse = await fetch(`${MARKET_API_URL}/catalog?type=spirits&limit=100`, { headers: { Accept: 'application/json' } });
+    if (marketResponse.ok) {
+      const market = await marketResponse.json() as { packages?: Array<Record<string, unknown>> };
+      for (const item of market.packages ?? []) {
+        if (typeof item.id !== 'string' || typeof item.preview_url !== 'string' || typeof item.author !== 'string') continue;
+        const preview = new URL(item.preview_url);
+        if (preview.origin === apiOrigin && preview.pathname.startsWith('/api/v2/packages/')) {
+          previews.set(item.id, { author: item.author, preview_url: preview.toString() });
+        }
+      }
+    }
+  } catch {
+    // Use the package manifests below as metadata fallback when the API is offline.
+  }
+
+  return Promise.all(registry.map(async entry => {
+    const apiPreview = new URL(`/api/v2/packages/${encodeURIComponent(entry.id)}/preview`, apiOrigin).toString();
+    const marketEntry = previews.get(entry.id);
+    if (marketEntry) return { ...entry, ...marketEntry };
+
+    let author = 'Unknown author';
+    try {
+      const response = await fetch(registryResource(entry.manifest), { headers: { Accept: 'application/json' } });
+      if (response.ok) {
+        const manifest = await response.json() as Record<string, unknown>;
+        if (typeof manifest.author === 'string' && manifest.author.trim()) author = manifest.author;
+      }
+    } catch {
+      // A missing optional author field should not hide an installable Spirit.
+    }
+    return { ...entry, author, preview_url: apiPreview };
+  }));
 }
 
 async function validateSpriteSheet(blob: Blob) {
