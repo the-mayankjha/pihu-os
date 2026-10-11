@@ -5,7 +5,7 @@ import { controlSpirit } from './tools/spiritTools';
 import { messageNotifications } from '../../services/messageNotifications';
 import { LLMManager } from '../../llm/LLMManager';
 import { PIHU_CORE_IDENTITY } from './systemPrompt';
-import { buildGeminiTools, executeTool as defaultExecuteTool } from './tools/index';
+import { buildGeminiTools, executeTool as defaultExecuteTool, loadInstalledMcpTools } from './tools/index';
 import { useAgentActivityStore } from '../../agent/activityStore';
 import { handlePendingWhatsAppConfirmation } from './tools/whatsappTools';
 import { handlePendingProjectConfirmation } from './tools/projectTools';
@@ -22,6 +22,7 @@ import { parseBrowserIntent } from '../../automation/browserIntent';
 import { parseUIIntent } from '../../automation/uiIntent';
 import { normalizeCommand } from '../../automation/normalizeCommand';
 import { parseAppIntent } from '../../automation/appIntent';
+import { invoke } from '@tauri-apps/api/core';
 
 export class ActionEngine {
   private llm: LLMManager;
@@ -187,6 +188,19 @@ export class ActionEngine {
 
   private async tryFastDirectIntent(text: string, executeTool = defaultExecuteTool): Promise<string | null> {
     const lower = text.toLowerCase().trim();
+    const installIntent = lower.match(/^(?:please\s+)?(?:install|add|get)\s+(.+?)\s+(?:mcp|server)(?:\s+please)?[.!?]*$/i);
+    if (installIntent) {
+      const query = installIntent[1].trim();
+      try {
+        const response = await fetch('https://raw.githubusercontent.com/the-mayankjha/pihu_mcp/pihu_market/market/catalog.json');
+        if (!response.ok) throw new Error(`Catalog unavailable (${response.status})`);
+        const catalog = await response.json() as { packages?: Array<{ id: string; name?: string; display_name?: string; type?: string }> };
+        const match = (catalog.packages || []).filter(item => item.type === 'mcp' && [item.id, item.name, item.display_name].some(name => name?.toLowerCase() === query.toLowerCase()));
+        if (match.length !== 1) return match.length ? `I found multiple MCPs named “${query}”. Please say the exact package name.` : `I couldn't find an MCP named “${query}” in the catalog.`;
+        const result = await invoke<string>('mcp_install_package', { packageId: match[0].id });
+        return result || `${match[0].display_name || match[0].name || match[0].id} installed.`;
+      } catch (error) { return `MCP installation failed: ${String(error)}`; }
+    }
     const vtop = normalizeCommand(lower).match(/^(?:(set up|setup|configure)|(open|login to|log in to)|(continue|resume|finish))\s+vtop$/);
     if (vtop) {
       const result = await executeTool('vtop_login', {action:vtop[1]?'setup':vtop[2]?'open':'continue'});
@@ -697,12 +711,13 @@ export class ActionEngine {
       const historyToPass = this.conversationHistory.slice(-10);
 
       // Step 3: LLM Generation with 25-second Timeout Guard to allow multi-step tool execution
+      const installedMcpTools = await loadInstalledMcpTools();
       const llmPromise = this.llm.generateWithTools(
         {
           prompt: cleanText,
           systemInstruction: fullSystemInstruction,
           history: historyToPass,
-          tools: buildGeminiTools()
+          tools: buildGeminiTools(installedMcpTools)
         },
         executeTool
       );

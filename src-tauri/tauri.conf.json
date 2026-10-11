@@ -4,7 +4,7 @@
   "identifier": "com.mayankjha.pihuos",
   "build": {
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run browser:prepare && npm run build",
+    "beforeBuildCommand": "python3 src-tauri/prepare-mcp-runtime.py && npm run browser:prepare && npm run build",
     "devUrl": "http://127.0.0.1:5173",
     "frontendDist": "../dist"
   },
@@ -41,6 +41,10 @@
     "resources": [
       "pihu_mcps/mcp/servers/google_oauth_server.py",
       "pihu_mcps/mcp/servers/google_api_client.py",
+      "pihu_mcps/mcp/servers/google_oauth_page.html",
+      "pihu_mcps/mcp/servers/pihu-logo.png",
+      "mcp-agent-bundle/agent/",
+      "mcp-agent-bundle/mcp/servers/",
       "python/stt_server.py",
       "python/tts_server.py",
       "python/wakeword.py",

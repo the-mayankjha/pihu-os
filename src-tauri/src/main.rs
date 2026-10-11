@@ -11,6 +11,7 @@ mod spotify_mcp;
 mod browser_mcp;
 mod vtop_credentials;
 mod spirits;
+mod mcp_market;
 use tauri::Manager;
 
 pub fn get_python_cmd() -> String {
@@ -106,6 +107,10 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             spirits::sync_spirits,
             spirits::sync_voice_overlay,
+            mcp_market::mcp_install_package,
+            mcp_market::mcp_list_installed,
+            mcp_market::mcp_list_tools,
+            mcp_market::mcp_call_tool,
             wakeword::trigger_listening,
             wakeword::speech_done,
             wakeword::resume_wakeword,

@@ -71,8 +71,8 @@ export function Marketplace({ navigateTo }: { navigateTo: (category: 'connection
   async function install(item: McpPackage) {
     setNotice('');
     try {
-      const result = await invoke<string>('execute_shell_command', { command: `pihu mcp install ${item.id}` });
-      setNotice(typeof result === 'string' ? result : `${displayName(item)} installation command finished.`);
+      const result = await invoke<string>('mcp_install_package', { packageId: item.id });
+      setNotice(result || `${displayName(item)} installed successfully.`);
       navigateTo('connections');
     } catch (cause) {
       setNotice(cause instanceof Error ? cause.message : 'Could not start the MCP installer. Open Connections for setup options.');

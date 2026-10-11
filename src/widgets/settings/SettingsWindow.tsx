@@ -28,7 +28,6 @@ import {
   Copy,
   Check,
   Cpu,
-  FolderGit2,
   Search,
   ChevronRight,
   ArrowLeft,
@@ -76,10 +75,7 @@ export const SettingsWindow: React.FC = () => {
     elevenLabsApiKey,
     elevenLabsVoiceId,
     setElevenLabsConfig,
-    googleClientId,
-    googleClientSecret,
     connectedGoogleAccounts,
-    setGoogleWorkspaceConfig,
     removeConnectedGoogleAccount,
     setPrimaryGoogleAccount,
     themeAccent,
@@ -1301,40 +1297,8 @@ export const SettingsWindow: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Google Workspace OAuth Client Credentials */}
-                    <div className="p-5 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="text-xs font-bold text-white flex items-center gap-2">
-                            <FolderGit2 className="w-4 h-4 text-neutral-400" /> Google OAuth Credentials
-                          </h4>
-                          <p className="text-[11px] text-neutral-400 mt-0.5">Desktop Application OAuth Client for Workspace automation</p>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-[11px] font-semibold text-neutral-300 mb-1">Client ID</label>
-                          <input
-                            type="text"
-                            placeholder="Google OAuth Client ID"
-                            value={googleClientId}
-                            onChange={(e) => setGoogleWorkspaceConfig(e.target.value, googleClientSecret, true)}
-                            className="w-full px-3.5 py-2 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-500 transition font-mono"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-[11px] font-semibold text-neutral-300 mb-1">Client Secret</label>
-                          <input
-                            type="password"
-                            placeholder="Google OAuth Client Secret"
-                            value={googleClientSecret}
-                            onChange={(e) => setGoogleWorkspaceConfig(googleClientId, e.target.value, true)}
-                            className="w-full px-3.5 py-2 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-500 transition font-mono"
-                          />
-                        </div>
-                      </div>
+                    <div className="rounded-2xl border border-white/5 bg-white/[0.045] p-4 text-xs text-neutral-300">
+                      Google sign-in is securely handled by pihu.nfks.co.in. Your Google client secret stays on the PIHU server.
                     </div>
 
                     {/* Connected Google Accounts List */}
@@ -1345,15 +1309,9 @@ export const SettingsWindow: React.FC = () => {
                         </h3>
                         <button
                           onClick={async () => {
-                            const cId = googleClientId.trim();
-                            const cSecret = googleClientSecret.trim();
-                            if (!cId || !cSecret) {
-                              alert('Please enter your Google OAuth Client ID and Client Secret above first!');
-                              return;
-                            }
                             const { invoke } = await import('@tauri-apps/api/core');
                             try {
-                              await invoke('google_oauth_start', { clientId: cId, clientSecret: cSecret });
+                              await invoke('google_oauth_start');
                             } catch (error) {
                               alert(`Google sign-in could not start: ${String(error)}`);
                             }
