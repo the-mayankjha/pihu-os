@@ -6,6 +6,7 @@ import { GlassCard } from '../../shared/components/GlassCard/GlassCard';
 import React, { useState, useEffect } from 'react';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { SpiritsSettings } from '../../features/spirits/SpiritsSettings';
+import { Marketplace } from '../../features/marketplace/Marketplace';
 import { useLayoutStore } from '../../core/layout/LayoutStore';
 import {
   Settings,
@@ -42,6 +43,7 @@ import {
   Mail,
   Edit2,
   CheckCircle2,
+  ShoppingBag,
 } from 'lucide-react';
 
 interface McpToolDef {
@@ -806,6 +808,7 @@ export const SettingsWindow: React.FC = () => {
   const sidebarItems = [
     { id: 'general', label: 'General', icon: Settings },
     { id: 'connections', label: 'Connections', icon: Briefcase, badge: 'MCP' },
+    { id: 'marketplace', label: 'Marketplace', icon: ShoppingBag },
     { id: 'widgets', label: 'Widgets', icon: LayoutGrid },
     { id: 'spirits', label: 'Spirits', icon: Sparkles },
     { id: 'notifications', label: 'Notifications', icon: Bell },
@@ -920,6 +923,7 @@ export const SettingsWindow: React.FC = () => {
               <h1 className="text-lg font-bold text-white tracking-wide">
                 {activeSidebarCategory === 'general' && 'PIHU OS System Profile'}
                 {activeSidebarCategory === 'connections' && (activeMcpDetailId ? `${currentSelectedMcp?.name} • Tools Explorer` : 'Connections & MCP Servers')}
+                {activeSidebarCategory === 'marketplace' && 'Marketplace'}
                 {activeSidebarCategory === 'widgets' && 'Active Desktop Widgets'}
                 {activeSidebarCategory === 'spirits' && 'Spirits'}
                 {activeSidebarCategory === 'notifications' && 'Notification Preferences'}
@@ -934,6 +938,7 @@ export const SettingsWindow: React.FC = () => {
               <p className="text-xs text-neutral-400">
                 {activeSidebarCategory === 'general' && 'Operating system profile, runtime context, memory cache, and assistant persona.'}
                 {activeSidebarCategory === 'connections' && (activeMcpDetailId ? `Listing all ${currentSelectedMcp?.tools.length} executable tool declarations and parameters.` : 'Google Workspace OAuth, project MCP, file MCP, and external tool protocols.')}
+                {activeSidebarCategory === 'marketplace' && 'Discover and install MCP packages and animated Spirits for PIHU.'}
                 {activeSidebarCategory === 'widgets' && 'Toggle canvas widgets, dock magnification, and screen layout.'}
                 {activeSidebarCategory === 'spirits' && 'Add animated companions to your desktop and make them your own.'}
                 {activeSidebarCategory === 'notifications' && 'Control voice spoken alerts, desktop banners, and chime sounds.'}
@@ -2284,6 +2289,7 @@ export const SettingsWindow: React.FC = () => {
             )}
 
             {activeSidebarCategory === 'spirits' && <SpiritsSettings />}
+            {activeSidebarCategory === 'marketplace' && <Marketplace navigateTo={category => { setActiveMcpDetailId(null); setActiveSidebarCategory(category); }} />}
 
           </div>
 
