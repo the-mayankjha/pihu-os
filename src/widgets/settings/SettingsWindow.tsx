@@ -4,6 +4,7 @@ import { useVoiceStore } from '../../stores/voiceStore';
 import { ensureWhatsAppBridge, WHATSAPP_API_URL } from '../../core/services/whatsappBridge';
 import { GlassCard } from '../../shared/components/GlassCard/GlassCard';
 import React, { useState, useEffect } from 'react';
+import { listen } from '@tauri-apps/api/event';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { SpiritsSettings } from '../../features/spirits/SpiritsSettings';
 import { useLayoutStore } from '../../core/layout/LayoutStore';
@@ -689,6 +690,8 @@ export const SettingsWindow: React.FC = () => {
   // Sync Google Workspace accounts from token file
   useEffect(() => {
     let isMounted = true;
+    let unlistenGoogleConnected: (() => void) | undefined;
+    let unlistenGoogleError: (() => void) | undefined;
 
     const syncAccountsFromFile = async () => {
       try {
@@ -737,10 +740,30 @@ export const SettingsWindow: React.FC = () => {
 
     syncAccountsFromFile();
     const interval = setInterval(syncAccountsFromFile, 2500);
+    void listen<{ name?: string; email?: string; picture?: string }>('google-oauth-connected', (event) => {
+      void syncAccountsFromFile();
+      const account = event.payload.email || event.payload.name || 'Google account';
+      setGoogleOAuthMessage(`${account} connected successfully. PIHU is ready to use Google Workspace.`);
+      setGoogleOAuthError('');
+      setGoogleOAuthStarting(false);
+    }).then((unlisten) => {
+      if (isMounted) unlistenGoogleConnected = unlisten;
+      else unlisten();
+    });
+    void listen<string>('google-oauth-error', (event) => {
+      setGoogleOAuthMessage('');
+      setGoogleOAuthError(event.payload || 'Google sign-in could not be completed.');
+      setGoogleOAuthStarting(false);
+    }).then((unlisten) => {
+      if (isMounted) unlistenGoogleError = unlisten;
+      else unlisten();
+    });
 
     return () => {
       isMounted = false;
       clearInterval(interval);
+      unlistenGoogleConnected?.();
+      unlistenGoogleError?.();
     };
   }, []);
 

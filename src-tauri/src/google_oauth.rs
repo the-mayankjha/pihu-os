@@ -3,7 +3,7 @@ use std::io::{BufRead, BufReader};
 use std::process::{Command, Stdio};
 use std::sync::mpsc;
 use std::time::Duration;
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 
 #[tauri::command]
 pub async fn google_oauth_start(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
@@ -31,14 +31,24 @@ pub async fn google_oauth_start(app: tauri::AppHandle) -> Result<serde_json::Val
             .map_err(|e| format!("Could not start Google OAuth callback: {e}"))?;
         let stdout = child.stdout.take().ok_or("OAuth callback has no output")?;
         let (tx, rx) = mpsc::channel();
+        let event_app = app.clone();
         std::thread::spawn(move || {
             let mut reader = BufReader::new(stdout);
             let mut line = String::new();
             let _ = reader.read_line(&mut line);
-            let _ = tx.send(line);
-            let mut discard = String::new();
-            while reader.read_line(&mut discard).unwrap_or(0) > 0 {
-                discard.clear();
+            let _ = tx.send(line.clone());
+            loop {
+                line.clear();
+                if reader.read_line(&mut line).unwrap_or(0) == 0 {
+                    break;
+                }
+                if let Some(payload) = line.trim().strip_prefix("OAUTH_ACCOUNT_CONNECTED:") {
+                    if let Ok(account) = serde_json::from_str::<serde_json::Value>(payload) {
+                        let _ = event_app.emit("google-oauth-connected", account);
+                    }
+                } else if let Some(message) = line.trim().strip_prefix("OAUTH_ACCOUNT_ERROR:") {
+                    let _ = event_app.emit("google-oauth-error", message.to_string());
+                }
             }
         });
         let first_line = rx
