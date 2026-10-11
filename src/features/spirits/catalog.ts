@@ -49,7 +49,7 @@ import hug3 from '../../../src-tauri/minis/pihu/interactions/hug/frames/03.png?u
 import type { Spirit } from './model';
 import type { SocialAction, SocialCompanion } from './socialModel';
 
-const metadata = import.meta.glob('../../../src-tauri/minis/*/pet.json', { eager: true, import: 'default' }) as Record<string, Spirit>;
+const metadata = import.meta.glob('../../../src-tauri/minis/*/spirit.json', { eager: true, import: 'default' }) as Record<string, Spirit>;
 const sheets = import.meta.glob('../../../src-tauri/minis/*/spritesheet-extended.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 const talkingFrames = import.meta.glob('../../../src-tauri/minis/*/final/tts-visemes/*.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 
@@ -75,10 +75,10 @@ export function spiritTalkingFrames(id: string): string[] {
   return Object.entries(talkingFrames).filter(([path]) => path.includes(`/minis/${id}/`) && !path.endsWith('-mouth.png')).sort(([a], [b]) => a.localeCompare(b)).map(([, url]) => url);
 }
 
-export const bundledSpirits: Spirit[] = Object.entries(metadata).flatMap(([path, pet]) => {
+export const bundledSpirits: Spirit[] = Object.entries(metadata).flatMap(([path, spirit]) => {
   const id = path.split('/').at(-2)!;
-  return sheets[path.replace('pet.json', 'spritesheet-extended.png')]
-    ? [{ id, name: pet.name, description: pet.description }]
+  return sheets[path.replace('spirit.json', 'spritesheet-extended.png')]
+    ? [{ id, name: spirit.name, description: spirit.description }]
     : [];
 });
 
