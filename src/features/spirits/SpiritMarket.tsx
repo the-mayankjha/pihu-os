@@ -82,20 +82,20 @@ export function SpiritMarket() {
     {!loading && packages.length > 0 && <div className="grid grid-cols-1 gap-4 md:grid-cols-2">{packages.map(entry => {
       const installed = installedIds.has(entry.id);
       const active = activeIds.includes(entry.id);
-      return <article key={entry.id} className="flex min-h-48 flex-col rounded-2xl border border-white/10 bg-white/[0.035] p-4 transition hover:border-white/20 hover:bg-white/[0.055]">
-        <div className="flex min-h-28 items-center gap-4">
+      return <article key={entry.id} className="relative flex min-h-48 flex-col rounded-2xl border border-white/10 bg-white/[0.035] p-4 transition hover:border-white/20 hover:bg-white/[0.055]">
+        <button type="button" aria-label={`Open ${entry.name} Spirit details`} onClick={() => void openDetails(entry)} className="absolute inset-0 z-0 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-300" />
+        <div className="pointer-events-none relative z-10 flex min-h-28 items-center gap-4">
           <div className="flex h-28 w-24 shrink-0 items-center justify-center rounded-xl bg-white/[0.035] p-2">
             <SpiritMarketPreview name={entry.name} src={entry.preview_url} />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2"><button type="button" onClick={() => void openDetails(entry)} className="truncate text-left text-sm font-semibold text-white hover:text-pink-200">{entry.name}</button>{active && <span className="rounded-full bg-emerald-400/10 px-2 py-0.5 text-[10px] text-emerald-200">On desktop</span>}</div>
+            <div className="flex flex-wrap items-center gap-2"><h5 className="truncate text-sm font-semibold text-white">{entry.name}</h5>{active && <span className="rounded-full bg-emerald-400/10 px-2 py-0.5 text-[10px] text-emerald-200">On desktop</span>}</div>
             <p className="mt-1 line-clamp-3 text-xs leading-5 text-neutral-400">{entry.description}</p>
             <p className="mt-2 text-[11px] text-neutral-300">{entry.author}</p>
             <p className="mt-1 text-[10px] text-neutral-500">v{entry.version} · {installed ? active ? 'Added' : 'Installed' : `${Math.ceil(entry.size_bytes / 1024 / 1024)} MB download`}</p>
           </div>
         </div>
-        <button type="button" onClick={() => void openDetails(entry)} className="mt-2 self-start text-[11px] text-neutral-400 underline decoration-white/20 underline-offset-2 hover:text-white">View animations and details</button>
-        <button type="button" onClick={() => void install(entry)} disabled={busyId !== null || (atLimit && !active)} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white/[0.09] px-3 py-2.5 text-xs font-medium text-neutral-200 transition hover:bg-white/[0.14] disabled:opacity-40">
+        <button type="button" onClick={() => void install(entry)} disabled={busyId !== null || (atLimit && !active)} className="relative z-20 mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white/[0.09] px-3 py-2.5 text-xs font-medium text-neutral-200 transition hover:bg-white/[0.14] disabled:opacity-40">
           <Download size={14} />{busyId === entry.id ? 'Installing…' : active ? 'Added to desktop' : installed ? 'Add Spirit' : 'Install Spirit'}
         </button>
       </article>;
