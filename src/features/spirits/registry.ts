@@ -17,6 +17,7 @@ export interface RegistrySpirit {
   preview_url: string;
   sha256: string;
   size_bytes: number;
+  files?: Array<{ path: string; sha256: string; size_bytes: number }>;
 }
 
 export interface SpiritDetails {
@@ -132,14 +133,53 @@ export async function loadSpiritRegistry(): Promise<RegistrySpirit[]> {
 }
 
 export async function loadSpiritDetails(id: string): Promise<SpiritDetails> {
-  const response = await fetch(`${MARKET_API_URL}/packages/${encodeURIComponent(id)}/details`, { headers: { Accept: 'application/json' } });
-  if (!response.ok) throw new Error(`Could not load Spirit details from the PIHU Market API (${response.status}).`);
-  const details = await response.json() as SpiritDetails;
-  if (!details || typeof details !== 'object' || typeof details.manifest !== 'object' || !Array.isArray(details.animation?.animations)
-    || !details.animation.state_mapping || !Array.isArray(details.assets)) {
-    throw new Error('The PIHU Market API returned incomplete Spirit details.');
+  const apiOrigin = new URL(MARKET_API_URL).origin;
+  const detailsResponse = await fetch(`${MARKET_API_URL}/packages/${encodeURIComponent(id)}/details`, { headers: { Accept: 'application/json' } });
+  if (detailsResponse.ok) {
+    const details = await detailsResponse.json() as SpiritDetails;
+    if (details && typeof details === 'object' && typeof details.manifest === 'object' && Array.isArray(details.animation?.animations)
+      && details.animation.state_mapping && Array.isArray(details.assets)) return details;
   }
-  return details;
+
+  // Older deployed Market API versions return the package summary for unknown
+  // subroutes. Rebuild the detail view from the live Spirits registry until the
+  // details endpoint is deployed, while keeping preview and asset URLs on API.
+  const [indexResponse, runtimeResponse] = await Promise.all([
+    fetch(REGISTRY_URL, { headers: { Accept: 'application/json' } }),
+    fetch(new URL('runtime.json', REGISTRY_URL), { headers: { Accept: 'application/json' } }),
+  ]);
+  if (!indexResponse.ok) throw new Error(`Could not load the Spirits registry (${indexResponse.status}).`);
+  if (!runtimeResponse.ok) throw new Error(`Could not load the Spirit animation specification (${runtimeResponse.status}).`);
+  const registryEntry = parseIndex(await indexResponse.json()).packages.find(entry => entry.id === id);
+  if (!registryEntry) throw new Error('This Spirit is no longer in the published registry.');
+  const runtime = await runtimeResponse.json() as SpiritDetails['animation'];
+  if (!Array.isArray(runtime.animations) || !runtime.state_mapping) throw new Error('The Spirits registry has an invalid animation specification.');
+
+  let manifest: Record<string, unknown>;
+  const manifestResponse = await fetch(`${MARKET_API_URL}/packages/${encodeURIComponent(id)}/manifest`, { headers: { Accept: 'application/json' } });
+  if (manifestResponse.ok) manifest = await manifestResponse.json() as Record<string, unknown>;
+  else {
+    const response = await fetch(registryResource(registryEntry.manifest), { headers: { Accept: 'application/json' } });
+    if (!response.ok) throw new Error(`Could not load the Spirit manifest (${response.status}).`);
+    manifest = await response.json() as Record<string, unknown>;
+  }
+  const files = (registryEntry.files ?? []).filter(file => safeRelativePath(file.path)
+    && file.path.startsWith(`spirits/${id}/`) && file.path.toLowerCase().endsWith('.png')
+    && /^[a-f0-9]{64}$/i.test(file.sha256) && Number.isSafeInteger(file.size_bytes) && file.size_bytes > 0);
+  const assets = files.map(file => {
+    const relativePath = file.path.slice(`spirits/${id}/`.length);
+    const assetPath = relativePath.split('/').map(encodeURIComponent).join('/');
+    return { ...file, path: relativePath, url: new URL(`/api/v2/packages/${encodeURIComponent(id)}/assets/${assetPath}`, apiOrigin).toString() };
+  });
+  const base = `/api/v2/packages/${encodeURIComponent(id)}`;
+  return {
+    package: { id, display_name: manifest.display_name ?? registryEntry.name, type: 'spirits', version: registryEntry.version },
+    manifest,
+    animation: runtime,
+    assets,
+    preview_url: new URL(`${base}/preview`, apiOrigin).toString(),
+    download_url: new URL(`${base}/download`, apiOrigin).toString(),
+  };
 }
 
 async function validateSpriteSheet(blob: Blob) {
