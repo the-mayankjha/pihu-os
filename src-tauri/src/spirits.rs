@@ -132,8 +132,10 @@ fn reconcile(
     let labels: Vec<String> = ids.iter().map(|id| format!("spirit-{id}")).collect();
     for (label, window) in app.webview_windows() {
         if label.starts_with("spirit-") && !labels.contains(&label) {
-            release_overlay(&window);
-            window.destroy().map_err(|e| e.to_string())?;
+            // Keep the WebKit view alive while a Spirit is removed. Destroying
+            // an NSPanel immediately from this reconciliation callback can
+            // crash WebKit on macOS; hidden windows are safely reused on add.
+            window.hide().map_err(|e| e.to_string())?;
         }
     }
     for (index, (id, label)) in ids.iter().zip(labels.iter()).enumerate() {
@@ -206,6 +208,20 @@ fn reconcile(
         window.show().map_err(|e| e.to_string())?;
     }
     Ok(())
+}
+
+/// Reload companion views after their downloaded artwork package is updated.
+#[tauri::command]
+pub async fn refresh_spirit_windows(app: tauri::AppHandle) -> Result<(), String> {
+    let (sender, receiver) = std::sync::mpsc::channel();
+    let handle = app.clone();
+    app.run_on_main_thread(move || {
+        let result = handle.webview_windows().into_iter()
+            .filter(|(label, _)| label.starts_with("spirit-"))
+            .try_for_each(|(_, window)| window.eval("window.location.reload()").map_err(|e| e.to_string()));
+        let _ = sender.send(result);
+    }).map_err(|e| e.to_string())?;
+    receiver.recv().map_err(|e| e.to_string())?
 }
 
 #[tauri::command]

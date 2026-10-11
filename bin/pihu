@@ -125,7 +125,7 @@ function writePihuConfig() {
   // Write a master config JSON
   const configPath = path.join(configDir, 'config.json');
   const config = {
-    version: '1.0.0',
+    version: '1.2.1',
     created_at: new Date().toISOString(),
     google_oauth: {
       client_id: process.env.GOOGLE_CLIENT_ID,
@@ -157,7 +157,7 @@ function printBanner(mode) {
   console.log(`
 ${C.magenta}${C.bold}  ╭─────────────────────────────────────────────╮
   │                                             │
-  │        🟣  P I H U   O S  v1.0.0  🟣       │
+  │        🟣  P I H U   O S  v1.2.1  🟣       │
   │           Your AI Desktop Companion         │
   │                                             │
   ╰─────────────────────────────────────────────╯${C.reset}

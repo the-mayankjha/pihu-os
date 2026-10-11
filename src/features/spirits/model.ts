@@ -3,6 +3,8 @@ export interface Spirit {
   name: string;
   description: string;
   custom?: boolean;
+  version?: string;
+  author?: string;
 }
 
 export const CELL_WIDTH = 192;

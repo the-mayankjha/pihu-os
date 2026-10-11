@@ -1,10 +1,17 @@
 import { validateSheetDimensions, validateSheetPixels } from './model';
 
-const REGISTRY_URL = import.meta.env.VITE_SPIRITS_REGISTRY_URL
-  || 'https://raw.githubusercontent.com/the-mayankjha/pihu_spirits/pihu_market/index.json';
-const MARKET_API_URL = import.meta.env.VITE_PIHU_MARKET_API_URL || 'https://pihu.nfks.co.in/api/v2';
+const MARKET_API_URL = (import.meta.env.VITE_PIHU_MARKET_API_URL || 'https://pihu.nfks.co.in/api/v2').replace(/\/$/, '');
 const MAX_INDEX_BYTES = 1024 * 1024;
-const MAX_SPRITE_BYTES = 20 * 1024 * 1024;
+const MAX_ASSET_BYTES = 20 * 1024 * 1024;
+const MAX_PACKAGE_BYTES = 80 * 1024 * 1024;
+const MAX_PACKAGE_FILES = 256;
+
+export interface SpiritAsset {
+  path: string;
+  sha256: string;
+  size_bytes: number;
+  url: string;
+}
 
 export interface RegistrySpirit {
   id: string;
@@ -12,12 +19,12 @@ export interface RegistrySpirit {
   description: string;
   author: string;
   version: string;
-  manifest: string;
+  manifest: Record<string, unknown>;
   sprite_sheet: string;
   preview_url: string;
   sha256: string;
   size_bytes: number;
-  files?: Array<{ path: string; sha256: string; size_bytes: number }>;
+  files: SpiritAsset[];
 }
 
 export interface SpiritDetails {
@@ -34,152 +41,91 @@ export interface SpiritDetails {
     interactions?: string[];
     social_timing_ms?: Record<string, number>;
   };
-  assets: Array<{ path: string; sha256: string; size_bytes: number; url: string }>;
+  assets: SpiritAsset[];
   preview_url: string;
   download_url: string;
 }
 
-interface RegistryIndex {
-  schema_version: 1;
-  package_type: 'spirits';
-  packages: RegistrySpirit[];
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  Boolean(value && typeof value === 'object' && !Array.isArray(value));
 
 function safeRelativePath(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0 && value.length <= 256
     && !value.startsWith('/') && !value.includes('..') && !value.includes('\\');
 }
 
-function parseIndex(value: unknown): RegistryIndex {
-  if (!isRecord(value) || value.schema_version !== 1 || value.package_type !== 'spirits' || !Array.isArray(value.packages)) {
-    throw new Error('The Spirits registry returned an unsupported catalog.');
-  }
-  const seen = new Set<string>();
-  const packages = value.packages.map((item): RegistrySpirit => {
-    if (!isRecord(item)
-      || typeof item.id !== 'string' || !/^[a-z0-9][a-z0-9-]{1,63}$/.test(item.id)
-      || typeof item.name !== 'string' || item.name.length > 128
-      || typeof item.description !== 'string' || item.description.length > 1000
-      || typeof item.version !== 'string' || !/^\d+\.\d+\.\d+$/.test(item.version)
-      || !safeRelativePath(item.manifest) || !safeRelativePath(item.sprite_sheet)
-      || typeof item.sha256 !== 'string' || !/^[a-f0-9]{64}$/i.test(item.sha256)
-      || !Number.isSafeInteger(item.size_bytes) || (item.size_bytes as number) < 1 || (item.size_bytes as number) > MAX_SPRITE_BYTES) {
-      throw new Error('The Spirits registry contains an invalid package entry.');
-    }
-    if (seen.has(item.id)) throw new Error('The Spirits registry contains a duplicate package ID.');
-    seen.add(item.id);
-    return item as unknown as RegistrySpirit;
-  });
-  return { schema_version: 1, package_type: 'spirits', packages };
+function assetFrom(value: unknown, apiOrigin: string): SpiritAsset | null {
+  if (!isRecord(value) || !safeRelativePath(value.path)
+    || typeof value.sha256 !== 'string' || !/^[a-f0-9]{64}$/i.test(value.sha256)
+    || !Number.isSafeInteger(value.size_bytes) || (value.size_bytes as number) < 1 || (value.size_bytes as number) > MAX_ASSET_BYTES
+    || typeof value.url !== 'string') return null;
+  try {
+    const url = new URL(value.url);
+    if (url.origin !== apiOrigin || !url.pathname.startsWith('/api/v2/packages/')) return null;
+    return { path: value.path, sha256: value.sha256, size_bytes: value.size_bytes as number, url: url.toString() };
+  } catch { return null; }
 }
 
-function registryResource(path: string) {
-  const base = new URL(REGISTRY_URL);
-  const resource = new URL(path, base);
-  if (resource.origin !== base.origin || !resource.pathname.startsWith(base.pathname.replace(/[^/]*$/, ''))) {
-    throw new Error('The package points outside the configured Spirits registry.');
-  }
-  return resource;
+async function fetchJSON(url: string, label: string) {
+  const response = await fetch(url, { headers: { Accept: 'application/json' } });
+  if (!response.ok) throw new Error(`${label} (${response.status}).`);
+  const length = Number(response.headers.get('content-length') ?? 0);
+  if (length > MAX_INDEX_BYTES) throw new Error('The Spirits Market response is too large.');
+  return response.json() as Promise<unknown>;
 }
 
 export async function loadSpiritRegistry(): Promise<RegistrySpirit[]> {
-  const registryResponse = await fetch(REGISTRY_URL, { headers: { Accept: 'application/json' } });
-  if (!registryResponse.ok) throw new Error(`Could not load the Spirits registry (${registryResponse.status}).`);
-  const length = Number(registryResponse.headers.get('content-length') ?? 0);
-  if (length > MAX_INDEX_BYTES) throw new Error('The Spirits registry catalog is too large.');
-  const registry = parseIndex(await registryResponse.json()).packages;
   const apiOrigin = new URL(MARKET_API_URL).origin;
-  const previews = new Map<string, { author: string; preview_url: string }>();
+  const catalog = await fetchJSON(`${MARKET_API_URL}/catalog?type=spirits&limit=100`, 'Could not load the Spirits catalog');
+  if (!isRecord(catalog) || !Array.isArray(catalog.packages)) throw new Error('The PIHU Market API returned an invalid Spirits catalog.');
+  const entries = catalog.packages.filter((item): item is Record<string, unknown> =>
+    isRecord(item) && item.type === 'spirits' && typeof item.id === 'string'
+      && /^[a-z0-9][a-z0-9-]{1,63}$/.test(item.id));
 
-  // The registry is the source of truth for what can be installed. The Market
-  // API enriches it with preview URLs, but a not-yet-deployed API route should
-  // not make the entire Spirits catalog disappear from the desktop app.
-  try {
-    const marketResponse = await fetch(`${MARKET_API_URL}/catalog?type=spirits&limit=100`, { headers: { Accept: 'application/json' } });
-    if (marketResponse.ok) {
-      const market = await marketResponse.json() as { packages?: Array<Record<string, unknown>> };
-      for (const item of market.packages ?? []) {
-        if (typeof item.id !== 'string' || typeof item.preview_url !== 'string' || typeof item.author !== 'string') continue;
-        const preview = new URL(item.preview_url);
-        if (preview.origin === apiOrigin && preview.pathname.startsWith('/api/v2/packages/')) {
-          previews.set(item.id, { author: item.author, preview_url: preview.toString() });
-        }
-      }
+  return Promise.all(entries.map(async item => {
+    const details = await fetchJSON(`${MARKET_API_URL}/packages/${encodeURIComponent(item.id as string)}/details`, `Could not load details for ${String(item.display_name ?? item.name)}`);
+    if (!isRecord(details) || !isRecord(details.manifest) || !isRecord(details.manifest.assets) || !Array.isArray(details.assets)) {
+      throw new Error(`The PIHU Market API returned invalid package details for ${String(item.id)}.`);
     }
-  } catch {
-    // Use the package manifests below as metadata fallback when the API is offline.
-  }
-
-  return Promise.all(registry.map(async entry => {
-    const apiPreview = new URL(`/api/v2/packages/${encodeURIComponent(entry.id)}/preview`, apiOrigin).toString();
-    const marketEntry = previews.get(entry.id);
-    if (marketEntry) return { ...entry, ...marketEntry };
-
-    let author = 'Unknown author';
-    try {
-      const response = await fetch(registryResource(entry.manifest), { headers: { Accept: 'application/json' } });
-      if (response.ok) {
-        const manifest = await response.json() as Record<string, unknown>;
-        if (typeof manifest.author === 'string' && manifest.author.trim()) author = manifest.author;
-      }
-    } catch {
-      // A missing optional author field should not hide an installable Spirit.
+    const manifest = details.manifest;
+    const manifestAssets = isRecord(manifest.assets) ? manifest.assets : null;
+    const detailAssets = details.assets;
+    if (!manifestAssets) throw new Error(`The PIHU Market API returned invalid package details for ${String(item.id)}.`);
+    const packageInfo = isRecord(details.package) ? details.package : item;
+    const files = detailAssets.map(file => assetFrom(file, apiOrigin)).filter((file): file is SpiritAsset => file !== null);
+    const spriteSheet = manifestAssets.sprite_sheet;
+    const sheet = files.find(file => file.path === spriteSheet);
+    const entry: RegistrySpirit = {
+      id: String(packageInfo.id ?? item.id),
+      name: String(packageInfo.display_name ?? packageInfo.name ?? item.display_name ?? item.name),
+      description: String(packageInfo.description ?? item.description ?? ''),
+      author: String(packageInfo.author ?? item.author ?? 'Unknown author'),
+      version: String(packageInfo.version ?? item.version ?? ''),
+      manifest,
+      sprite_sheet: String(spriteSheet ?? ''),
+      preview_url: String(details.preview_url ?? packageInfo.preview_url ?? ''),
+      sha256: sheet?.sha256 ?? String(packageInfo.sha256 ?? ''),
+      size_bytes: sheet?.size_bytes ?? Number(packageInfo.size_bytes ?? 0),
+      files,
+    };
+    if (manifest.schema_version !== 1 || manifest.type !== 'spirits' || manifest.id !== entry.id
+      || manifest.version !== entry.version || !sheet || files.length !== detailAssets.length
+      || files.length > MAX_PACKAGE_FILES || files.reduce((sum, file) => sum + file.size_bytes, 0) > MAX_PACKAGE_BYTES) {
+      throw new Error(`The PIHU Market API returned incomplete or unsafe Spirit package data for ${entry.id}.`);
     }
-    return { ...entry, author, preview_url: apiPreview };
+    return entry;
   }));
 }
 
 export async function loadSpiritDetails(id: string): Promise<SpiritDetails> {
-  const apiOrigin = new URL(MARKET_API_URL).origin;
-  const detailsResponse = await fetch(`${MARKET_API_URL}/packages/${encodeURIComponent(id)}/details`, { headers: { Accept: 'application/json' } });
-  if (detailsResponse.ok) {
-    const details = await detailsResponse.json() as SpiritDetails;
-    if (details && typeof details === 'object' && typeof details.manifest === 'object' && Array.isArray(details.animation?.animations)
-      && details.animation.state_mapping && Array.isArray(details.assets)) return details;
+  const details = await fetchJSON(`${MARKET_API_URL}/packages/${encodeURIComponent(id)}/details`, 'Could not load Spirit details');
+  if (!isRecord(details) || !isRecord(details.manifest) || !isRecord(details.animation)
+    || !Array.isArray(details.animation.animations) || !isRecord(details.animation.state_mapping)
+    || !Array.isArray(details.assets) || typeof details.preview_url !== 'string' || typeof details.download_url !== 'string') {
+    throw new Error('The PIHU Market API returned incomplete Spirit details.');
   }
-
-  // Older deployed Market API versions return the package summary for unknown
-  // subroutes. Rebuild the detail view from the live Spirits registry until the
-  // details endpoint is deployed, while keeping preview and asset URLs on API.
-  const [indexResponse, runtimeResponse] = await Promise.all([
-    fetch(REGISTRY_URL, { headers: { Accept: 'application/json' } }),
-    fetch(new URL('runtime.json', REGISTRY_URL), { headers: { Accept: 'application/json' } }),
-  ]);
-  if (!indexResponse.ok) throw new Error(`Could not load the Spirits registry (${indexResponse.status}).`);
-  if (!runtimeResponse.ok) throw new Error(`Could not load the Spirit animation specification (${runtimeResponse.status}).`);
-  const registryEntry = parseIndex(await indexResponse.json()).packages.find(entry => entry.id === id);
-  if (!registryEntry) throw new Error('This Spirit is no longer in the published registry.');
-  const runtime = await runtimeResponse.json() as SpiritDetails['animation'];
-  if (!Array.isArray(runtime.animations) || !runtime.state_mapping) throw new Error('The Spirits registry has an invalid animation specification.');
-
-  let manifest: Record<string, unknown>;
-  const manifestResponse = await fetch(`${MARKET_API_URL}/packages/${encodeURIComponent(id)}/manifest`, { headers: { Accept: 'application/json' } });
-  if (manifestResponse.ok) manifest = await manifestResponse.json() as Record<string, unknown>;
-  else {
-    const response = await fetch(registryResource(registryEntry.manifest), { headers: { Accept: 'application/json' } });
-    if (!response.ok) throw new Error(`Could not load the Spirit manifest (${response.status}).`);
-    manifest = await response.json() as Record<string, unknown>;
-  }
-  const files = (registryEntry.files ?? []).filter(file => safeRelativePath(file.path)
-    && file.path.startsWith(`spirits/${id}/`) && file.path.toLowerCase().endsWith('.png')
-    && /^[a-f0-9]{64}$/i.test(file.sha256) && Number.isSafeInteger(file.size_bytes) && file.size_bytes > 0);
-  const assets = files.map(file => {
-    const relativePath = file.path.slice(`spirits/${id}/`.length);
-    const assetPath = relativePath.split('/').map(encodeURIComponent).join('/');
-    return { ...file, path: relativePath, url: new URL(`/api/v2/packages/${encodeURIComponent(id)}/assets/${assetPath}`, apiOrigin).toString() };
-  });
-  const base = `/api/v2/packages/${encodeURIComponent(id)}`;
-  return {
-    package: { id, display_name: manifest.display_name ?? registryEntry.name, type: 'spirits', version: registryEntry.version },
-    manifest,
-    animation: runtime,
-    assets,
-    preview_url: new URL(`${base}/preview`, apiOrigin).toString(),
-    download_url: new URL(`${base}/download`, apiOrigin).toString(),
-  };
+  return details as unknown as SpiritDetails;
 }
 
 async function validateSpriteSheet(blob: Blob) {
@@ -196,28 +142,46 @@ async function validateSpriteSheet(blob: Blob) {
     if (!context) throw new Error('Could not inspect the Spirit artwork.');
     context.drawImage(image, 0, 0);
     validateSheetPixels(canvas.width, canvas.height, context.getImageData(0, 0, canvas.width, canvas.height).data);
-  } finally {
-    URL.revokeObjectURL(url);
-  }
+  } finally { URL.revokeObjectURL(url); }
 }
 
-export async function downloadSpirit(entry: RegistrySpirit): Promise<Blob> {
-  const manifestResponse = await fetch(registryResource(entry.manifest));
-  if (!manifestResponse.ok) throw new Error('Could not load the Spirit package manifest.');
-  const manifest = await manifestResponse.json() as Record<string, unknown>;
+async function checkedAsset(file: SpiritAsset): Promise<Blob> {
+  const response = await fetch(file.url, { headers: { Accept: 'image/png' } });
+  if (!response.ok) throw new Error(`Could not download Spirit asset ${file.path} (${response.status}).`);
+  const blob = await response.blob();
+  if (blob.size !== file.size_bytes || blob.size > MAX_ASSET_BYTES) throw new Error(`Spirit asset ${file.path} has an unexpected size.`);
+  const digest = await crypto.subtle.digest('SHA-256', await blob.arrayBuffer());
+  const sha256 = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+  if (sha256 !== file.sha256.toLowerCase()) throw new Error(`Spirit asset ${file.path} failed its SHA-256 check.`);
+  return blob;
+}
+
+export async function downloadSpirit(entry: RegistrySpirit): Promise<Map<string, Blob>> {
+  const manifest = entry.manifest;
   const assets = isRecord(manifest.assets) ? manifest.assets : null;
   if (manifest.schema_version !== 1 || manifest.type !== 'spirits' || manifest.id !== entry.id
-    || manifest.version !== entry.version || assets?.sprite_sheet !== entry.sprite_sheet) {
+    || manifest.version !== entry.version || assets?.sprite_sheet !== entry.sprite_sheet
+    || entry.files.length === 0 || entry.files.length > MAX_PACKAGE_FILES
+    || entry.files.reduce((sum, file) => sum + file.size_bytes, 0) > MAX_PACKAGE_BYTES) {
     throw new Error('The Spirit manifest does not match the catalog entry.');
   }
 
-  const response = await fetch(registryResource(entry.sprite_sheet));
-  if (!response.ok) throw new Error(`Could not download ${entry.name}'s artwork.`);
-  const blob = await response.blob();
-  if (blob.size !== entry.size_bytes || blob.size > MAX_SPRITE_BYTES) throw new Error('The downloaded Spirit artwork has an unexpected size.');
-  const digest = await crypto.subtle.digest('SHA-256', await blob.arrayBuffer());
-  const sha256 = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
-  if (sha256 !== entry.sha256.toLowerCase()) throw new Error('The downloaded Spirit artwork failed its SHA-256 check.');
-  await validateSpriteSheet(blob);
-  return blob;
+  // Keep downloads bounded; packages may include many individual animation
+  // frames, and this runs inside the desktop renderer.
+  const downloaded = new Map<string, Blob>();
+  let cursor = 0;
+  const workers = Array.from({ length: Math.min(4, entry.files.length) }, async () => {
+    while (cursor < entry.files.length) {
+      const file = entry.files[cursor++];
+      if (!safeRelativePath(file.path) || !file.path.toLowerCase().endsWith('.png')) {
+        throw new Error(`The Spirit catalog contains an invalid asset path for ${entry.id}.`);
+      }
+      downloaded.set(file.path, await checkedAsset(file));
+    }
+  });
+  await Promise.all(workers);
+  const sheet = downloaded.get(entry.sprite_sheet);
+  if (!sheet || sheet.size !== entry.size_bytes) throw new Error('The Spirit package is missing its declared sprite sheet.');
+  await validateSpriteSheet(sheet);
+  return downloaded;
 }

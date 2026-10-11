@@ -100,6 +100,9 @@ export const SettingsWindow: React.FC = () => {
 
   const [newKeyInput, setNewKeyInput] = useState('');
   const [copiedKeyIdx, setCopiedKeyIdx] = useState<number | null>(null);
+  const [googleOAuthStarting, setGoogleOAuthStarting] = useState(false);
+  const [googleOAuthMessage, setGoogleOAuthMessage] = useState('');
+  const [googleOAuthError, setGoogleOAuthError] = useState('');
   
   // MCP Inspector & In-Place Navigation states
   const [activeMcpDetailId, setActiveMcpDetailId] = useState<string | null>(null);
@@ -1313,19 +1316,34 @@ export const SettingsWindow: React.FC = () => {
                           Connected Google Accounts ({connectedGoogleAccounts.length})
                         </h3>
                         <button
+                          type="button"
+                          disabled={googleOAuthStarting}
                           onClick={async () => {
-                            const { invoke } = await import('@tauri-apps/api/core');
+                            setGoogleOAuthStarting(true);
+                            setGoogleOAuthError('');
+                            setGoogleOAuthMessage('Preparing secure Google sign-in…');
                             try {
-                              await invoke('google_oauth_start');
+                              const { invoke } = await import('@tauri-apps/api/core');
+                              const result = await invoke<{ provider?: string }>('google_oauth_start');
+                              setGoogleOAuthMessage(result.provider === 'local'
+                                ? 'PIHU hosted sign-in is unavailable. Using the Google OAuth client configured on this device; complete authorization in your browser.'
+                                : 'PIHU sign-in opened. Complete Google authorization in your browser to link the account.');
                             } catch (error) {
-                              alert(`Google sign-in could not start: ${String(error)}`);
+                              setGoogleOAuthMessage('');
+                              setGoogleOAuthError(String(error));
+                            } finally {
+                              setGoogleOAuthStarting(false);
                             }
                           }}
-                          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10   hover: hover: text-white text-xs font-semibold shadow-lg shadow-neutral-500/20 transition"
+                          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold shadow-lg shadow-neutral-500/20 transition disabled:cursor-wait disabled:opacity-60"
                         >
-                          <Plus className="w-3.5 h-3.5" /> Link Another Account
+                          {googleOAuthStarting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                          {googleOAuthStarting ? 'Preparing…' : 'Link Another Account'}
                         </button>
                       </div>
+
+                      {googleOAuthMessage && <p role="status" className="text-xs text-emerald-300">{googleOAuthMessage}</p>}
+                      {googleOAuthError && <p role="alert" className="rounded-xl border border-rose-400/20 bg-rose-400/10 px-3 py-2 text-xs text-rose-200">Google sign-in could not start: {googleOAuthError}</p>}
 
                       <div className="space-y-2.5">
                         {connectedGoogleAccounts.map((account, idx) => (

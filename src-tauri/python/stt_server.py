@@ -43,7 +43,12 @@ HINDI_ENGLISH_INITIAL_PROMPT = (
 def init_model():
     global model
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    models_dir = os.path.join(project_root, 'models', 'stt')
+    resource_models_dir = os.path.normpath(os.path.join(current_dir, '..', '_up_', 'models', 'stt'))
+    user_models_dir = os.path.expanduser('~/.pihu-os/models/stt')
+    source_models_dir = os.path.join(project_root, 'models', 'stt')
+    models_dir = next((path for path in (user_models_dir, resource_models_dir, source_models_dir)
+                       if os.path.isdir(path) and any(os.path.isfile(os.path.join(path, name))
+                       for name in ('ggml-small.bin', 'ggml-base.bin', 'ggml-base.en.bin'))), user_models_dir)
     os.makedirs(models_dir, exist_ok=True)
 
     # 1. Search for high-accuracy multilingual 'small' model first (244M params, high accuracy for Hindi), then 'base', then 'base.en'

@@ -23,6 +23,7 @@ pub async fn google_oauth_start(app: tauri::AppHandle) -> Result<serde_json::Val
         let mut child = Command::new(crate::get_python_cmd())
             .arg(script)
             .env("PIHU_OAUTH_BROKER", "https://pihu.nfks.co.in/api/v2/oauth/google")
+            .env("PIHU_OAUTH_AUTH_PAGE", "https://pihu.nfks.co.in/mcp/google/auth")
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
@@ -53,13 +54,28 @@ pub async fn google_oauth_start(app: tauri::AppHandle) -> Result<serde_json::Val
             .as_str()
             .filter(|url| url.starts_with("https://accounts.google.com/"))
             .ok_or_else(|| "PIHU returned an invalid Google sign-in URL.".to_string())?;
+        let auth_page_url = ready["auth_page_url"]
+            .as_str()
+            .filter(|url| url.starts_with("https://pihu.nfks.co.in/mcp/google/auth?"))
+            .unwrap_or(auth_url);
 
         #[cfg(target_os = "macos")]
-        let opened = Command::new("/usr/bin/open").arg(auth_url).status();
+        let mut opened = Command::new("/usr/bin/open").arg(auth_page_url).status();
         #[cfg(target_os = "windows")]
-        let opened = Command::new("cmd").args(["/C", "start", "", auth_url]).status();
+        let mut opened = Command::new("cmd").args(["/C", "start", "", auth_page_url]).status();
         #[cfg(all(not(target_os = "macos"), not(target_os = "windows")))]
-        let opened = Command::new("xdg-open").arg(auth_url).status();
+        let mut opened = Command::new("xdg-open").arg(auth_page_url).status();
+
+        // If the branded PIHU auth page cannot be opened by the OS, launch the
+        // already-prepared Google authorization URL directly as a local fallback.
+        if !opened.as_ref().is_ok_and(|status| status.success()) {
+            #[cfg(target_os = "macos")]
+            { opened = Command::new("/usr/bin/open").arg(auth_url).status(); }
+            #[cfg(target_os = "windows")]
+            { opened = Command::new("cmd").args(["/C", "start", "", auth_url]).status(); }
+            #[cfg(all(not(target_os = "macos"), not(target_os = "windows")))]
+            { opened = Command::new("xdg-open").arg(auth_url).status(); }
+        }
 
         if !opened.map(|status| status.success()).unwrap_or(false) {
             let _ = child.kill();
@@ -69,7 +85,11 @@ pub async fn google_oauth_start(app: tauri::AppHandle) -> Result<serde_json::Val
         std::thread::spawn(move || {
             let _ = child.wait();
         });
-        Ok(serde_json::json!({"started": true, "port": ready["port"]}))
+        Ok(serde_json::json!({
+            "started": true,
+            "port": ready["port"],
+            "provider": ready["provider"].as_str().unwrap_or("pihu"),
+        }))
     })
     .await
     .map_err(|e| e.to_string())?

@@ -47,7 +47,12 @@ export const useSpiritsStore = create<SpiritsState>()(persist((set) => ({
   add: id => set(s => ({ activeIds: normalizeActiveIds([...s.activeIds, id]) })),
   remove: id => set(s => ({ activeIds: s.activeIds.filter(active => linkedStoryPair.includes(id as typeof linkedStoryPair[number])
     ? !linkedStoryPair.includes(active as typeof linkedStoryPair[number]) : active !== id) })),
-  importSpirit: spirit => set(s => ({ customSpirits: [...s.customSpirits, spirit], activeIds: [...s.activeIds, spirit.id] })),
+  importSpirit: spirit => set(s => ({
+    customSpirits: s.customSpirits.some(item => item.id === spirit.id)
+      ? s.customSpirits.map(item => item.id === spirit.id ? { ...item, ...spirit } : item)
+      : [...s.customSpirits, spirit],
+    activeIds: s.activeIds.includes(spirit.id) ? s.activeIds : [...s.activeIds, spirit.id],
+  })),
   setError: error => set({ error }),
 }), {
   name: 'pihu-spirits',

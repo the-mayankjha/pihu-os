@@ -91,7 +91,7 @@ fn run_first_launch_setup() {
 }
 
 fn main() {
-    let builder = tauri::Builder::default();
+    let builder = tauri::Builder::default().plugin(tauri_plugin_deep_link::init());
     #[cfg(target_os = "macos")]
     let builder = builder.plugin(tauri_nspanel::init());
     builder
@@ -106,6 +106,7 @@ fn main() {
         .manage(spotify_mcp::SpotifyMcpState::default())
         .invoke_handler(tauri::generate_handler![
             spirits::sync_spirits,
+            spirits::refresh_spirit_windows,
             spirits::sync_voice_overlay,
             mcp_market::mcp_install_package,
             mcp_market::mcp_list_installed,

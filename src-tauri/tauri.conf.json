@@ -1,6 +1,6 @@
 {
   "productName": "Pihu OS",
-  "version": "1.0.0",
+  "version": "1.2.1",
   "identifier": "com.mayankjha.pihuos",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -28,6 +28,13 @@
       "csp": null
     }
   },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["pihu"]
+      }
+    }
+  },
   "bundle": {
     "active": true,
     "targets": ["dmg", "app", "nsis", "msi"],
@@ -52,6 +59,7 @@
       "python/requirements.txt",
       "python/automations/macos/pihu-macos-automation-v2/",
       "../models/wakeWord/*",
+      "../models/stt/ggml-small.bin",
       "../bin/pihu-project-mcp.js",
       "../bin/browser-runtime/",
       "../bin/spotify-runtime/",

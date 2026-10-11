@@ -89,10 +89,13 @@ export function SpiritsHost() {
     return () => { disposed = true; unlisten?.(); };
   }, [setError]);
   if (isTauri()) return null;
-  return <div className="fixed bottom-24 right-6 flex items-end gap-3 pointer-events-none" style={{ zIndex: 10000 }}>{ids.map(id => <div key={id} className="pointer-events-auto"><SpiritCompanion id={id} size={size} animation={animation} resting={restingState} speaking={playbackSpeaking} listening={listening} thinking={thinking} shortcuts={shortcuts} toolbar={toolbar} /></div>)}</div>;
+  return <div className="fixed bottom-24 right-6 flex items-end gap-3 pointer-events-none" style={{ zIndex: 10000 }}>{ids.map(id => {
+    const spirit = [...bundledSpirits, ...customSpirits].find(item => item.id === id);
+    return <div key={id} className="pointer-events-auto"><SpiritCompanion id={id} version={spirit?.version} size={size} animation={animation} resting={restingState} speaking={playbackSpeaking} listening={listening} thinking={thinking} shortcuts={shortcuts} toolbar={toolbar} /></div>;
+  })}</div>;
 }
 
-function SpiritCompanion({ id, size, animation, resting = false, speaking = false, listening = false, thinking = false, shortcuts, toolbar }: { id: string; size: number; animation: SpiritAnimation; resting?: boolean; speaking?: boolean; listening?: boolean; thinking?: boolean; shortcuts: SpiritShortcut[]; toolbar: ToolbarPreferences }) {
+function SpiritCompanion({ id, version, size, animation, resting = false, speaking = false, listening = false, thinking = false, shortcuts, toolbar }: { id: string; version?: string; size: number; animation: SpiritAnimation; resting?: boolean; speaking?: boolean; listening?: boolean; thinking?: boolean; shortcuts: SpiritShortcut[]; toolbar: ToolbarPreferences }) {
   const [held, setHeld] = useState(false);
   const [interaction, setInteraction] = useState<SpiritAnimation | null>(null);
   const [dragging, setDragging] = useState<SpiritAnimation | null>(null);
@@ -267,7 +270,7 @@ function SpiritCompanion({ id, size, animation, resting = false, speaking = fals
       onPointerCancel={() => { setHeld(false); pointer.current.pressed = false; setDragging(null); }}
       onLostPointerCapture={() => { if (pointer.current.pressed) { setHeld(false); pointer.current.pressed = false; setDragging(null); } }}
       onClick={event => { if (event.detail === 0 || !pointer.current.dragged) play('waving'); }}>
-      <SpiritSprite id={id} size={size} animation={shown} pair={social.pair} resting={!dragging && !interaction && !social.animation && resting} direction={shown === 'idle' && (!resting || social.animation) ? social.direction ?? direction : null} />
+      <SpiritSprite id={id} version={version} size={size} animation={shown} pair={social.pair} resting={!dragging && !interaction && !social.animation && resting} direction={shown === 'idle' && (!resting || social.animation) ? social.direction ?? direction : null} />
     </button>
     <SpiritToolbar name={name} size={size} shortcuts={shortcuts} disabled={Boolean(dragging)} onShortcut={shortcut => {
       setShortcutsOpen(false);

@@ -5,7 +5,7 @@ import type { SpiritPose } from './model';
 import { SOCIAL_RENDER_ACTIONS, socialFrame, socialLooping } from './socialModel';
 import type { PairPose } from './socialModel';
 
-export function SpiritSprite({ id, size = 128, animation = 'idle', direction = null, resting = false, pair = null }: { id: string; size?: number; animation?: SpiritPose; direction?: number | null; resting?: boolean; pair?: PairPose | null }) {
+export function SpiritSprite({ id, version, size = 128, animation = 'idle', direction = null, resting = false, pair = null }: { id: string; version?: string; size?: number; animation?: SpiritPose; direction?: number | null; resting?: boolean; pair?: PairPose | null }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const [source, setSource] = useState<{ id: string; image?: HTMLImageElement; error?: string }>();
   const [listeningState, setListeningState] = useState<{ id: string; image: HTMLImageElement; frames: number }>();
@@ -17,21 +17,23 @@ export function SpiritSprite({ id, size = 128, animation = 'idle', direction = n
   useEffect(() => {
     let cancelled = false;
     void Promise.all((['pihu', 'piyu'] as const).flatMap(companion => SOCIAL_RENDER_ACTIONS.map(async action => {
-      const frames = await Promise.all(spiritSocialFrames(action, companion).map(async url => { const frame = new Image(); frame.src = url; await frame.decode(); return frame; }));
+      const urls = await spiritSocialFrames(action, companion);
+      const frames = await Promise.all(urls.map(async url => { const frame = new Image(); frame.src = url; await frame.decode(); return frame; }));
       return [`${companion}:${action}`, frames] as const;
     }))).then(entries => { if (!cancelled) setSocialImages(Object.fromEntries(entries)); }).catch(console.error);
     return () => { cancelled = true; };
-  }, []);
+  }, [id, version]);
   useEffect(() => {
     let cancelled = false;
     const keys = ['pihu:jealous', 'piyu:jealous', 'pihu:turning', 'piyu:turning', 'pihu:mediating', 'pihu:reconcile'];
     void Promise.all(keys.map(async key => {
       const [who, action] = key.split(':');
-      const frames = await Promise.all(spiritSpecialFrames(who, action as PairPose['action']).map(async url => { const frame = new Image(); frame.src = url; await frame.decode(); return frame; }));
+      const urls = await spiritSpecialFrames(who, action as PairPose['action']);
+      const frames = await Promise.all(urls.map(async url => { const frame = new Image(); frame.src = url; await frame.decode(); return frame; }));
       return [key, frames] as const;
     })).then(entries => { if (!cancelled) setSpecialImages(Object.fromEntries(entries)); }).catch(console.error);
     return () => { cancelled = true; };
-  }, []);
+  }, [id, version]);
   const image = source?.id === id ? source.image : undefined;
   const error = source?.id === id ? source.error : undefined;
   const hasLook = direction !== null && image?.naturalHeight === 2288;
@@ -40,13 +42,22 @@ export function SpiritSprite({ id, size = 128, animation = 'idle', direction = n
   useEffect(() => { gaze.current = hasLook ? direction : null; }, [hasLook, direction]);
   useEffect(() => {
     let cancelled = false;
-    const listeningStateUrl = spiritListeningStateStrip(id);
-    if (listeningStateUrl) { const sprite = new Image(); sprite.src = listeningStateUrl; void sprite.decode().then(() => { if (!cancelled && sprite.naturalWidth >= CELL_WIDTH * 6 && sprite.naturalWidth % CELL_WIDTH === 0 && sprite.naturalHeight === CELL_HEIGHT) setListeningState({ id, image: sprite, frames: sprite.naturalWidth / CELL_WIDTH }); }).catch(console.error); } else setListeningState(undefined);
-    const thinkingUrl = spiritThinkingStrip(id);
-    if (thinkingUrl) { const sprite = new Image(); sprite.src = thinkingUrl; void sprite.decode().then(() => { if (!cancelled) setThinking({ id, image: sprite }); }).catch(console.error); } else setThinking(undefined);
-    void Promise.all(spiritTalkingFrames(id).map(async url => {
+    setListeningState(undefined);
+    setThinking(undefined);
+    setTalking(undefined);
+    void spiritListeningStateStrip(id).then(url => {
+      if (!url) return;
+      const sprite = new Image(); sprite.src = url;
+      return sprite.decode().then(() => { if (!cancelled && sprite.naturalWidth >= CELL_WIDTH * 6 && sprite.naturalWidth % CELL_WIDTH === 0 && sprite.naturalHeight === CELL_HEIGHT) setListeningState({ id, image: sprite, frames: sprite.naturalWidth / CELL_WIDTH }); });
+    }).catch(console.error);
+    void spiritThinkingStrip(id).then(url => {
+      if (!url) return;
+      const sprite = new Image(); sprite.src = url;
+      return sprite.decode().then(() => { if (!cancelled) setThinking({ id, image: sprite }); });
+    }).catch(console.error);
+    void spiritTalkingFrames(id).then(urls => Promise.all(urls.map(async url => {
       const frame = new Image(); frame.src = url; await frame.decode(); return frame;
-    })).then(frames => { if (!cancelled) setTalking({ id, frames }); }).catch(console.error);
+    }))).then(frames => { if (!cancelled) setTalking({ id, frames }); }).catch(console.error);
     let url = '';
     const image = new Image();
     image.onload = () => { if (!cancelled) setSource({ id, image }); };
@@ -57,19 +68,19 @@ export function SpiritSprite({ id, size = 128, animation = 'idle', direction = n
       image.src = source;
     }).catch(() => { if (!cancelled) setSource({ id, error: 'Artwork unavailable' }); });
     return () => { cancelled = true; if (url.startsWith('blob:')) URL.revokeObjectURL(url); };
-  }, [id]);
+  }, [id, version]);
 
   useEffect(() => {
     let cancelled = false;
-    void Promise.all(spiritListeningFrames(id).map(async url => {
+    void spiritListeningFrames(id).then(urls => Promise.all(urls.map(async url => {
       const frame = new Image(); frame.src = url; await frame.decode(); return frame;
-    })).then(strips => {
+    }))).then(strips => {
       if (!cancelled && strips.length === 4 && strips.every(strip => strip.naturalWidth === CELL_WIDTH * 4 && strip.naturalHeight === CELL_HEIGHT)) {
         setListeningImages({ id, strips });
       }
     }).catch(console.error);
     return () => { cancelled = true; };
-  }, [id]);
+  }, [id, version]);
 
   useEffect(() => {
     if (!image) return;
