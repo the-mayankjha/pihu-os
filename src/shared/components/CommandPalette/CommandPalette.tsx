@@ -16,11 +16,12 @@ import { IdeCodeBlock } from '../../../core/voice/IdeCodeBlock';
 import { EmailPreviewCard } from '../Email/EmailPreviewCard';
 import { WhatsAppConfirmationCard } from '../WhatsApp/WhatsAppConfirmationCard';
 import { executePendingProjectAction } from '../../../core/voice/intent/tools/projectTools';
+import { useLayoutStore } from '../../../core/layout/LayoutStore';
 
 interface ShortcutItem {
   id: string;
   icon: React.ReactNode;
-  category: 'Email' | 'WhatsApp' | 'Coding' | 'System' | 'Settings';
+  category: 'Email' | 'WhatsApp' | 'Coding' | 'System' | 'Settings' | 'Marketplace';
   title: string;
   prompt: string;
   badge?: string;
@@ -84,6 +85,14 @@ const SHORTCUTS: ShortcutItem[] = [
     badge: 'Protocol',
   },
   {
+    id: 'open-marketplace',
+    icon: <Sparkles className="w-4 h-4 text-pink-300" />,
+    category: 'Marketplace',
+    title: 'Open Marketplace',
+    prompt: 'Open Marketplace',
+    badge: 'MCPs & Spirits',
+  },
+  {
     id: 'system-stats',
     icon: <Cpu className="w-4 h-4 text-neutral-400" />,
     category: 'System',
@@ -127,6 +136,12 @@ export const CommandPalette: React.FC = () => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setIsCommandPaletteOpen(!isCommandPaletteOpen);
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'm') {
+        e.preventDefault();
+        const store = useLayoutStore.getState();
+        if (!store.widgets['marketplace-window']?.isOpen) store.toggleWidget('marketplace-window');
       }
 
       // Close on Escape

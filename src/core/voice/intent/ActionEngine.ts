@@ -387,6 +387,20 @@ export class ActionEngine {
           ]);
     }
 
+    // Marketplace Window (Open / Close)
+    if ((/\b(?:marketplace|market)\b/i.test(lower) &&
+         /\b(?:open|show|kholo|view|dikhao|display|launch|close|band|hatao|hide)\b/i.test(lower)) ||
+        /\bbrowse\s+(?:mcps?|spirits)\b/i.test(lower)) {
+      const layout = useLayoutStore.getState();
+      const isClose = /\b(?:close|hide|band|hatao|dismiss)\b/i.test(lower);
+      if (isClose) {
+        if (layout.widgets['marketplace-window']?.isOpen) layout.toggleWidget('marketplace-window');
+        return isHindi ? 'Marketplace band kar di hai, Sir.' : 'Closed the Marketplace.';
+      }
+      if (!layout.widgets['marketplace-window']?.isOpen) layout.toggleWidget('marketplace-window');
+      return isHindi ? 'Marketplace khol diya hai, Sir.' : 'Opening the Marketplace now.';
+    }
+
     // Settings Window (Open / Close)
     if (/\b(?:settings|setting|preferences|options)\b/i.test(lower) && 
         /\b(?:open|show|kholo|view|dikhao|display|close|band|hatao|hide)\b/i.test(lower)) {
@@ -464,7 +478,7 @@ export class ActionEngine {
       if (layout.isWidgetDrawerOpen) layout.toggleWidgetDrawer();
 
       // Close all active plugin windows (task-window, settings-window)
-      ['task-window', 'settings-window'].forEach(id => {
+      ['task-window', 'settings-window', 'marketplace-window'].forEach(id => {
         if (layout.widgets[id]?.isOpen) layout.toggleWidget(id);
       });
 

@@ -46,6 +46,7 @@ import {
 } from '../widgets/system/SystemLargeWidgets';
 
 import { SettingsWindow } from '../widgets/settings/SettingsWindow';
+import { MarketplaceWindow } from '../widgets/marketplace/MarketplaceWindow';
 import { CodeOutputWindow } from '../widgets/codeOutput/CodeOutputWindow';
 import { CommandPalette } from '../shared/components/CommandPalette/CommandPalette';
 
@@ -117,6 +118,7 @@ export default function App() {
       )}
 
       {(widgets['settings-window']?.isOpen) && <SettingsWindow />}
+      {(widgets['marketplace-window']?.isOpen) && <MarketplaceWindow />}
       <CodeOutputWindow />
 
       <YTMusicPlugin />

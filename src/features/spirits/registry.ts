@@ -2,6 +2,7 @@ import { validateSheetDimensions, validateSheetPixels } from './model';
 
 const REGISTRY_URL = import.meta.env.VITE_SPIRITS_REGISTRY_URL
   || 'https://raw.githubusercontent.com/the-mayankjha/pihu_spirits/pihu_market/index.json';
+const MARKET_API_URL = import.meta.env.VITE_PIHU_MARKET_API_URL || 'https://pihu.nfks.co.in/api/v2';
 const MAX_INDEX_BYTES = 1024 * 1024;
 const MAX_SPRITE_BYTES = 20 * 1024 * 1024;
 
@@ -9,9 +10,11 @@ export interface RegistrySpirit {
   id: string;
   name: string;
   description: string;
+  author: string;
   version: string;
   manifest: string;
   sprite_sheet: string;
+  preview_url: string;
   sha256: string;
   size_bytes: number;
 }
@@ -63,11 +66,25 @@ function registryResource(path: string) {
 }
 
 export async function loadSpiritRegistry(): Promise<RegistrySpirit[]> {
-  const response = await fetch(REGISTRY_URL, { headers: { Accept: 'application/json' } });
-  if (!response.ok) throw new Error(`Could not load the Spirits registry (${response.status}).`);
-  const length = Number(response.headers.get('content-length') ?? 0);
+  const [registryResponse, marketResponse] = await Promise.all([
+    fetch(REGISTRY_URL, { headers: { Accept: 'application/json' } }),
+    fetch(`${MARKET_API_URL}/catalog?type=spirits&limit=100`, { headers: { Accept: 'application/json' } }),
+  ]);
+  if (!registryResponse.ok) throw new Error(`Could not load the Spirits registry (${registryResponse.status}).`);
+  if (!marketResponse.ok) throw new Error(`Could not load Spirits from the PIHU Market API (${marketResponse.status}).`);
+  const length = Number(registryResponse.headers.get('content-length') ?? 0);
   if (length > MAX_INDEX_BYTES) throw new Error('The Spirits registry catalog is too large.');
-  return parseIndex(await response.json()).packages;
+  const registry = parseIndex(await registryResponse.json()).packages;
+  const market = await marketResponse.json() as { packages?: Array<Record<string, unknown>> };
+  const marketById = new Map((market.packages ?? []).map(item => [String(item.id), item]));
+  const apiOrigin = new URL(MARKET_API_URL).origin;
+  return registry.map(entry => {
+    const item = marketById.get(entry.id);
+    if (!item || typeof item.preview_url !== 'string' || typeof item.author !== 'string') return null;
+    const preview = new URL(item.preview_url);
+    if (preview.origin !== apiOrigin || !preview.pathname.startsWith('/api/v2/packages/')) return null;
+    return { ...entry, author: item.author, preview_url: preview.toString() };
+  }).filter((entry): entry is RegistrySpirit => entry !== null);
 }
 
 async function validateSpriteSheet(blob: Blob) {

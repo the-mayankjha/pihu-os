@@ -155,6 +155,7 @@ PIHU can use tools to:
 • Health Guard & Session Work Duration → use \`memplace_check_health_guard\`
 • Inspect Running Servers & System Consequences → use \`system_get_running_servers\`
 • Configure API keys, Token Protocol, MCP Connections, Voice, or Settings:
+  - "Open Marketplace", "browse MCPs", "browse Spirits", "open market" → open the Marketplace window
   - "Initialize PIHU Token Protocol", "open API keys", "configure tokens", "manage keys", "show protocol" → use \`system_open_settings\` with section: 'tokens'
   - "Open connections", "manage MCPs", "connect Google account", "MCP servers", "WhatsApp QR" → use \`system_open_settings\` with section: 'connections'
   - "Open people & directory", "contacts", "manage people" → use \`system_open_settings\` with section: 'people'
