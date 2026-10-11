@@ -208,11 +208,16 @@ export const CommandPalette: React.FC = () => {
     setResult('Cancelled proposed project changes.');
   };
 
-  if (!isCommandPaletteOpen) return null;
-
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[100] flex items-start justify-center pt-16 sm:pt-24 px-4 bg-black/25 backdrop-blur-sm pointer-events-auto">
+      {isCommandPaletteOpen && <motion.div
+        key="command-palette-overlay"
+        className="fixed inset-0 z-[100] flex items-start justify-center pt-16 sm:pt-24 px-4 bg-black/25 backdrop-blur-md pointer-events-auto"
+        initial={{ opacity: 0, backdropFilter: 'blur(0px)' }}
+        animate={{ opacity: 1, backdropFilter: 'blur(14px)' }}
+        exit={{ opacity: 0, backdropFilter: 'blur(0px)' }}
+        transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+      >
         {/* Backdrop click to close */}
         <div
           className="absolute inset-0 -z-10"
@@ -221,11 +226,11 @@ export const CommandPalette: React.FC = () => {
 
         {/* Floating Modal */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.96, y: -20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.96, y: -20 }}
-          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          className="w-full max-w-3xl bg-neutral-900/30 backdrop-blur-3xl backdrop-saturate-0 border border-white/20 rounded-3xl shadow-[0_25px_60px_rgba(0,0,0,0.8)] text-white overflow-hidden flex flex-col max-h-[85vh] relative"
+          initial={{ opacity: 0, scale: 0.9, y: -24, filter: 'blur(14px)' }}
+          animate={{ opacity: 1, scale: 1, y: 0, filter: 'blur(0px)' }}
+          exit={{ opacity: 0, scale: 0.94, y: -10, filter: 'blur(8px)' }}
+          transition={{ type: 'spring', stiffness: 320, damping: 26, mass: 0.78 }}
+          className="w-full max-w-3xl bg-neutral-900/30 backdrop-blur-3xl backdrop-saturate-150 border border-white/20 rounded-3xl shadow-[0_25px_60px_rgba(0,0,0,0.55)] text-white overflow-hidden flex flex-col max-h-[85vh] relative"
         >
           {/* Ambient Glow */}
 
@@ -484,7 +489,7 @@ export const CommandPalette: React.FC = () => {
           </div>
 
         </motion.div>
-      </div>
+      </motion.div>}
     </AnimatePresence>
   );
 };

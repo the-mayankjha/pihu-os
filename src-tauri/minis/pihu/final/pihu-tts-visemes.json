@@ -1,24 +1,17 @@
 {
-  "order": [
-    "REST",
-    "MBP",
-    "AA",
-    "EE",
-    "OH",
-    "OO",
-    "FV",
-    "L"
+  "frames": [
+    "00-REST",
+    "01-MBP",
+    "02-AA",
+    "03-EE",
+    "04-OH",
+    "05-OO",
+    "06-FV",
+    "07-L"
   ],
-  "integration": "Local reference asset only; no Pets TTS callback is connected",
-  "frame_size": [
+  "cell": [
     192,
     208
   ],
-  "mouth_crop": [
-    60,
-    48,
-    130,
-    86
-  ],
-  "notes": "FV and L are subtle illustrative poses; phoneme mapping is approximate, not timed audio lip sync"
+  "note": "Full-body poses updated to Pihu\u2019s fuller bust; existing mouth overlay PNGs remain compatible."
 }

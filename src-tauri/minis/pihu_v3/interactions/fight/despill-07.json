@@ -1,0 +1,20 @@
+{
+  "ok": true,
+  "input": "/Users/mayankjha/Documents/projects/pihu-os/src-tauri/minis/pihu/interactions/fight/frames-raw/07.png",
+  "output": "/Users/mayankjha/Documents/projects/pihu-os/src-tauri/minis/pihu/interactions/fight/frames/07.png",
+  "chroma_key": "#FF00FF",
+  "algorithm": "edge-local-chroma-spill-suppression",
+  "strength": 1,
+  "edge_radius": 5,
+  "spill_tolerance": 0.15,
+  "minimum_saturation": 0.1,
+  "changed_pixels": 3212,
+  "decontaminated_pixels": 3014,
+  "spill_suppressed_pixels": 3212,
+  "rejected_pixels": 0,
+  "changed_by_cell": {
+    "r0c1": 1613,
+    "r0c0": 1599
+  },
+  "alpha_preserved": true
+}

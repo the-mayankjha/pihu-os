@@ -1,0 +1,21 @@
+{
+  "state": "listening",
+  "character": "pihu",
+  "sourceSheets": 4,
+  "framesPerSheet": 4,
+  "frames": 16,
+  "cellSize": [
+    192,
+    208
+  ],
+  "stripSize": [
+    768,
+    208
+  ],
+  "loopFrames": [
+    12,
+    13,
+    14,
+    15
+  ]
+}

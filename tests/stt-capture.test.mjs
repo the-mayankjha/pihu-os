@@ -19,8 +19,9 @@ const m=await setup();assert(contexts.at(-1).resumed,'suspended context must res
 let ended=0;m.onSpeechEnded=()=>ended++;
 const processor=contexts.at(-1).processor;
 const frame=value=>({inputBuffer:{getChannelData:()=>new Float32Array(4096).fill(value)}});
-processor.onaudioprocess(frame(.1));now+=200;processor.onaudioprocess(frame(0));now+=1600;for(const fn of [...intervals.values()])fn();
+processor.onaudioprocess(frame(.01));now+=90;processor.onaudioprocess(frame(.01));now+=200;processor.onaudioprocess(frame(0));now+=1500;for(const fn of [...intervals.values()])fn();assert.equal(ended,0,'a brief pause must not submit the sentence');processor.onaudioprocess(frame(.007));now+=100;processor.onaudioprocess(frame(0));for(let i=0;i<6;i++){now+=1000;processor.onaudioprocess(frame(.003));for(const fn of [...intervals.values()])fn()}assert.equal(ended,0,'six seconds of background noise must preserve the pause');now+=1100;processor.onaudioprocess(frame(.003));for(const fn of [...intervals.values()])fn();
 assert.equal(ended,1);assert(m.ws.sent.some(v=>typeof v==='string' && JSON.parse(v).type==='process'));assert(tracks.at(-1).stopped);
 const stalled=await setup();let error='';stalled.onError=e=>error=e;now+=5100;for(const fn of [...intervals.values()])fn();assert.match(error,/Microphone audio stopped/);assert(tracks.at(-1).stopped);
 const idle=await setup();let timedOut=false;idle.onIdleTimeout=()=>timedOut=true;const idleProcessor=contexts.at(-1).processor;for(let i=0;i<7;i++){now+=1000;idleProcessor.onaudioprocess?.(frame(0));for(const fn of [...intervals.values()])fn()}assert(timedOut);
-console.log('PASS: suspended-context resume, speech-end submission, stalled capture cleanup, silent idle timeout');
+const click=await setup();const clickProcessor=contexts.at(-1).processor;clickProcessor.onaudioprocess(frame(.1));now+=100;clickProcessor.onaudioprocess(frame(0));assert.equal(click.speechDetected,false,'one click must not start speech');click.stopListening();
+console.log('PASS: quiet speech, brief pauses, quiet word endings, click rejection, suspended-context resume, speech-end submission, stalled capture cleanup, silent idle timeout');

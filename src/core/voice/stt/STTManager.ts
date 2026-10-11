@@ -1,6 +1,6 @@
 // VAD thresholds (tuned for typical speech at 16kHz or native rate)
-const SPEECH_RMS_THRESHOLD = 0.015;          // RMS above this = speaking
-const SILENCE_AFTER_SPEECH_MS  = 1500;       // 1.5s of quiet after speech → end session
+const SILENCE_AFTER_SPEECH_MS = 7000;
+const MIN_SPEECH_MS = 120;                   // A single click should not start an utterance.
 const DEFAULT_IDLE_TIMEOUT_MS  = 6000;       // 6s with no speech at all → end session
 
 export class STTManager {
@@ -13,6 +13,8 @@ export class STTManager {
   private captureWatchdog: ReturnType<typeof setInterval> | null = null;
   private lastAudioFrame = 0;
   private sessionGeneration = 0;
+  private noiseFloor = 0.001;
+  private speechCandidateMs = 0;
 
   // Browser-side VAD state
   private speechDetected: boolean = false;
@@ -22,6 +24,10 @@ export class STTManager {
 
   /** Configurable idle timeout per session (default 6s, set longer for follow-up). */
   public idleTimeoutMs: number = DEFAULT_IDLE_TIMEOUT_MS;
+  public speechStartThreshold = 0.008;
+  public minimumSpeechMs = MIN_SPEECH_MS;
+  public bufferUntilSpeech = false;
+  private preSpeechFrames: Float32Array[] = [];
 
   public onTranscription: ((text: string) => void) | null = null;
   public onError: ((error: string) => void) | null = null;
@@ -131,10 +137,14 @@ export class STTManager {
     this.silenceStart = 0;
     this.sessionStart = Date.now();
     this.vadTriggered = false;
+    this.noiseFloor = 0.001;
+    this.speechCandidateMs = 0;
+    this.preSpeechFrames = [];
     const generation = ++this.sessionGeneration;
 
     // Ensure WebSocket is live before opening mic
     await this.ensureConnected();
+    if (generation !== this.sessionGeneration) return;
     this.ws?.send(JSON.stringify({ type: 'reset' }));
 
     try {
@@ -199,7 +209,12 @@ export class STTManager {
             samples[i] = inputData[src];
           }
         }
-        this.ws!.send(samples.buffer as ArrayBuffer);
+        if (!this.bufferUntilSpeech || this.speechDetected) this.ws!.send(samples.buffer as ArrayBuffer);
+        else {
+          this.preSpeechFrames.push(samples);
+          // Keep roughly half a second before speech; discard old speaker echo.
+          while (this.preSpeechFrames.reduce((n, frame) => n + frame.length, 0) > 8000 && this.preSpeechFrames.length > 1) this.preSpeechFrames.shift();
+        }
 
         // ─── Browser-side Voice Activity Detection ─────────────────────────
         const rms = Math.sqrt(
@@ -207,9 +222,27 @@ export class STTManager {
         );
         const now = Date.now();
 
-        if (rms > SPEECH_RMS_THRESHOLD) {
+        // A lower continuation threshold preserves quiet syllables and word
+        // endings. Slowly track quiet background audio rather than using one
+        // fixed microphone-volume threshold for everyone.
+        const threshold = this.speechDetected
+          ? Math.max(0.006, this.noiseFloor * 2.5)
+          : Math.max(this.speechStartThreshold, this.noiseFloor * 3);
+        if (rms < this.speechStartThreshold) {
+          this.noiseFloor = this.noiseFloor * 0.98 + rms * 0.02;
+        }
+        const voiced = rms > threshold;
+        if (!this.speechDetected) {
+          this.speechCandidateMs = voiced ? this.speechCandidateMs + samples.length / 16 : 0;
+        }
+
+        if (voiced && (this.speechDetected || this.speechCandidateMs >= this.minimumSpeechMs)) {
           // User is speaking
           if (!this.speechDetected) {
+            if (this.bufferUntilSpeech) {
+              this.preSpeechFrames.forEach(frame => this.ws?.send(frame.buffer as ArrayBuffer));
+              this.preSpeechFrames = [];
+            }
             console.log('[SPEECH ENGINE - STT] 🗣️ Speech detected (RMS:', rms.toFixed(4), ')');
             if (this.onSpeechStarted) this.onSpeechStarted();
           }

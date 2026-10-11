@@ -1,0 +1,37 @@
+{
+  "ok": true,
+  "frames": 4,
+  "cell": [
+    192,
+    208
+  ],
+  "subject": "piyu",
+  "action": "turning",
+  "sourceBounds": [
+    [
+      175,
+      16,
+      464,
+      770
+    ],
+    [
+      575,
+      15,
+      859,
+      769
+    ],
+    [
+      1048,
+      15,
+      1343,
+      770
+    ],
+    [
+      1508,
+      14,
+      1776,
+      770
+    ]
+  ],
+  "method": "connected pose extraction, shared baseline and bundled despill"
+}

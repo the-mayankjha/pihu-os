@@ -4,6 +4,16 @@ import { bundledSpirits } from './catalog';
 import { normalizeShortcuts, normalizeToolbar, safeSpiritSize } from './model';
 import type { Spirit, SpiritShortcut, ToolbarPreferences } from './model';
 
+const linkedStoryPair = ['pihu', 'piyu'] as const;
+const bundledIds = new Set(bundledSpirits.map(spirit => spirit.id));
+function normalizeActiveIds(ids: string[]) {
+  const active = [...new Set(ids)];
+  if (linkedStoryPair.some(id => active.includes(id)) && linkedStoryPair.every(id => bundledIds.has(id))) {
+    for (const id of linkedStoryPair) if (!active.includes(id)) active.push(id);
+  }
+  return active;
+}
+
 interface SpiritsState {
   enabled: boolean;
   activeIds: string[];
@@ -34,8 +44,9 @@ export const useSpiritsStore = create<SpiritsState>()(persist((set) => ({
   error: null,
   setEnabled: enabled => set({ enabled }),
   setSize: size => set({ size: safeSpiritSize(size) }),
-  add: id => set(s => ({ activeIds: [...new Set([...s.activeIds, id])] })),
-  remove: id => set(s => ({ activeIds: s.activeIds.filter(active => active !== id) })),
+  add: id => set(s => ({ activeIds: normalizeActiveIds([...s.activeIds, id]) })),
+  remove: id => set(s => ({ activeIds: s.activeIds.filter(active => linkedStoryPair.includes(id as typeof linkedStoryPair[number])
+    ? !linkedStoryPair.includes(active as typeof linkedStoryPair[number]) : active !== id) })),
   importSpirit: spirit => set(s => ({ customSpirits: [...s.customSpirits, spirit], activeIds: [...s.activeIds, spirit.id] })),
   setError: error => set({ error }),
 }), {
@@ -43,6 +54,7 @@ export const useSpiritsStore = create<SpiritsState>()(persist((set) => ({
   partialize: ({ enabled, activeIds, customSpirits, size, shortcuts, toolbar }) => ({ enabled, activeIds, customSpirits, size, shortcuts, toolbar }),
   merge: (persisted, current) => {
     const saved = (persisted ?? {}) as Partial<SpiritsState>;
-    return { ...current, ...saved, size: safeSpiritSize(saved.size ?? current.size), shortcuts: normalizeShortcuts(saved.shortcuts), toolbar: normalizeToolbar(saved.toolbar) };
+    return { ...current, ...saved, activeIds: normalizeActiveIds(saved.activeIds ?? current.activeIds),
+      size: safeSpiritSize(saved.size ?? current.size), shortcuts: normalizeShortcuts(saved.shortcuts), toolbar: normalizeToolbar(saved.toolbar) };
   },
 }));

@@ -6,6 +6,10 @@ Created using Pets create-pet and built-in imagegen from the supplied reference.
 
 Piyu and Mayank interact continuously while nearby. Mayank approaches; Piyu stays anchored. TTS faces Piyu toward the user and interrupts contact. Nearby interaction resumes after speech. Moving either away stops it. Pihu retains separate artwork. Reduced motion avoids approach/contact motion. Partners must use equal mini sizes.
 
+## Pihu–Piyu story in Pihu-OS
+
+When Mayank and one companion begin interacting with the other companion nearby, the left-out mini turns toward them, becomes visibly tearful, and the two minis move together for an eight-frame serious hair-grappling scuffle. The fight sheet contains only Pihu and Piyu; Mayank's separate mediation animation plays while they fight. They then apologize, shake hands, and hug. The sequence handles either left-right order, ends when the group separates, and yields to TTS. Eight fight frames, turning, tearful, mediation, and reconciliation artwork are saved in `interactions/` in both mini packs.
+
 ChatGPT Pets uses only the 11-row atlas. Detailed pair animations and speech extensions run in pihu-os. The current active ChatGPT pet remains Pihu. Piyu is created in the pet library. No Library connector was available; originals, prompts, QA reports and previews are saved locally.
 
 Verification: bundled structural/quality/preflight and three blind reviews passed; some intermediate gaze angles have reviewed subtlety/continuity warnings. 22 focused tests, TypeScript, ESLint and Vite build passed. Browser tested all eight actions, anchoring, TTS interruption/resumption and separation. Native window movement needs an in-app check.

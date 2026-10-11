@@ -1,0 +1,13 @@
+{
+  "id": "pet_6ac97d59917c8191a64b24a6be03ad80",
+  "name": "Pihu v2",
+  "is_custom": true,
+  "is_active": true,
+  "atlas_sha256": "2d5e297243c10cdfed7af33e6546843cddf6aaad3eba2f1906c84477174c6adf",
+  "sprite_version": 2,
+  "frames": 73,
+  "description": "A curious, thoughtful companion with curly dark hair, pink glasses and a floral kurti. Pihu v2 speaks and animates through PIHU OS states.",
+  "validation": "passed",
+  "storage": "local files",
+  "generation": "built-in imagegen"
+}

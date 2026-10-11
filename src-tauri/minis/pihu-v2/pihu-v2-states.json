@@ -1,0 +1,81 @@
+{
+  "id": "pihu-v2",
+  "atlas": "spritesheet-extended.png",
+  "cell": {
+    "width": 192,
+    "height": 208
+  },
+  "animations": {
+    "idle": {
+      "row": 0,
+      "frames": 6
+    },
+    "running-right": {
+      "row": 1,
+      "frames": 8
+    },
+    "running-left": {
+      "row": 2,
+      "frames": 8
+    },
+    "waving": {
+      "row": 3,
+      "frames": 4
+    },
+    "jumping": {
+      "row": 4,
+      "frames": 5
+    },
+    "failed": {
+      "row": 5,
+      "frames": 8
+    },
+    "waiting": {
+      "row": 6,
+      "frames": 6
+    },
+    "running": {
+      "row": 7,
+      "frames": 6
+    },
+    "review": {
+      "row": 8,
+      "frames": 6
+    },
+    "look-directions": {
+      "rows": [
+        9,
+        10
+      ],
+      "frames": 16
+    },
+    "thinking": {
+      "file": "states/thinking.png",
+      "frames": 6
+    },
+    "listening": {
+      "file": "states/listening.png",
+      "frames": 10,
+      "fps": 8,
+      "sequence": [
+        "hold-headphones",
+        "raise-headphones",
+        "put-on",
+        "eyes-open-listen",
+        "blink-half",
+        "blink-closed",
+        "blink-half-open",
+        "eyes-open-listen",
+        "remove-headphones",
+        "hold-headphones"
+      ]
+    }
+  },
+  "identity": "Canonical corrected character reference; normal uncrossed stance in thinking strip.",
+  "additionalStates": {
+    "thinking": "states/thinking.png",
+    "listening": "states/listening.png",
+    "speaking": "final/tts-visemes/*.png"
+  },
+  "interactionsWith": "Custom Mayank pair-action art and routing are pending."
+}

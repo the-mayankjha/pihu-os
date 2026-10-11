@@ -1,0 +1,38 @@
+{
+  "ok": true,
+  "frames": 4,
+  "cell": [
+    192,
+    208
+  ],
+  "subject": "pihu",
+  "action": "turning",
+  "outfit": "white floral kurta, light blue jeans, pink sneakers",
+  "sourceBounds": [
+    [
+      43,
+      6,
+      293,
+      584
+    ],
+    [
+      27,
+      6,
+      275,
+      582
+    ],
+    [
+      41,
+      7,
+      270,
+      581
+    ],
+    [
+      47,
+      4,
+      293,
+      581
+    ]
+  ],
+  "method": "2x4 grid cell extraction, shared baseline, bundled despill"
+}

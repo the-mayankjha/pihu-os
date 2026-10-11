@@ -59,12 +59,13 @@ export function SpiritsSettings() {
         <FrostSelect label={`Shortcut ${index+1}`} value={shortcut} onChange={value=>setShortcut(index,value as SpiritShortcut)} options={Object.entries(SPIRIT_SHORTCUTS).map(([value,label])=>({value,label}))} />
       </label>)}</div>
     </div>
-    <SpiritMarket />
     {(error || importError) && <p role="alert" className="text-xs text-neutral-300 bg-neutral-500/10 p-3 rounded-xl">{importError || error}</p>}
+    <SpiritMarket />
     <div className="flex items-center justify-between gap-3"><h4 className="text-sm font-semibold">Your Spirits <span className="text-neutral-500 text-xs">{activeIds.length} added</span></h4>
       <button onClick={() => input.current?.click()} disabled={importing || atLimit} className="inline-flex gap-2 items-center bg-white/10 hover:bg-white/15 rounded-xl px-3 py-2 text-xs disabled:opacity-40"><Upload size={14} />{importing ? 'Importing…' : 'Import Spirit'}</button>
       <input ref={input} className="hidden" type="file" accept="image/png,image/webp" onChange={e => { const file = e.target.files?.[0]; if (file) void importFile(file); }} />
     </div>
+    {spirits.some(spirit => spirit.id === 'pihu') && spirits.some(spirit => spirit.id === 'piyu') && <p className="text-xs text-neutral-400">Pihu and Piyu stay active together for their shared interactions.</p>}
     {atLimit && <p className="text-xs text-amber-300">Remove a Spirit before adding another (up to 12 at once).</p>}
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{spirits.map(spirit => {
       const active = activeIds.includes(spirit.id);

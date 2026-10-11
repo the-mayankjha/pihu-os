@@ -1,0 +1,19 @@
+{
+  "ok": true,
+  "input": "/Users/mayankjha/Documents/projects/pihu-os/src-tauri/minis/piyu/interactions/mediating/frames-raw/00.png",
+  "output": "/Users/mayankjha/Documents/projects/pihu-os/src-tauri/minis/piyu/interactions/mediating/frames/00.png",
+  "chroma_key": "#FF00FF",
+  "algorithm": "edge-local-chroma-spill-suppression",
+  "strength": 1,
+  "edge_radius": 5,
+  "spill_tolerance": 0.15,
+  "minimum_saturation": 0.1,
+  "changed_pixels": 1352,
+  "decontaminated_pixels": 1346,
+  "spill_suppressed_pixels": 1352,
+  "rejected_pixels": 0,
+  "changed_by_cell": {
+    "r0c0": 1352
+  },
+  "alpha_preserved": true
+}

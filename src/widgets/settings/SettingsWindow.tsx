@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { SpiritsSettings } from '../../features/spirits/SpiritsSettings';
 import { useLayoutStore } from '../../core/layout/LayoutStore';
+import { motion } from 'framer-motion';
 import {
   Settings,
   Briefcase,
@@ -815,10 +816,21 @@ export const SettingsWindow: React.FC = () => {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 backdrop-blur-sm p-4 sm:p-6 select-none animate-in fade-in duration-200">
+    <motion.div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 backdrop-blur-md p-4 sm:p-6 select-none"
+      initial={{ opacity: 0, backdropFilter: 'blur(0px)' }}
+      animate={{ opacity: 1, backdropFilter: 'blur(14px)' }}
+      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+    >
       
       {/* Main Glass Window Frame */}
-      <GlassCard blur="xl" frost="heavy" className="relative w-full max-w-5xl h-[min(760px,90vh)] rounded-3xl overflow-hidden flex text-white font-sans" style={{ backgroundColor: 'rgba(18,18,18,0.18)', backdropFilter: 'blur(40px) saturate(115%)', WebkitBackdropFilter: 'blur(40px) saturate(115%)', borderRadius: 24, border: '1px solid rgba(255,255,255,0.16)', boxShadow: '0 24px 80px rgba(0,0,0,0.35)' }}>
+      <motion.div
+        className="relative w-full max-w-5xl"
+        initial={{ opacity: 0, scale: 0.92, y: 18, filter: 'blur(12px)' }}
+        animate={{ opacity: 1, scale: 1, y: 0, filter: 'blur(0px)' }}
+        transition={{ type: 'spring', stiffness: 300, damping: 25, mass: 0.82 }}
+      >
+      <GlassCard blur="xl" frost="heavy" className="relative w-full h-[min(760px,90vh)] rounded-3xl overflow-hidden flex text-white font-sans" style={{ backgroundColor: 'rgba(18,18,18,0.18)', backdropFilter: 'blur(40px) saturate(115%)', WebkitBackdropFilter: 'blur(40px) saturate(115%)', borderRadius: 24, border: '1px solid rgba(255,255,255,0.16)', boxShadow: '0 24px 80px rgba(0,0,0,0.35)' }}>
         
         {/* Ambient Neon Glow Accents */}
 
@@ -871,9 +883,7 @@ export const SettingsWindow: React.FC = () => {
                   key={item.id}
                   onClick={() => {
                     setActiveSidebarCategory(item.id);
-                    if (item.id === 'connections') {
-                      setActiveMcpDetailId(null);
-                    }
+                    setActiveMcpDetailId(null);
                   }}
                   className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition duration-150 ${
                     isActive
@@ -2248,7 +2258,7 @@ export const SettingsWindow: React.FC = () => {
         </div>
 
       </GlassCard>
-
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };

@@ -13,6 +13,25 @@ export class TTSManager {
   private currentAudio: HTMLAudioElement | null = null;
   private resolveLocalSpeech: (() => void) | null = null;
   private playbackTokens = new Set<string>();
+  private pausedForInterruption = false;
+  private resumeWaiters: Array<() => void> = [];
+
+  public pause(): void {
+    this.pausedForInterruption = true;
+    this.currentAudio?.pause();
+    this.synth.pause();
+  }
+
+  public resume(): void {
+    this.pausedForInterruption = false;
+    this.resumeWaiters.splice(0).forEach(resolve => resolve());
+    if (this.currentAudio) void this.currentAudio.play().catch(() => this.stop());
+    this.synth.resume();
+  }
+
+  private waitUntilResumed(): Promise<void> {
+    return this.pausedForInterruption ? new Promise(resolve => this.resumeWaiters.push(resolve)) : Promise.resolve();
+  }
 
   private beginPlayback(token: string) {
     this.playbackTokens.add(token);
@@ -70,6 +89,8 @@ export class TTSManager {
   }
 
   public stop(): void {
+    this.pausedForInterruption = false;
+    this.resumeWaiters.splice(0).forEach(resolve => resolve());
     this.wasInterrupted = true;
     for (const token of this.playbackTokens) this.endPlayback(token);
     this.resolveLocalSpeech?.();
@@ -169,6 +190,7 @@ export class TTSManager {
          if (!this._isKokoroSpeaking) break; // Stop if interrupted
          
          const audioUrl = await nextFetchPromise;
+         await this.waitUntilResumed();
          
          if (!this._isKokoroSpeaking) {
            // Interrupted while fetching — clean up and exit
@@ -372,8 +394,10 @@ export class TTSManager {
         // Chromium bug workaround: pause/resume every 14 seconds so long texts don't hang
         this.resumeInterval = setInterval(() => {
           if (this.synth.speaking) {
-            this.synth.pause();
-            this.synth.resume();
+            if (!this.pausedForInterruption) {
+              this.synth.pause();
+              this.synth.resume();
+            }
           }
         }, 14000);
       };
