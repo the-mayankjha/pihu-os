@@ -19,6 +19,25 @@ export interface RegistrySpirit {
   size_bytes: number;
 }
 
+export interface SpiritDetails {
+  package: Record<string, unknown>;
+  manifest: Record<string, unknown>;
+  animation: {
+    cell?: { width: number; height: number };
+    sheet?: { width: number; heights: number[] };
+    animations?: Array<{ id: string; label: string; row: number; frames: number; fps: number }>;
+    special_poses?: Array<{ id: string; source?: string; row: number; frames: number; fps: number; assets?: string }>;
+    state_mapping?: Record<string, string>;
+    activity_rules?: Array<{ when: string; animation: string }>;
+    idle_rules?: Array<Record<string, string | number>>;
+    interactions?: string[];
+    social_timing_ms?: Record<string, number>;
+  };
+  assets: Array<{ path: string; sha256: string; size_bytes: number; url: string }>;
+  preview_url: string;
+  download_url: string;
+}
+
 interface RegistryIndex {
   schema_version: 1;
   package_type: 'spirits';
@@ -110,6 +129,17 @@ export async function loadSpiritRegistry(): Promise<RegistrySpirit[]> {
     }
     return { ...entry, author, preview_url: apiPreview };
   }));
+}
+
+export async function loadSpiritDetails(id: string): Promise<SpiritDetails> {
+  const response = await fetch(`${MARKET_API_URL}/packages/${encodeURIComponent(id)}/details`, { headers: { Accept: 'application/json' } });
+  if (!response.ok) throw new Error(`Could not load Spirit details from the PIHU Market API (${response.status}).`);
+  const details = await response.json() as SpiritDetails;
+  if (!details || typeof details !== 'object' || typeof details.manifest !== 'object' || !Array.isArray(details.animation?.animations)
+    || !details.animation.state_mapping || !Array.isArray(details.assets)) {
+    throw new Error('The PIHU Market API returned incomplete Spirit details.');
+  }
+  return details;
 }
 
 async function validateSpriteSheet(blob: Blob) {

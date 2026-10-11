@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Download, RefreshCw } from 'lucide-react';
 import { bundledSpirits, saveSpiritSheet } from './catalog';
-import { downloadSpirit, loadSpiritRegistry } from './registry';
+import { downloadSpirit, loadSpiritDetails, loadSpiritRegistry } from './registry';
+import type { SpiritDetails } from './registry';
+import { SpiritDetailsPage } from './SpiritDetailsPage';
 import { SpiritMarketPreview } from './SpiritMarketPreview';
 import type { RegistrySpirit } from './registry';
 import { useSpiritsStore } from './store';
@@ -12,6 +14,10 @@ export function SpiritMarket() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [selectedSpirit, setSelectedSpirit] = useState<RegistrySpirit | null>(null);
+  const [details, setDetails] = useState<SpiritDetails | null>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [detailsError, setDetailsError] = useState('');
   const installedIds = new Set([...bundledSpirits, ...customSpirits].map(spirit => spirit.id));
   const atLimit = activeIds.length >= 12;
 
@@ -24,6 +30,16 @@ export function SpiritMarket() {
   }
 
   useEffect(() => { void refresh(); }, []);
+
+  async function openDetails(entry: RegistrySpirit) {
+    setSelectedSpirit(entry);
+    setDetails(null);
+    setDetailsError('');
+    setDetailsLoading(true);
+    try { setDetails(await loadSpiritDetails(entry.id)); }
+    catch (cause) { setDetailsError(cause instanceof Error ? cause.message : 'Could not load Spirit details.'); }
+    finally { setDetailsLoading(false); }
+  }
 
   async function install(entry: RegistrySpirit) {
     setError('');
@@ -48,6 +64,14 @@ export function SpiritMarket() {
     }
   }
 
+  if (selectedSpirit) return <SpiritDetailsPage
+    name={selectedSpirit.name}
+    details={details}
+    loading={detailsLoading}
+    error={detailsError}
+    onBack={() => setSelectedSpirit(null)}
+  />;
+
   return <section className="rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl p-4 space-y-4" aria-labelledby="spirit-market-title">
     <div className="flex items-center justify-between gap-3">
       <div><h4 id="spirit-market-title" className="text-sm font-semibold">Spirit catalog</h4><p className="text-xs text-neutral-400 mt-1">Download artwork packages and add them to this computer.</p></div>
@@ -64,12 +88,13 @@ export function SpiritMarket() {
             <SpiritMarketPreview name={entry.name} src={entry.preview_url} />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2"><h5 className="truncate text-sm font-semibold text-white">{entry.name}</h5>{active && <span className="rounded-full bg-emerald-400/10 px-2 py-0.5 text-[10px] text-emerald-200">On desktop</span>}</div>
+            <div className="flex flex-wrap items-center gap-2"><button type="button" onClick={() => void openDetails(entry)} className="truncate text-left text-sm font-semibold text-white hover:text-pink-200">{entry.name}</button>{active && <span className="rounded-full bg-emerald-400/10 px-2 py-0.5 text-[10px] text-emerald-200">On desktop</span>}</div>
             <p className="mt-1 line-clamp-3 text-xs leading-5 text-neutral-400">{entry.description}</p>
             <p className="mt-2 text-[11px] text-neutral-300">{entry.author}</p>
             <p className="mt-1 text-[10px] text-neutral-500">v{entry.version} · {installed ? active ? 'Added' : 'Installed' : `${Math.ceil(entry.size_bytes / 1024 / 1024)} MB download`}</p>
           </div>
         </div>
+        <button type="button" onClick={() => void openDetails(entry)} className="mt-2 self-start text-[11px] text-neutral-400 underline decoration-white/20 underline-offset-2 hover:text-white">View animations and details</button>
         <button type="button" onClick={() => void install(entry)} disabled={busyId !== null || (atLimit && !active)} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white/[0.09] px-3 py-2.5 text-xs font-medium text-neutral-200 transition hover:bg-white/[0.14] disabled:opacity-40">
           <Download size={14} />{busyId === entry.id ? 'Installing…' : active ? 'Added to desktop' : installed ? 'Add Spirit' : 'Install Spirit'}
         </button>
