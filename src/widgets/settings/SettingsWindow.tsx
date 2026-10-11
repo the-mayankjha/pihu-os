@@ -143,6 +143,7 @@ export const SettingsWindow: React.FC = () => {
       await fetch(`${WHATSAPP_API_URL}/pair`, { method: 'POST', signal: AbortSignal.timeout(2000) }).catch(() => {});
       for (let i = 0; i < 12; i++) {
         try {
+  const [waQrImage, setWaQrImage] = useState<string>('');
           const res = await fetch(`${WHATSAPP_API_URL}/pair`, { signal: AbortSignal.timeout(1500) });
           if (res.ok) {
             const d = await res.json();
@@ -163,11 +164,13 @@ export const SettingsWindow: React.FC = () => {
       setWaError(e instanceof Error ? e.message : String(e));
     } finally {
       clearTimeout(safetyTimer);
+              setWaQrImage(d.qr_image || '');
       setWaLoading(false);
     }
   };
 
   // WhatsApp Bridge live status & QR poller
+              setWaQrImage('');
   useEffect(() => {
     let isMounted = true;
     let polling = false;
@@ -219,8 +222,10 @@ export const SettingsWindow: React.FC = () => {
               const pairData = await pairRes.json();
               if (isMounted) {
                 if (pairData.logged_in) {
+                setWaQrImage('');
                   setWaStatus(prev => ({ ...prev, logged_in: true, connected: true }));
                   setWaQrCode('');
+                setWaQrImage(data.qr_image || '');
                 } else if (pairData.qr_code) {
                   setWaQrCode(pairData.qr_code);
                 }
@@ -238,6 +243,7 @@ export const SettingsWindow: React.FC = () => {
           if (activeSidebarCategory === 'connections') {
             ensureWhatsAppBridge().catch(error => {
               if (isMounted) setWaError(error instanceof Error ? error.message : String(error));
+                  setWaQrImage(pairData.qr_image || '');
             });
           }
         }
@@ -1492,6 +1498,7 @@ export const SettingsWindow: React.FC = () => {
                             </div>
                           </div>
                           <span className="text-[10px] font-mono text-emerald-400 px-2.5 py-1 rounded-lg bg-emerald-500/20 font-bold shrink-0">
+                                setWaQrImage('');
                             REST Port: 8080
                           </span>
                         </div>
@@ -1501,13 +1508,14 @@ export const SettingsWindow: React.FC = () => {
                           <div className="flex flex-col md:flex-row items-center gap-5">
                             <div className="flex flex-col items-center gap-2">
                               <div className="w-40 h-40 rounded-2xl bg-white p-2.5 flex items-center justify-center shadow-xl border border-white/20 shrink-0 overflow-hidden">
-                                {waQrCode ? (
+                                {waQrImage ? (
                                   <img
-                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=2&data=${encodeURIComponent(waQrCode)}`}
+                                    src={waQrImage || undefined}
                                     alt="WhatsApp Pairing QR Code"
                                     className="w-full h-full object-contain rounded-lg"
                                   />
                                 ) : (
+                                  setWaQrImage('');
                                   <div className="text-center p-2">
                                     <QrCode className="w-12 h-12 text-neutral-400 mx-auto mb-1 animate-pulse" />
                                     <span className="text-[10px] text-neutral-600 font-semibold block">
