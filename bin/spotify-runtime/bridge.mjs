@@ -62,7 +62,7 @@ export async function startAuth(config, { openBrowser = open, fetchToken = fetch
       if (callback !== server) throw Error('Spotify sign-in was cancelled.');
       saveConfig({ ...config, redirectUri: uri.href, accessToken: tokens.access_token, refreshToken: tokens.refresh_token, expiresAt: Date.now() + (tokens.expires_in || 3600) * 1000 });
       await closeClient();
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });res.end(page(true));
+      res.writeHead(303, { Location: 'https://pihu.nfks.co.in/mcp/spotify/auth?status=connected', 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' });res.end();
     } catch (e) {
       authError = e.message;
       res.writeHead(400, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });res.end(page(false));
@@ -73,8 +73,16 @@ export async function startAuth(config, { openBrowser = open, fetchToken = fetch
   callback = server;
   timer = setTimeout(() => { authError = 'Spotify sign-in timed out. Connect again.'; stop(); }, timeoutMs);
   const authUrl = 'https://accounts.spotify.com/authorize?' + new URLSearchParams({ client_id: config.clientId, response_type: 'code', redirect_uri: uri.href, scope: scopes, state, show_dialog: 'true' });
-  try { await openBrowser(authUrl); } catch { stop(); throw Error('Could not open Spotify sign-in in your browser.'); }
-  return { started: true, redirectUri: uri.href };
+  const authPage = new URL(process.env.PIHU_SPOTIFY_AUTH_PAGE || 'https://pihu.nfks.co.in/mcp/spotify/auth');
+  authPage.search = new URLSearchParams({ callback: uri.href, state, auth_url: authUrl }).toString();
+  let provider = 'pihu';
+  try { await openBrowser(authPage.toString()); }
+  catch {
+    provider = 'local';
+    try { await openBrowser(authUrl); }
+    catch { stop(); throw Error('Could not open Spotify sign-in in your browser.'); }
+  }
+  return { started: true, redirectUri: uri.href, provider };
 }
 export async function dispatch(payload) {
   const config = loadConfig();
