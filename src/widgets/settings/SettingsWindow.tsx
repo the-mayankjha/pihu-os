@@ -142,7 +142,6 @@ export const SettingsWindow: React.FC = () => {
     platform?: string;
     auth_state?: string;
   }>({ connected: false, logged_in: false, jid: '' });
-  const [waQrCode, setWaQrCode] = useState<string>('');
   const [waLoading, setWaLoading] = useState(false);
   const [waUnlinking, setWaUnlinking] = useState(false);
   const waUnlinkingRef = useRef(false);
@@ -155,40 +154,67 @@ export const SettingsWindow: React.FC = () => {
   // REPL deliberately consume this same API/session instead of owning separate clients.
   const handleScanQr = async () => {
     setWaError('');
+    setWaAuthPageOpened(false);
     setWaLoading(true);
-    const safetyTimer = setTimeout(() => setWaLoading(false), 30000);
-    let pageOpened = false;
     try {
       await ensureWhatsAppBridge();
-      await fetch(`${WHATSAPP_API_URL}/pair`, { method: 'POST', signal: AbortSignal.timeout(3000) }).catch(() => {});
-      for (let i = 0; i < 12; i++) {
-        try {
-          const res = await fetch(`${WHATSAPP_API_URL}/pair`, { signal: AbortSignal.timeout(1500) });
-          if (res.ok) {
-            const d = await res.json();
-            if (d.qr_code) {
-              const openRes = await fetch(`${WHATSAPP_API_URL}/open-auth-page`, { method: 'POST', signal: AbortSignal.timeout(4000) });
-              if (!openRes.ok) throw new Error(await openRes.text() || 'The secure pairing page is not ready yet. Try again shortly.');
-              setWaQrCode('ready');
-              setWaAuthPageOpened(true);
-              pageOpened = true;
-              break;
-            }
-            if (d.logged_in) {
-              setWaStatus(prev => ({ ...prev, connected: true, logged_in: true, has_session: true, reachable: true, jid: d.jid || 'PIHU Desktop' }));
-              setWaQrCode('');
-              setWaAuthPageOpened(false);
-              break;
-            }
-          }
-        } catch (e) {}
-        await new Promise(r => setTimeout(r, 400));
+      if (waAuthPageOpened) {
+        const reopenResponse = await fetch(`${WHATSAPP_API_URL}/open-auth-page`, {
+          method: 'POST',
+          signal: AbortSignal.timeout(10000),
+        });
+        if (!reopenResponse.ok) {
+          const detail = await reopenResponse.text();
+          throw new Error(detail || `Could not reopen the PIHU WhatsApp auth page (HTTP ${reopenResponse.status}).`);
+        }
+        return;
       }
-      if (!pageOpened && !waQrCode) setWaError('WhatsApp pairing is starting. Wait a moment, then open the secure pairing page again.');
+      const startResponse = await fetch(`${WHATSAPP_API_URL}/pair`, {
+        method: 'POST',
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!startResponse.ok) {
+        const detail = await startResponse.text();
+        throw new Error(detail || `WhatsApp pairing could not start (HTTP ${startResponse.status}).`);
+      }
+
+      const started = await startResponse.json().catch(() => ({}));
+      if (started.logged_in) {
+        setWaStatus(prev => ({ ...prev, connected: true, logged_in: true, has_session: true, reachable: true, jid: started.jid || 'PIHU Desktop' }));
+        return;
+      }
+
+      // Pairing starts asynchronously in the bridge; wait until it has produced
+      // a live QR before opening the hosted auth page.
+      for (let attempt = 0; attempt < 30; attempt++) {
+        const response = await fetch(`${WHATSAPP_API_URL}/pair`, { signal: AbortSignal.timeout(3000) });
+        if (!response.ok) {
+          const detail = await response.text();
+          throw new Error(detail || `Could not read WhatsApp pairing status (HTTP ${response.status}).`);
+        }
+        const pairing = await response.json();
+        if (pairing.logged_in) {
+          setWaStatus(prev => ({ ...prev, connected: true, logged_in: true, has_session: true, reachable: true, jid: pairing.jid || 'PIHU Desktop' }));
+          return;
+        }
+        if (pairing.qr_code) {
+          const openResponse = await fetch(`${WHATSAPP_API_URL}/open-auth-page`, {
+            method: 'POST',
+            signal: AbortSignal.timeout(10000),
+          });
+          if (!openResponse.ok) {
+            const detail = await openResponse.text();
+            throw new Error(detail || `Could not open the PIHU WhatsApp auth page (HTTP ${openResponse.status}).`);
+          }
+          setWaAuthPageOpened(true);
+          return;
+        }
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      throw new Error('The WhatsApp bridge started, but no QR was ready after 15 seconds. Check the bridge and try again.');
     } catch (e) {
       setWaError(e instanceof Error ? e.message : String(e));
     } finally {
-      clearTimeout(safetyTimer);
       setWaLoading(false);
     }
   };
@@ -231,10 +257,8 @@ export const SettingsWindow: React.FC = () => {
                 auth_state: data.auth_state,
               });
               if (data.logged_in) {
-                setWaQrCode('');
                 setWaAuthPageOpened(false);
               } else if (data.qr_code) {
-                setWaQrCode('ready');
               }
             }
           }
@@ -249,9 +273,7 @@ export const SettingsWindow: React.FC = () => {
               if (isMounted && isCurrent()) {
                 if (pairData.logged_in) {
                   setWaStatus(prev => ({ ...prev, logged_in: true, has_session: true, connected: true, reachable: true }));
-                  setWaQrCode('');
                 } else if (pairData.qr_code) {
-                  setWaQrCode('ready');
                   setWaAuthPageOpened(true);
                 }
               }
@@ -1534,7 +1556,6 @@ export const SettingsWindow: React.FC = () => {
                                     throw new Error('The bridge did not confirm that its saved WhatsApp session was removed. Restart the WhatsApp bridge and try unlinking again.');
                                   }
                                   setWaStatus({ connected: false, logged_in: false, has_session: false, reachable: true, jid: '', auth_state: 'waiting' });
-                                  setWaQrCode('');
                                   setWaAuthPageOpened(false);
                                   if (result.remote_unlinked === false) setWaError('The local PIHU session was removed. To unlink PIHU from WhatsApp completely, remove it from WhatsApp → Linked Devices.');
                                 } catch (e) {
@@ -1556,7 +1577,7 @@ export const SettingsWindow: React.FC = () => {
                               className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10 from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:opacity-50 text-white text-xs font-semibold shadow-lg shadow-emerald-500/20 transition"
                             >
                               <QrCode className="w-3.5 h-3.5" />
-                              {waLoading ? 'Opening secure pairing…' : (waAuthPageOpened ? 'Open QR Pairing Page' : 'Pair WhatsApp')}
+                              {waLoading ? (waAuthPageOpened ? 'Opening QR page…' : 'Starting WhatsApp…') : (waAuthPageOpened ? 'Open QR Pairing Page' : 'Pair WhatsApp')}
                             </button>
                           )}
                           {waError && <p role="alert" className="mt-2 text-xs text-neutral-300">{waError}</p>}
