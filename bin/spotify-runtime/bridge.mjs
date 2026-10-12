@@ -89,6 +89,20 @@ export async function dispatch(payload) {
   switch (payload.action) {
     case 'dashboard': await open('https://developer.spotify.com/dashboard');return { opened: true };
     case 'status': return { configured: !!(config.clientId && config.clientSecret), connected: !!(config.accessToken && config.refreshToken), clientId: config.clientId || '', redirectUri: REDIRECT_URI, authorizing: !!callback, error: authError };
+    case 'configure': {
+      const clientId = String(payload.clientId || '').trim();
+      const clientSecret = String(payload.clientSecret || config.clientSecret || '').trim();
+      if (!clientId) throw Error('Enter your Spotify Client ID.');
+      if (!clientSecret) throw Error('Enter your Spotify Client Secret.');
+      const credentialsChanged = clientId !== config.clientId || clientSecret !== config.clientSecret;
+      if (credentialsChanged && callback) callback.cancel();
+      if (credentialsChanged) await closeClient();
+      const next = { ...config, clientId, clientSecret, redirectUri: REDIRECT_URI };
+      if (credentialsChanged) { delete next.accessToken; delete next.refreshToken; delete next.expiresAt; }
+      saveConfig(next);
+      authError = '';
+      return { configured: true, clientId, redirectUri: REDIRECT_URI, connected: !!(next.accessToken && next.refreshToken) };
+    }
     case 'auth': {
       const clientId = String(payload.clientId || config.clientId || '').trim();
       if (clientId !== config.clientId && !payload.clientSecret) throw Error('Enter the Client Secret for your new Spotify Client ID.');

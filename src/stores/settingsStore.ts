@@ -36,6 +36,7 @@ export interface SettingsState {
   googleClientSecret: string;
   googleAccountConnected: boolean;
   connectedGoogleAccounts: GoogleAccount[];
+  developerMode: boolean;
 
   // Appearance & Workspace Preferences
   themeAccent: 'pink' | 'purple' | 'cyan' | 'emerald' | 'amber';
@@ -62,6 +63,7 @@ export interface SettingsState {
   addConnectedGoogleAccount: (account: GoogleAccount) => void;
   removeConnectedGoogleAccount: (email: string) => void;
   setPrimaryGoogleAccount: (email: string) => void;
+  setDeveloperMode: (enabled: boolean) => void;
   setThemeAccent: (accent: 'pink' | 'purple' | 'cyan' | 'emerald' | 'amber') => void;
   setBlurIntensity: (val: number) => void;
   setDockPosition: (pos: 'bottom' | 'left' | 'right') => void;
@@ -94,6 +96,7 @@ export const useSettingsStore = create<SettingsState>()(
       googleClientSecret: '',
       googleAccountConnected: false,
       connectedGoogleAccounts: [],
+      developerMode: false,
       themeAccent: 'pink',
       blurIntensity: 24,
       dockPosition: 'bottom',
@@ -114,6 +117,7 @@ export const useSettingsStore = create<SettingsState>()(
       setFocusMode: (focusModeActive) => set({ focusModeActive }),
       setTtsSpeed: (ttsSpeed) => set({ ttsSpeed }),
       setActiveSidebarCategory: (activeSidebarCategory) => set({ activeSidebarCategory }),
+      setDeveloperMode: (developerMode) => set({ developerMode }),
 
       addGeminiKey: (key: string) => {
         const trimmed = key.trim();

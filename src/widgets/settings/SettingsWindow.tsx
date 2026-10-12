@@ -1,14 +1,16 @@
-import { SpotifyConnection } from './SpotifyConnection';
+import { SpotifyConnection, SpotifyDeveloperSettings } from './SpotifyConnection';
 import spotifyCatalog from '../../core/services/spotifyToolCatalog.json';
 import { useVoiceStore } from '../../stores/voiceStore';
 import { ensureWhatsAppBridge, WHATSAPP_API_URL } from '../../core/services/whatsappBridge';
 import { GlassCard } from '../../shared/components/GlassCard/GlassCard';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { listen } from '@tauri-apps/api/event';
+import { getVersion } from '@tauri-apps/api/app';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { SpiritsSettings } from '../../features/spirits/SpiritsSettings';
 import { useLayoutStore } from '../../core/layout/LayoutStore';
 import { motion } from 'framer-motion';
+import pihuLogo from '../../assets/logo.png';
 import {
   Settings,
   Briefcase,
@@ -76,6 +78,8 @@ export const SettingsWindow: React.FC = () => {
     elevenLabsVoiceId,
     setElevenLabsConfig,
     connectedGoogleAccounts,
+    developerMode,
+    setDeveloperMode,
     removeConnectedGoogleAccount,
     setPrimaryGoogleAccount,
     themeAccent,
@@ -104,6 +108,17 @@ export const SettingsWindow: React.FC = () => {
   const [googleOAuthStarting, setGoogleOAuthStarting] = useState(false);
   const [googleOAuthMessage, setGoogleOAuthMessage] = useState('');
   const [googleOAuthError, setGoogleOAuthError] = useState('');
+  const [appVersion, setAppVersion] = useState('Loading…');
+
+  useEffect(() => {
+    let active = true;
+    void getVersion().then(version => {
+      if (active) setAppVersion(version);
+    }).catch(() => {
+      if (active) setAppVersion(import.meta.env.VITE_APP_VERSION || 'Development');
+    });
+    return () => { active = false; };
+  }, []);
   
   // MCP Inspector & In-Place Navigation states
   const [activeMcpDetailId, setActiveMcpDetailId] = useState<string | null>(null);
@@ -129,8 +144,12 @@ export const SettingsWindow: React.FC = () => {
   }>({ connected: false, logged_in: false, jid: '' });
   const [waQrCode, setWaQrCode] = useState<string>('');
   const [waLoading, setWaLoading] = useState(false);
+  const [waUnlinking, setWaUnlinking] = useState(false);
+  const waUnlinkingRef = useRef(false);
+  const waStatusRevisionRef = useRef(0);
+  const [waAuthPageOpened, setWaAuthPageOpened] = useState(false);
   const [waError, setWaError] = useState('');
-  const [waCopiedQr, setWaCopiedQr] = useState(false);
+  const waHasSession = waStatus.has_session ?? waStatus.logged_in;
 
   // WhatsApp authentication belongs to the local bridge. The desktop, CLI and
   // REPL deliberately consume this same API/session instead of owning separate clients.
@@ -138,44 +157,50 @@ export const SettingsWindow: React.FC = () => {
     setWaError('');
     setWaLoading(true);
     const safetyTimer = setTimeout(() => setWaLoading(false), 30000);
+    let pageOpened = false;
     try {
       await ensureWhatsAppBridge();
-      await fetch(`${WHATSAPP_API_URL}/pair`, { method: 'POST', signal: AbortSignal.timeout(2000) }).catch(() => {});
+      await fetch(`${WHATSAPP_API_URL}/pair`, { method: 'POST', signal: AbortSignal.timeout(3000) }).catch(() => {});
       for (let i = 0; i < 12; i++) {
         try {
-  const [waQrImage, setWaQrImage] = useState<string>('');
           const res = await fetch(`${WHATSAPP_API_URL}/pair`, { signal: AbortSignal.timeout(1500) });
           if (res.ok) {
             const d = await res.json();
             if (d.qr_code) {
-              setWaQrCode(d.qr_code);
+              const openRes = await fetch(`${WHATSAPP_API_URL}/open-auth-page`, { method: 'POST', signal: AbortSignal.timeout(4000) });
+              if (!openRes.ok) throw new Error(await openRes.text() || 'The secure pairing page is not ready yet. Try again shortly.');
+              setWaQrCode('ready');
+              setWaAuthPageOpened(true);
+              pageOpened = true;
               break;
             }
             if (d.logged_in) {
-              setWaStatus(prev => ({ ...prev, connected: true, logged_in: true, jid: d.jid || 'PIHU Desktop' }));
+              setWaStatus(prev => ({ ...prev, connected: true, logged_in: true, has_session: true, reachable: true, jid: d.jid || 'PIHU Desktop' }));
               setWaQrCode('');
+              setWaAuthPageOpened(false);
               break;
             }
           }
         } catch (e) {}
         await new Promise(r => setTimeout(r, 400));
       }
+      if (!pageOpened && !waQrCode) setWaError('WhatsApp pairing is starting. Wait a moment, then open the secure pairing page again.');
     } catch (e) {
       setWaError(e instanceof Error ? e.message : String(e));
     } finally {
       clearTimeout(safetyTimer);
-              setWaQrImage(d.qr_image || '');
       setWaLoading(false);
     }
   };
 
   // WhatsApp Bridge live status & QR poller
-              setWaQrImage('');
   useEffect(() => {
     let isMounted = true;
     let polling = false;
     const fetchWaStatus = async () => {
-      if (polling) return;
+      if (polling || waUnlinkingRef.current) return;
+      const revision = waStatusRevisionRef.current;
+      const isCurrent = () => revision === waStatusRevisionRef.current && !waUnlinkingRef.current;
       polling = true;
       try {
         let isConnected = false;
@@ -194,7 +219,7 @@ export const SettingsWindow: React.FC = () => {
             if (isMounted) setWaError('');
             isLoggedIn = !!data.logged_in;
             hasSession = data.has_session ?? (data.logged_in || data.auth_state === "reconnecting");
-            if (isMounted) {
+            if (isMounted && isCurrent()) {
               setWaStatus({
                 has_session: hasSession,
                 reachable: true,
@@ -207,8 +232,9 @@ export const SettingsWindow: React.FC = () => {
               });
               if (data.logged_in) {
                 setWaQrCode('');
+                setWaAuthPageOpened(false);
               } else if (data.qr_code) {
-                setWaQrCode(data.qr_code);
+                setWaQrCode('ready');
               }
             }
           }
@@ -220,14 +246,13 @@ export const SettingsWindow: React.FC = () => {
             const pairRes = await fetch(`${WHATSAPP_API_URL}/pair`, { signal: AbortSignal.timeout(1500) });
             if (pairRes.ok) {
               const pairData = await pairRes.json();
-              if (isMounted) {
+              if (isMounted && isCurrent()) {
                 if (pairData.logged_in) {
-                setWaQrImage('');
-                  setWaStatus(prev => ({ ...prev, logged_in: true, connected: true }));
+                  setWaStatus(prev => ({ ...prev, logged_in: true, has_session: true, connected: true, reachable: true }));
                   setWaQrCode('');
-                setWaQrImage(data.qr_image || '');
                 } else if (pairData.qr_code) {
-                  setWaQrCode(pairData.qr_code);
+                  setWaQrCode('ready');
+                  setWaAuthPageOpened(true);
                 }
               }
             }
@@ -236,19 +261,18 @@ export const SettingsWindow: React.FC = () => {
 
         // 3. If bridge is offline
         if (!isConnected) {
-          if (isMounted) {
+          if (isMounted && isCurrent()) {
             setWaStatus(prev => ({ ...prev, connected: false, logged_in: false, reachable: false }));
           }
           // Auto-start bridge if user is actively in the Connections section
           if (activeSidebarCategory === 'connections') {
             ensureWhatsAppBridge().catch(error => {
               if (isMounted) setWaError(error instanceof Error ? error.message : String(error));
-                  setWaQrImage(pairData.qr_image || '');
             });
           }
         }
       } catch (e) {
-        if (isMounted) {
+        if (isMounted && isCurrent()) {
           setWaStatus(prev => ({ ...prev, connected: false, logged_in: false, reachable: false }));
         }
       } finally {
@@ -831,10 +855,11 @@ export const SettingsWindow: React.FC = () => {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  // 10 Streamlined Sidebar Menu Items as requested
+  // Settings sections
   const sidebarItems = [
     { id: 'general', label: 'General', icon: Settings },
     { id: 'connections', label: 'Connections', icon: Briefcase, badge: 'MCP' },
+    { id: 'advanced', label: 'Advanced Settings', icon: Wrench },
     { id: 'widgets', label: 'Widgets', icon: LayoutGrid },
     { id: 'spirits', label: 'Spirits', icon: Sparkles },
     { id: 'notifications', label: 'Notifications', icon: Bell },
@@ -895,8 +920,8 @@ export const SettingsWindow: React.FC = () => {
 
           {/* Logo & Workspace Title */}
           <div className="flex items-center gap-3 px-2 py-3 mb-3 border-b border-white/5">
-            <div className="w-9 h-9 rounded-2xl bg-white/10    flex items-center justify-center text-white shadow-lg shadow-neutral-500/30 ring-1 ring-white/20">
-              <Sparkles className="w-5 h-5 animate-pulse" />
+            <div className="w-9 h-9 shrink-0 flex items-center justify-center">
+              <img src={pihuLogo} alt="PIHU logo" className="w-9 h-9 object-contain" />
             </div>
             <div>
               <h2 className="text-sm font-bold tracking-wide text-white">PIHU OS</h2>
@@ -958,6 +983,7 @@ export const SettingsWindow: React.FC = () => {
               <h1 className="text-lg font-bold text-white tracking-wide">
                 {activeSidebarCategory === 'general' && 'PIHU OS System Profile'}
                 {activeSidebarCategory === 'connections' && (activeMcpDetailId ? `${currentSelectedMcp?.name} • Tools Explorer` : 'Connections & MCP Servers')}
+                {activeSidebarCategory === 'advanced' && 'Advanced Settings'}
                 {activeSidebarCategory === 'widgets' && 'Active Desktop Widgets'}
                 {activeSidebarCategory === 'spirits' && 'Spirits'}
                 {activeSidebarCategory === 'notifications' && 'Notification Preferences'}
@@ -972,6 +998,7 @@ export const SettingsWindow: React.FC = () => {
               <p className="text-xs text-neutral-400">
                 {activeSidebarCategory === 'general' && 'Operating system profile, runtime context, memory cache, and assistant persona.'}
                 {activeSidebarCategory === 'connections' && (activeMcpDetailId ? `Listing all ${currentSelectedMcp?.tools.length} executable tool declarations and parameters.` : 'Google Workspace OAuth, project MCP, file MCP, and external tool protocols.')}
+                {activeSidebarCategory === 'advanced' && 'Developer options and advanced service configuration.'}
                 {activeSidebarCategory === 'widgets' && 'Toggle canvas widgets, dock magnification, and screen layout.'}
                 {activeSidebarCategory === 'spirits' && 'Add animated companions to your desktop and make them your own.'}
                 {activeSidebarCategory === 'notifications' && 'Control voice spoken alerts, desktop banners, and chime sounds.'}
@@ -981,7 +1008,7 @@ export const SettingsWindow: React.FC = () => {
                 {activeSidebarCategory === 'privacy' && 'On-device local AI processing, encrypted keys, and data boundaries.'}
                 {activeSidebarCategory === 'shortcuts' && 'Global hotkeys and quick action triggers across PIHU OS.'}
                 {activeSidebarCategory === 'people' && 'Define contacts, email addresses, and phone numbers for AI messaging via Gmail and WhatsApp.'}
-                {activeSidebarCategory === 'about' && 'System version, Tauri v2 core architectures, and credits.'}
+                {activeSidebarCategory === 'about' && 'Learn about PIHU OS and the tools that make it your personal AI desktop companion.'}
               </p>
             </div>
 
@@ -994,7 +1021,7 @@ export const SettingsWindow: React.FC = () => {
             {/* ══════ SECTION 1: GENERAL (PIHU OS Core Profile) ══════ */}
             {activeSidebarCategory === 'general' && (
               <div className="space-y-6">
-                
+
                 {/* OS Identity & Salutation */}
                 <div className="p-5 rounded-3xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-4">
                   <div className="flex items-center justify-between">
@@ -1166,6 +1193,35 @@ export const SettingsWindow: React.FC = () => {
                   </div>
                 </div>
 
+              </div>
+            )}
+
+            {/* ══════ ADVANCED SETTINGS ══════ */}
+            {activeSidebarCategory === 'advanced' && (
+              <div className="space-y-6">
+                <section className="p-5 rounded-3xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-5">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-neutral-200"><Code className="w-5 h-5" /></div>
+                      <div>
+                        <h3 className="text-xs font-bold text-white uppercase tracking-wider">Developer Settings</h3>
+                        <p className="text-[11px] text-neutral-400 mt-1 max-w-lg">Reveal service credentials and redirect configuration for local integrations.</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={developerMode}
+                      aria-label="Developer’s Mode"
+                      onClick={() => setDeveloperMode(!developerMode)}
+                      className={`w-12 h-6 shrink-0 flex items-center rounded-full p-1 transition ${developerMode ? 'bg-white/25' : 'bg-neutral-700'}`}
+                    >
+                      <span className={`bg-white w-4 h-4 rounded-full shadow-md transform transition ${developerMode ? 'translate-x-6' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+                  {!developerMode && <p className="text-xs text-neutral-400 border-t border-white/10 pt-4">Turn on Developer’s Mode to edit Spotify app credentials. Your Spotify account connection stays available below.</p>}
+                </section>
+                <SpotifyDeveloperSettings enabled={developerMode} />
               </div>
             )}
 
@@ -1445,12 +1501,14 @@ export const SettingsWindow: React.FC = () => {
                         <div className="flex items-center gap-2">
                           <button
                             onClick={async () => {
-                              if (confirm('Clear all local WhatsApp sessions, chats cache and database?')) {
+                              if (confirm('Clear local WhatsApp chats and message history? This will not unlink your device.')) {
                                 try {
-                                  await fetch(`${WHATSAPP_API_URL}/clear`, { method: 'POST' });
-                                } catch (e) {}
-                                setWaStatus(prev => ({ ...prev, connected: false, logged_in: false, reachable: false }));
-                                setWaQrCode('');
+                                  const response = await fetch(`${WHATSAPP_API_URL}/clear`, { method: 'POST' });
+                                  if (!response.ok) throw new Error(await response.text());
+                                  setWaError('');
+                                } catch (e) {
+                                  setWaError(e instanceof Error ? e.message : 'Could not clear WhatsApp data.');
+                                }
                               }
                             }}
                             title="Clear local WhatsApp session & message database"
@@ -1460,18 +1518,36 @@ export const SettingsWindow: React.FC = () => {
                             Clear Data
                           </button>
 
-                          {waStatus.has_session || waStatus.logged_in ? (
+                          {waHasSession ? (
                             <button
+                              disabled={waUnlinking}
                               onClick={async () => {
+                                waStatusRevisionRef.current += 1;
+                                waUnlinkingRef.current = true;
+                                setWaUnlinking(true);
+                                setWaError('');
                                 try {
-                                  await fetch(`${WHATSAPP_API_URL}/logout`, { method: 'POST' });
-                                  setWaStatus(prev => ({ ...prev, connected: false, logged_in: false, reachable: false }));
+                                  const response = await fetch(`${WHATSAPP_API_URL}/logout`, { method: 'POST', signal: AbortSignal.timeout(15000) });
+                                  const result = await response.json().catch(() => ({}));
+                                  if (!response.ok || result.success !== true) throw new Error(result.error || 'The WhatsApp bridge could not unlink this device.');
+                                  if (result.has_session !== false || result.logged_in !== false) {
+                                    throw new Error('The bridge did not confirm that its saved WhatsApp session was removed. Restart the WhatsApp bridge and try unlinking again.');
+                                  }
+                                  setWaStatus({ connected: false, logged_in: false, has_session: false, reachable: true, jid: '', auth_state: 'waiting' });
                                   setWaQrCode('');
-                                } catch (e) {}
+                                  setWaAuthPageOpened(false);
+                                  if (result.remote_unlinked === false) setWaError('The local PIHU session was removed. To unlink PIHU from WhatsApp completely, remove it from WhatsApp → Linked Devices.');
+                                } catch (e) {
+                                  setWaError(e instanceof Error ? e.message : 'Could not unlink the WhatsApp device.');
+                                } finally {
+                                  // Ignore any status response that started before logout; the bridge is the source of truth.
+                                  waUnlinkingRef.current = false;
+                                  setWaUnlinking(false);
+                                }
                               }}
-                              className="px-3.5 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-xs font-semibold text-red-400 transition"
+                              className="px-3.5 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 disabled:opacity-50 text-xs font-semibold text-red-400 transition"
                             >
-                              Unlink Device
+                              {waUnlinking ? 'Unlinking…' : 'Unlink Device'}
                             </button>
                           ) : (
                             <button
@@ -1480,7 +1556,7 @@ export const SettingsWindow: React.FC = () => {
                               className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10 from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:opacity-50 text-white text-xs font-semibold shadow-lg shadow-emerald-500/20 transition"
                             >
                               <QrCode className="w-3.5 h-3.5" />
-                              {waLoading ? 'Starting Bridge...' : (waQrCode ? 'Refresh QR Code' : 'Scan WhatsApp QR')}
+                              {waLoading ? 'Opening secure pairing…' : (waAuthPageOpened ? 'Open QR Pairing Page' : 'Pair WhatsApp')}
                             </button>
                           )}
                           {waError && <p role="alert" className="mt-2 text-xs text-neutral-300">{waError}</p>}
@@ -1488,7 +1564,7 @@ export const SettingsWindow: React.FC = () => {
                       </div>
 
                       {/* If Authenticated: Display Device Details */}
-                      {waStatus.has_session || waStatus.logged_in ? (
+                      {waHasSession ? (
                         <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
@@ -1498,70 +1574,22 @@ export const SettingsWindow: React.FC = () => {
                             </div>
                           </div>
                           <span className="text-[10px] font-mono text-emerald-400 px-2.5 py-1 rounded-lg bg-emerald-500/20 font-bold shrink-0">
-                                setWaQrImage('');
                             REST Port: 8080
                           </span>
                         </div>
                       ) : (
-                        /* If Not Authenticated: Display QR Pairing Code and Steps */
-                        <div className="p-4 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 space-y-4">
-                          <div className="flex flex-col md:flex-row items-center gap-5">
-                            <div className="flex flex-col items-center gap-2">
-                              <div className="w-40 h-40 rounded-2xl bg-white p-2.5 flex items-center justify-center shadow-xl border border-white/20 shrink-0 overflow-hidden">
-                                {waQrImage ? (
-                                  <img
-                                    src={waQrImage || undefined}
-                                    alt="WhatsApp Pairing QR Code"
-                                    className="w-full h-full object-contain rounded-lg"
-                                  />
-                                ) : (
-                                  setWaQrImage('');
-                                  <div className="text-center p-2">
-                                    <QrCode className="w-12 h-12 text-neutral-400 mx-auto mb-1 animate-pulse" />
-                                    <span className="text-[10px] text-neutral-600 font-semibold block">
-                                      {waLoading ? 'Generating QR...' : 'Click "Scan WhatsApp QR"'}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                              {waQrCode && (
-                                <button
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(waQrCode);
-                                    setWaCopiedQr(true);
-                                    setTimeout(() => setWaCopiedQr(false), 2000);
-                                  }}
-                                  className="flex items-center gap-1 text-[10px] text-neutral-400 hover:text-white transition"
-                                >
-                                  {waCopiedQr ? (
-                                    <>
-                                      <Check className="w-3 h-3 text-emerald-400" />
-                                      <span className="text-emerald-400">QR Code String Copied</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Copy className="w-3 h-3" />
-                                      <span>Copy QR Payload</span>
-                                    </>
-                                  )}
-                                </button>
-                              )}
-                            </div>
-
-                            <div className="flex-1 space-y-2 text-xs">
-                              <h5 className="font-bold text-white uppercase tracking-wider text-[11px]">How to Pair Your Phone:</h5>
-                              <ol className="space-y-1.5 text-neutral-300 text-[11px] list-decimal list-inside font-medium">
-                                <li>Open <strong>WhatsApp</strong> on your mobile phone</li>
-                                <li>Tap <strong>Settings</strong> &gt; <strong>Linked Devices</strong> &gt; <strong>Link a Device</strong></li>
-                                <li>Point your phone camera at the QR code on the left</li>
-                                <li>Device will register as <strong>PIHU (Desktop)</strong></li>
+                        <div className="p-4 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10">
+                          <div className="flex items-start gap-3">
+                            <Shield className="w-5 h-5 mt-0.5 text-emerald-400 shrink-0" />
+                            <div className="space-y-2 text-xs">
+                              <h5 className="font-bold text-white">Secure WhatsApp pairing</h5>
+                              <p className="text-neutral-400">{waAuthPageOpened ? 'The secure PIHU auth page is open in your browser. Scan its live QR code with WhatsApp.' : 'PIHU opens the live QR code on its secure auth page. The QR is never displayed in Settings.'}</p>
+                              <ol className="space-y-1 text-neutral-300 text-[11px] list-decimal list-inside font-medium">
+                                <li>Open WhatsApp on your phone</li>
+                                <li>Go to Settings → Linked Devices → Link a Device</li>
+                                <li>Scan the QR on the PIHU auth page</li>
                               </ol>
-                              <div className="pt-2 flex items-center gap-3">
-                                <span className="text-[10px] text-neutral-500 font-mono">CLI Command:</span>
-                                <code className="px-2 py-0.5 rounded bg-black/60 text-[10px] font-mono text-neutral-400 border border-white/5">
-                                  pihu mcp whatsapp auth
-                                </code>
-                              </div>
+                              <div className="pt-1 text-[10px] text-neutral-500">Pairing page: pihu.nfks.co.in/mcp/whatsapp/auth</div>
                             </div>
                           </div>
                         </div>
@@ -2284,19 +2312,39 @@ export const SettingsWindow: React.FC = () => {
 
             {/* ══════ SECTION 11: ABOUT PIHU ══════ */}
             {activeSidebarCategory === 'about' && (
-              <div className="p-8 rounded-3xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-4 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-white/10    flex items-center justify-center text-white mx-auto shadow-2xl shadow-neutral-500/30">
-                  <Sparkles className="w-8 h-8" />
+              <div className="p-8 rounded-3xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-6">
+                <div className="flex flex-col items-center gap-3 text-center">
+                  <img src={pihuLogo} alt="PIHU logo" className="w-20 h-20 object-contain" />
+                  <div>
+                    <h3 className="text-xl font-bold text-white">PIHU OS <span className="text-neutral-300">v{appVersion}</span></h3>
+                    <p className="text-sm text-neutral-400 mt-1">Your personal AI desktop companion</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-lg font-bold text-white">PIHU OS v1.0.0</h3>
-                  <p className="text-xs text-neutral-400 mt-1">
-                    Created with ❤️ by <strong>Mayank Jha</strong>
-                  </p>
+                <p className="text-sm text-neutral-300 leading-relaxed max-w-3xl mx-auto text-center">
+                  PIHU brings voice-powered assistance, desktop companions, and connected tools together in one workspace. Talk naturally, work across your projects, and connect services such as Google Workspace and Spotify through MCP integrations.
+                </p>
+                <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/[0.12]">
+                  <table className="w-full text-left text-sm">
+                    <caption className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-300 border-b border-white/10">Build information</caption>
+                    <tbody className="divide-y divide-white/[0.07]">
+                      {[
+                        ['Product', 'PIHU OS'],
+                        ['Version', appVersion],
+                        ['Build number', __PIHU_BUILD_INFO__.number],
+                        ['Build name', __PIHU_BUILD_INFO__.name],
+                        ['Build date', new Date(__PIHU_BUILD_INFO__.date).toLocaleString()],
+                        ['Branch', __PIHU_BUILD_INFO__.branch],
+                        ['Commit', __PIHU_BUILD_INFO__.commit],
+                      ].map(([label, value]) => (
+                        <tr key={label}>
+                          <th scope="row" className="w-1/3 px-4 py-3 font-medium text-neutral-400">{label}</th>
+                          <td className="px-4 py-3 text-neutral-200 font-mono text-xs break-all">{value}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                <div className="p-4 rounded-2xl bg-black/[0.12] backdrop-blur-lg border border-white/5 text-[11px] font-mono text-neutral-300 max-w-md mx-auto">
-                  Tauri v2 • React 19 • Python 3.10 • Rust Core • MCP Suite
-                </div>
+                <p className="text-xs text-neutral-500 text-center">Created by Mayank Jha</p>
               </div>
             )}
 

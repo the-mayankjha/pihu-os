@@ -296,7 +296,7 @@ export const whatsappTools: ActionTool[] = [
           }
           return {
             success: false,
-            error: 'WhatsApp device is not paired. I have opened the Connections tab in Settings—please scan the QR code using WhatsApp on your phone (Settings > Linked Devices).',
+            error: 'WhatsApp device is not paired. I have opened the Connections tab in Settings and the secure PIHU WhatsApp auth page. Scan the QR code there using WhatsApp > Linked Devices.',
           };
         }
 
@@ -341,7 +341,7 @@ export const whatsappTools: ActionTool[] = [
   {
     declaration: {
       name: 'whatsapp_authenticate',
-      description: 'Initiates WhatsApp device pairing, launches bridge, and displays the QR code in Settings Connections tab. Use when user says "Initiate WhatsApp MCP", "Authenticate WhatsApp", "Login WhatsApp", "Connect WhatsApp", "Pair WhatsApp with phone".',
+      description: 'Initiates WhatsApp device pairing, launches the bridge, and opens the secure PIHU WhatsApp auth page with the live QR code. Use when user says "Initiate WhatsApp MCP", "Authenticate WhatsApp", "Login WhatsApp", "Connect WhatsApp", "Pair WhatsApp with phone".',
       parameters: {
         type: 'OBJECT',
         properties: {},
@@ -358,13 +358,16 @@ export const whatsappTools: ActionTool[] = [
           useLayoutStore.getState().toggleWidget('settings-window');
         }
 
-        // Fetch QR
+        // Ask the bridge to start pairing if needed. The QR is only shown by
+        // PIHU's hosted auth page, never inside the Settings window.
         let hasQr = false;
         try {
-          const qrRes = await fetch(`${WHATSAPP_API_URL}/qr`, { signal: AbortSignal.timeout(2000) });
-          if (qrRes.ok) {
-            const qrData = await qrRes.json();
-            if (qrData.logged_in) {
+          await fetch(`${WHATSAPP_API_URL}/pair`, { method: 'POST', signal: AbortSignal.timeout(2000) }).catch(() => {});
+          for (let attempt = 0; attempt < 12; attempt++) {
+            const pairRes = await fetch(`${WHATSAPP_API_URL}/pair`, { signal: AbortSignal.timeout(1500) });
+            if (pairRes.ok) {
+              const pairData = await pairRes.json();
+              if (pairData.logged_in) {
               return {
                 success: true,
                 data: {
@@ -373,7 +376,13 @@ export const whatsappTools: ActionTool[] = [
                 },
               };
             }
-            if (qrData.qr_code) hasQr = true;
+              if (pairData.qr_code) {
+                const pageRes = await fetch(`${WHATSAPP_API_URL}/open-auth-page`, { method: 'POST', signal: AbortSignal.timeout(3000) });
+                hasQr = pageRes.ok;
+                break;
+              }
+            }
+            await new Promise(resolve => setTimeout(resolve, 400));
           }
         } catch (e) {}
 
@@ -382,7 +391,9 @@ export const whatsappTools: ActionTool[] = [
           data: {
             action: 'whatsapp_pairing_initiated',
             has_qr: hasQr,
-            message: 'I have started the WhatsApp Bridge and opened the Connections tab. Please scan the QR code on screen with WhatsApp on your phone (Settings > Linked Devices > Link a Device).',
+            message: hasQr
+              ? 'I have started the WhatsApp Bridge and opened Connections. The secure PIHU auth page is open with the live QR; scan it from WhatsApp > Settings > Linked Devices > Link a Device.'
+              : 'I started the WhatsApp Bridge and opened Connections. The secure pairing page is still preparing; wait a moment, then choose Pair WhatsApp in Settings.',
           },
         };
       } catch (e: any) {
