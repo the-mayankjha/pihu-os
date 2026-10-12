@@ -367,7 +367,7 @@ export const whatsappTools: ActionTool[] = [
             const pairRes = await fetch(`${WHATSAPP_API_URL}/pair`, { signal: AbortSignal.timeout(1500) });
             if (pairRes.ok) {
               const pairData = await pairRes.json();
-              if (pairData.logged_in) {
+              if (pairData.logged_in && pairData.connected) {
               return {
                 success: true,
                 data: {

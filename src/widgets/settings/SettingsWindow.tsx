@@ -183,7 +183,6 @@ export const SettingsWindow: React.FC = () => {
       const started = await startResponse.json().catch(() => ({}));
       if (started.logged_in && started.connected) {
         setWaStatus(prev => ({ ...prev, connected: true, logged_in: true, has_session: true, reachable: true, jid: started.jid || 'PIHU Desktop' }));
-        return;
       }
 
       // The bridge creates the secure relay session before returning. Open its
@@ -220,7 +219,7 @@ export const SettingsWindow: React.FC = () => {
 
         // 1. Check status endpoint
         try {
-          const res = await fetch(`${WHATSAPP_API_URL}/status`, { signal: AbortSignal.timeout(4000) });
+          const res = await fetch(`${WHATSAPP_API_URL}/status`, { signal: AbortSignal.timeout(4000), cache: 'no-store' });
           if (res.ok) {
             const data = await res.json();
             if (typeof data.logged_in !== 'boolean' || typeof data.connected !== 'boolean') {
@@ -241,10 +240,6 @@ export const SettingsWindow: React.FC = () => {
                 platform: data.platform || 'PIHU Desktop',
                 auth_state: data.auth_state,
               });
-              if (data.logged_in) {
-                setWaAuthPageOpened(false);
-              } else if (data.qr_code) {
-              }
             }
           }
         } catch (_) {}
@@ -252,11 +247,11 @@ export const SettingsWindow: React.FC = () => {
         // 2. If bridge is active and not logged in, query /api/pair for active QR code
         if (isConnected && !isLoggedIn && !hasSession) {
           try {
-            const pairRes = await fetch(`${WHATSAPP_API_URL}/pair`, { signal: AbortSignal.timeout(1500) });
+            const pairRes = await fetch(`${WHATSAPP_API_URL}/pair`, { signal: AbortSignal.timeout(1500), cache: 'no-store' });
             if (pairRes.ok) {
               const pairData = await pairRes.json();
               if (isMounted && isCurrent()) {
-                if (pairData.logged_in) {
+                if (pairData.logged_in && pairData.connected) {
                   setWaStatus(prev => ({ ...prev, logged_in: true, has_session: true, connected: true, reachable: true }));
                 } else if (pairData.qr_code) {
                   setWaAuthPageOpened(true);
