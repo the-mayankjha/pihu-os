@@ -358,8 +358,8 @@ export const whatsappTools: ActionTool[] = [
           useLayoutStore.getState().toggleWidget('settings-window');
         }
 
-        // Ask the bridge to start pairing if needed. The QR is only shown by
-        // PIHU's hosted auth page, never inside the Settings window.
+        // Ask the bridge to start pairing if needed. The QR is only shown on
+        // the local auth page, never inside the Settings window.
         let hasQr = false;
         try {
           await fetch(`${WHATSAPP_API_URL}/pair`, { method: 'POST', signal: AbortSignal.timeout(2000) }).catch(() => {});
@@ -392,7 +392,7 @@ export const whatsappTools: ActionTool[] = [
             action: 'whatsapp_pairing_initiated',
             has_qr: hasQr,
             message: hasQr
-              ? 'I have started the WhatsApp Bridge and opened Connections. The secure PIHU auth page is open with the live QR; scan it from WhatsApp > Settings > Linked Devices > Link a Device.'
+              ? 'I have started the WhatsApp Bridge and opened its local PIHU auth page with the live QR; scan it from WhatsApp > Settings > Linked Devices > Link a Device.'
               : 'I started the WhatsApp Bridge and opened Connections. The secure pairing page is still preparing; wait a moment, then choose Pair WhatsApp in Settings.',
           },
         };

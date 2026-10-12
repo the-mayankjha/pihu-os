@@ -185,8 +185,7 @@ export const SettingsWindow: React.FC = () => {
         setWaStatus(prev => ({ ...prev, connected: true, logged_in: true, has_session: true, reachable: true, jid: started.jid || 'PIHU Desktop' }));
       }
 
-      // The bridge creates the secure relay session before returning. Open its
-      // hosted route immediately; the QR streams into that page when ready.
+      // Open the auth page served by this bridge. QR and sync state stay local.
       const openResponse = await fetch(`${WHATSAPP_API_URL}/open-auth-page`, {
         method: 'POST',
         signal: AbortSignal.timeout(10000),
@@ -1584,13 +1583,13 @@ export const SettingsWindow: React.FC = () => {
                             <Shield className="w-5 h-5 mt-0.5 text-emerald-400 shrink-0" />
                             <div className="space-y-2 text-xs">
                               <h5 className="font-bold text-white">Secure WhatsApp pairing</h5>
-                              <p className="text-neutral-400">{waAuthPageOpened ? 'The secure PIHU auth page is open in your browser. Scan its live QR code with WhatsApp.' : 'PIHU opens the live QR code on its secure auth page. The QR is never displayed in Settings.'}</p>
+          <p className="text-neutral-400">{waAuthPageOpened ? 'The local PIHU auth page is open in your browser. Scan its live QR code with WhatsApp.' : 'PIHU opens a local auth page with the live QR code. The QR is never displayed in Settings.'}</p>
                               <ol className="space-y-1 text-neutral-300 text-[11px] list-decimal list-inside font-medium">
                                 <li>Open WhatsApp on your phone</li>
                                 <li>Go to Settings → Linked Devices → Link a Device</li>
                                 <li>Scan the QR on the PIHU auth page</li>
                               </ol>
-                              <div className="pt-1 text-[10px] text-neutral-500">Pairing page: pihu.nfks.co.in/mcp/whatsapp/auth</div>
+                              <div className="pt-1 text-[10px] text-neutral-500">Pairing page: http://127.0.0.1:8080/mcp/whatsapp/auth</div>
                             </div>
                           </div>
                         </div>
