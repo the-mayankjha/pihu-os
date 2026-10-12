@@ -153,13 +153,13 @@ export const SettingsWindow: React.FC = () => {
   // WhatsApp authentication belongs to the local bridge. The desktop, CLI and
   // REPL deliberately consume this same API/session instead of owning separate clients.
   const handleScanQr = async () => {
+    const reopenExistingPage = waAuthPageOpened;
     setWaError('');
-    setWaAuthPageOpened(false);
     setWaLoading(true);
     try {
       await ensureWhatsAppBridge();
-      if (waAuthPageOpened) {
-        const reopenResponse = await fetch(`${WHATSAPP_API_URL}/open-auth-page`, {
+      if (reopenExistingPage) {
+        const reopenResponse = await fetch(`${WHATSAPP_API_URL}/open-auth-page?reopen=true`, {
           method: 'POST',
           signal: AbortSignal.timeout(10000),
         });
@@ -167,8 +167,10 @@ export const SettingsWindow: React.FC = () => {
           const detail = await reopenResponse.text();
           throw new Error(detail || `Could not reopen the PIHU WhatsApp auth page (HTTP ${reopenResponse.status}).`);
         }
+        setWaAuthPageOpened(true);
         return;
       }
+      setWaAuthPageOpened(false);
       const startResponse = await fetch(`${WHATSAPP_API_URL}/pair`, {
         method: 'POST',
         signal: AbortSignal.timeout(10000),
@@ -179,39 +181,22 @@ export const SettingsWindow: React.FC = () => {
       }
 
       const started = await startResponse.json().catch(() => ({}));
-      if (started.logged_in) {
+      if (started.logged_in && started.connected) {
         setWaStatus(prev => ({ ...prev, connected: true, logged_in: true, has_session: true, reachable: true, jid: started.jid || 'PIHU Desktop' }));
         return;
       }
 
-      // Pairing starts asynchronously in the bridge; wait until it has produced
-      // a live QR before opening the hosted auth page.
-      for (let attempt = 0; attempt < 30; attempt++) {
-        const response = await fetch(`${WHATSAPP_API_URL}/pair`, { signal: AbortSignal.timeout(3000) });
-        if (!response.ok) {
-          const detail = await response.text();
-          throw new Error(detail || `Could not read WhatsApp pairing status (HTTP ${response.status}).`);
-        }
-        const pairing = await response.json();
-        if (pairing.logged_in) {
-          setWaStatus(prev => ({ ...prev, connected: true, logged_in: true, has_session: true, reachable: true, jid: pairing.jid || 'PIHU Desktop' }));
-          return;
-        }
-        if (pairing.qr_code) {
-          const openResponse = await fetch(`${WHATSAPP_API_URL}/open-auth-page`, {
-            method: 'POST',
-            signal: AbortSignal.timeout(10000),
-          });
-          if (!openResponse.ok) {
-            const detail = await openResponse.text();
-            throw new Error(detail || `Could not open the PIHU WhatsApp auth page (HTTP ${openResponse.status}).`);
-          }
-          setWaAuthPageOpened(true);
-          return;
-        }
-        await new Promise(resolve => setTimeout(resolve, 500));
+      // The bridge creates the secure relay session before returning. Open its
+      // hosted route immediately; the QR streams into that page when ready.
+      const openResponse = await fetch(`${WHATSAPP_API_URL}/open-auth-page`, {
+        method: 'POST',
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!openResponse.ok) {
+        const detail = await openResponse.text();
+        throw new Error(detail || `Could not open the PIHU WhatsApp auth page (HTTP ${openResponse.status}).`);
       }
-      throw new Error('The WhatsApp bridge started, but no QR was ready after 15 seconds. Check the bridge and try again.');
+      setWaAuthPageOpened(true);
     } catch (e) {
       setWaError(e instanceof Error ? e.message : String(e));
     } finally {
