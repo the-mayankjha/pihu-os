@@ -14,9 +14,15 @@ pub fn start_stt_server(app: AppHandle) {
     let python_cmd = crate::get_python_cmd();
     println!("STT Server using python binary: {}", python_cmd);
 
-    // Spawn the Python process
+    let resource_dir = match app.path().resource_dir() {
+        Ok(path) => path,
+        Err(error) => { eprintln!("Could not locate app resources for STT: {error}"); return; }
+    };
+    let script = resource_dir.join("python/stt_server.py");
     let mut child = match Command::new(&python_cmd)
-        .arg("python/stt_server.py")
+        .arg(&script)
+        .current_dir(&resource_dir)
+        .env("PIHU_RESOURCE_DIR", &resource_dir)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

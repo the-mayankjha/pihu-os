@@ -154,7 +154,7 @@ done
 # ─── 4. Pre-cache Kokoro TTS Model ───────────────────
 if [ -f "$PYTHON" ]; then
     echo "[PIHU] Pre-caching TTS model..." | tee -a "$LOG_FILE"
-    "$PYTHON" -c "from kokoro import KPipeline; KPipeline(lang_code='a')" >>"$LOG_FILE" 2>&1 || true
+    HF_HUB_CACHE="$SCRIPT_DIR/runtime/tts/hub" "$PYTHON" -c "from kokoro import KPipeline; KPipeline(lang_code='a')" >>"$LOG_FILE" 2>&1 || true
 fi
 
 # ─── 5. Google OAuth & YTMusic Credentials ───────────
@@ -177,7 +177,7 @@ fi
 # ─── 6. Write Master Config & Lock File ──────────────
 cat > "$PIHU_HOME/config.json" << CONFIG_EOF
 {
-  "version": "1.2.1",
+  "version": "1.2.4",
   "venv_path": "$VENV_DIR",
   "models_path": "$MODELS_DIR",
   "stt_model": "$STT_MODEL",

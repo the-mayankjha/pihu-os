@@ -27,9 +27,14 @@ export interface SettingsState {
   activeKeyIndex: number;
   exhaustedKeyIndices: number[];
 
-  // Voice Engine Settings (ElevenLabs)
+  // Voice Engine Settings (ElevenLabs & Sarvam AI & Engine Preferences)
   elevenLabsApiKey: string;
   elevenLabsVoiceId: string;
+  sarvamApiKey: string;
+  sarvamSpeaker: string;
+  sarvamLanguageCode: string;
+  sttEnginePreference: 'auto' | 'whisper' | 'sarvam' | 'gemini_live';
+  ttsEnginePreference: 'auto' | 'kokoro' | 'sarvam' | 'elevenlabs' | 'native';
 
   // Google Workspace Settings
   googleClientId: string;
@@ -59,6 +64,11 @@ export interface SettingsState {
   markKeyExhausted: (index: number) => void;
   resetExhaustedKeys: () => void;
   setElevenLabsConfig: (apiKey: string, voiceId: string) => void;
+  setSarvamApiKey: (apiKey: string) => void;
+  setSarvamSpeaker: (speaker: string) => void;
+  setSarvamLanguageCode: (code: string) => void;
+  setSttEnginePreference: (pref: 'auto' | 'whisper' | 'sarvam' | 'gemini_live') => void;
+  setTtsEnginePreference: (pref: 'auto' | 'kokoro' | 'sarvam' | 'elevenlabs' | 'native') => void;
   setGoogleWorkspaceConfig: (clientId: string, clientSecret: string, connected?: boolean) => void;
   addConnectedGoogleAccount: (account: GoogleAccount) => void;
   removeConnectedGoogleAccount: (email: string) => void;
@@ -92,6 +102,11 @@ export const useSettingsStore = create<SettingsState>()(
       exhaustedKeyIndices: [],
       elevenLabsApiKey: '',
       elevenLabsVoiceId: 'MmQVkVZnQ0dUbfWzcW6f',
+      sarvamApiKey: (import.meta.env.VITE_SARVAM_API_KEY as string) || '',
+      sarvamSpeaker: 'aarti_hi_customer',
+      sarvamLanguageCode: 'hi-IN',
+      sttEnginePreference: 'auto',
+      ttsEnginePreference: 'auto',
       googleClientId: '',
       googleClientSecret: '',
       googleAccountConnected: false,
@@ -170,6 +185,12 @@ export const useSettingsStore = create<SettingsState>()(
         elevenLabsApiKey: apiKey.trim(),
         elevenLabsVoiceId: voiceId.trim() || 'MmQVkVZnQ0dUbfWzcW6f'
       }),
+
+      setSarvamApiKey: (apiKey: string) => set({ sarvamApiKey: apiKey.trim() }),
+      setSarvamSpeaker: (speaker: string) => set({ sarvamSpeaker: speaker.trim() }),
+      setSarvamLanguageCode: (code: string) => set({ sarvamLanguageCode: code.trim() }),
+      setSttEnginePreference: (pref: 'auto' | 'whisper' | 'sarvam' | 'gemini_live') => set({ sttEnginePreference: pref }),
+      setTtsEnginePreference: (pref: 'auto' | 'kokoro' | 'sarvam' | 'elevenlabs' | 'native') => set({ ttsEnginePreference: pref }),
 
       setGoogleWorkspaceConfig: (clientId: string, clientSecret: string, connected: boolean = true) => set({
         googleClientId: clientId.trim(),

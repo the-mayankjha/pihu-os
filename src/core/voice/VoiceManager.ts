@@ -78,11 +78,11 @@ export class VoiceManager {
     try {
       console.log('[VOICE MANAGER] 🌅 Waiting for Kokoro TTS to come online before greeting...');
 
-      // ── Poll Kokoro TTS /health until ready (max ~60s) ──
+      // ── Poll Kokoro TTS /health briefly (max ~3s) ──
       let kokoroReady = false;
-      for (let attempt = 0; attempt < 30; attempt++) {
+      for (let attempt = 0; attempt < 2; attempt++) {
         try {
-          const res = await fetch('http://127.0.0.1:48126/health', { signal: AbortSignal.timeout(2000) });
+          const res = await fetch('http://127.0.0.1:48126/health', { signal: AbortSignal.timeout(1500) });
           if (res.ok) {
             const data = await res.json();
             if (data.status === 'ready') {
@@ -92,12 +92,11 @@ export class VoiceManager {
             }
           }
         } catch {}
-        await new Promise(r => setTimeout(r, 2000));
+        if (!kokoroReady && attempt < 1) await new Promise(r => setTimeout(r, 1000));
       }
 
       if (!kokoroReady) {
-        console.warn('[VOICE MANAGER] ⚠️ Kokoro TTS did not come online in 60s. Skipping greeting.');
-        return;
+        console.warn('[VOICE MANAGER] ℹ Kokoro local TTS not immediately ready; speaking greeting via active fallback engine.');
       }
 
       // ── Check other services in parallel ──

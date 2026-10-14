@@ -28,6 +28,7 @@ interface SpiritsState {
   setSize: (size: number) => void;
   add: (id: string) => void;
   remove: (id: string) => void;
+  uninstall: (id: string) => void;
   importSpirit: (spirit: Spirit) => void;
   setError: (error: string | null) => void;
 }
@@ -47,6 +48,11 @@ export const useSpiritsStore = create<SpiritsState>()(persist((set) => ({
   add: id => set(s => ({ activeIds: normalizeActiveIds([...s.activeIds, id]) })),
   remove: id => set(s => ({ activeIds: s.activeIds.filter(active => linkedStoryPair.includes(id as typeof linkedStoryPair[number])
     ? !linkedStoryPair.includes(active as typeof linkedStoryPair[number]) : active !== id) })),
+  uninstall: id => set(s => ({
+    activeIds: normalizeActiveIds(s.activeIds.filter(active => linkedStoryPair.includes(id as typeof linkedStoryPair[number])
+      ? !linkedStoryPair.includes(active as typeof linkedStoryPair[number]) : active !== id)),
+    customSpirits: s.customSpirits.filter(spirit => spirit.id !== id),
+  })),
   importSpirit: spirit => set(s => ({
     customSpirits: s.customSpirits.some(item => item.id === spirit.id)
       ? s.customSpirits.map(item => item.id === spirit.id ? { ...item, ...spirit } : item)

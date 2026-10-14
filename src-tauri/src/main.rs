@@ -16,7 +16,7 @@ use tauri::Manager;
 
 pub fn get_python_cmd() -> String {
     // 1. Check ~/.pihu-os/venv (installed app)
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/Users/mayankjha".to_string());
+    let home = std::env::var("HOME").unwrap_or_default();
     let installed_venv = format!("{home}/.pihu-os/venv/bin/python");
     if std::path::Path::new(&installed_venv).exists() {
         return installed_venv;
@@ -141,9 +141,9 @@ fn main() {
 
             let app_handle = app.handle().clone();
             wakeword::start_wakeword_engine(app_handle.clone());
-            ytmusic::start_ytmusic_engine();
+            ytmusic::start_ytmusic_engine(app_handle.clone());
             stt::start_stt_server(app_handle);
-            tts::start_tts_server();
+            tts::start_tts_server(app.handle().clone());
             Ok(())
         })
         .run(tauri::generate_context!())

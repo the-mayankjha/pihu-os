@@ -20,8 +20,10 @@ impl Drop for Session {
 #[derive(Default)]
 pub struct SpotifyMcpState { session: Mutex<Option<Session>> }
 
-fn start(script: &std::path::Path) -> Result<Session,String> {
-    let node = ["/opt/homebrew/bin/node", "/usr/local/bin/node", "node"].into_iter().find(|p| *p=="node" || std::path::Path::new(p).exists()).unwrap_or("node");
+fn start(script: &std::path::Path, bundled_node: &std::path::Path) -> Result<Session,String> {
+    let node = if bundled_node.is_file() { bundled_node.to_string_lossy().into_owned() } else {
+        ["/opt/homebrew/bin/node", "/usr/local/bin/node", "node"].into_iter().find(|p| *p=="node" || std::path::Path::new(p).exists()).unwrap_or("node").to_string()
+    };
     let mut command = Command::new(node);
     for (key, _) in std::env::vars_os() {
         let name = key.to_string_lossy();
@@ -41,10 +43,11 @@ pub async fn spotify_mcp_action(app: tauri::AppHandle, payload: serde_json::Valu
     let root = app.path().resource_dir().map_err(|e|e.to_string())?;
     let bundled = root.join("_up_/bin/spotify-runtime/bridge.mjs");
     let script = if bundled.exists(){bundled}else{std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../bin/spotify-runtime/bridge.mjs")};
+    let node = root.join("_up_/bin/spotify-runtime/node_modules/node/bin/node");
     tauri::async_runtime::spawn_blocking(move || {
         let state = app.state::<SpotifyMcpState>();
         let mut session = state.session.lock().map_err(|_|"Spotify MCP session lock failed")?;
-        if session.is_none(){*session=Some(start(&script)?);}
+        if session.is_none(){*session=Some(start(&script,&node)?);}
         let active=session.as_mut().ok_or("Spotify session missing")?;
         let result = (|| {
             writeln!(active.input,"{request}").map_err(|e|e.to_string())?;

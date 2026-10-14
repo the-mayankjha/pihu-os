@@ -86,6 +86,30 @@ export async function saveSpiritPackage(id: string, assets: Map<string, Blob>) {
   }
 }
 
+export async function deleteSpiritPackage(id: string) {
+  const db = await database();
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction('sheets', 'readwrite');
+      const store = tx.objectStore('sheets');
+      const request = store.getAllKeys();
+      request.onsuccess = () => {
+        for (const key of request.result) {
+          if (key === id || String(key).startsWith(`${id}::`)) store.delete(key);
+        }
+      };
+      tx.oncomplete = () => resolve();
+      tx.onerror = tx.onabort = () => reject(new Error('Could not remove the Spirit package.'));
+    });
+  } finally { db.close(); }
+  for (const [key, url] of storedAssetUrls) {
+    if (key.startsWith(`${id}::`)) {
+      URL.revokeObjectURL(url);
+      storedAssetUrls.delete(key);
+    }
+  }
+}
+
 export async function loadSpiritSheet(id: string): Promise<string> {
   const blob = await readStoredAsset(id, 'spritesheet-extended.png') ?? await (async () => {
       const db = await database();

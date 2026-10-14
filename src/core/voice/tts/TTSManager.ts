@@ -1,5 +1,6 @@
 import { useTTSPlaybackStore } from './playbackStore';
 import { useVoiceStore } from '../../../stores/voiceStore';
+import { useSettingsStore } from '../../../stores/settingsStore';
 
 export class TTSManager {
   public onSpeechStarted: (() => void) | null = null;
@@ -123,20 +124,24 @@ export class TTSManager {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text,
-          voice: 'af_bella',
+          voice: 'auto',
           speed: 1.0
         }),
-        // Prevent infinite hang if Kokoro server stalls
+        // Allow enough time for neural synthesis without premature timeout
         signal: AbortSignal.timeout(15000)
       });
 
-      if (!response.ok) return null;
+      if (!response.ok) {
+        const errText = await response.text().catch(() => '');
+        console.warn(`[TTSManager] Kokoro responded with HTTP ${response.status}: ${errText}`);
+        return null;
+      }
       
       const arrayBuffer = await response.arrayBuffer();
       const blob = new Blob([arrayBuffer], { type: 'audio/wav' });
       return URL.createObjectURL(blob);
     } catch (e) {
-      console.error("[TTSManager] Error fetching chunk:", e);
+      console.error("[TTSManager] Error fetching Kokoro chunk:", e);
       return null;
     }
   }
@@ -236,10 +241,8 @@ export class TTSManager {
                  audio.play().catch(cleanup);
              });
          } else {
-             // If fetch failed, fallback to native for the rest
-             console.warn("[TTSManager] Kokoro chunk failed, falling back to native TTS");
-             await this.localSpeak(sentences.slice(i).join(" "));
-             break;
+             console.warn("[TTSManager] Kokoro chunk failed to generate.");
+             throw new Error("Kokoro chunk generation failed on port 48126");
          }
       }
 
@@ -251,84 +254,76 @@ export class TTSManager {
           this.onSpeechEnded();
       }
     } catch (err: any) {
+      this._isKokoroSpeaking = false;
       if (this.wasInterrupted) return;
       console.error("[TTSManager] Kokoro speech failed:", err);
-      this._isKokoroSpeaking = false;
-      try {
-        await this.localSpeak(text);
-      } catch (e2) {
-        console.error("[TTSManager] Local fallback also failed:", e2);
-      }
+      throw err;
     }
   }
 
-  public async speak(text: string): Promise<void> {
-    this.stop(); // Stop any ongoing speech and clear intervals
-    this.wasInterrupted = false; // Reset for this new speech
+  public async sarvamSpeak(text: string): Promise<void> {
+    this.wasInterrupted = false;
+    const settings = useSettingsStore.getState();
+    const apiKey = settings.sarvamApiKey || (import.meta.env.VITE_SARVAM_API_KEY as string) || '';
+    if (!apiKey) throw new Error('SARVAM_API_KEY is not configured in settings or .env');
 
-    // We prioritize Kokoro TTS (Local AI) as the default engine.
-    try {
-      await this.kokoroSpeak(text);
-    } catch (e) {
-      if (this.wasInterrupted) return;
-      console.warn('[TTSManager] Kokoro failed, falling back to ElevenLabs/Native', e);
-      
-      const apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY;
-      const voiceId = import.meta.env.VITE_ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM';
+    const speaker = settings.sarvamSpeaker || 'aarti_hi_customer';
+    const langCode = settings.sarvamLanguageCode || 'hi-IN';
 
-      if (navigator.onLine && apiKey) {
-        try {
-          useVoiceStore.getState().setActiveVoiceEngine('ElevenLabs (Online)');
-          useVoiceStore.getState().setActiveVoiceName(voiceId);
-          useVoiceStore.getState().setLastTTSError(null);
-          await this.elevenLabsSpeak(text, apiKey, voiceId);
-        } catch (error: any) {
-          if (this.wasInterrupted) return;
-          console.error('[TTSManager] ElevenLabs failed, falling back to local TTS:', error);
-          useVoiceStore.getState().setLastTTSError(error.message || String(error));
-          await this.localSpeak(text);
-        }
-      } else {
-        await this.localSpeak(text);
-      }
+    // Clean text for speech
+    const cleanText = text
+      .replace(/\*\*/g, '')
+      .replace(/\*/g, '')
+      .replace(/#/g, '')
+      .replace(/_/g, '')
+      .replace(/`/g, '')
+      .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1')
+      .replace(/>/g, '')
+      .replace(/---/g, '')
+      .trim();
+
+    if (!cleanText) return;
+
+    useVoiceStore.getState().setActiveVoiceEngine('Sarvam AI (Aarti hi-IN)');
+    useVoiceStore.getState().setActiveVoiceName(speaker);
+
+    const res = await fetch('https://api.sarvam.ai/text-to-speech', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'api-subscription-key': apiKey,
+      },
+      body: JSON.stringify({
+        text: cleanText,
+        language_code: langCode,
+        speaker: speaker,
+        model: 'bulbul:v4-flash',
+      }),
+      signal: AbortSignal.timeout(12000),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      throw new Error(`Sarvam AI API HTTP ${res.status}: ${errText}`);
     }
+
+    const data = await res.json();
+    if (!data.audios || data.audios.length === 0) {
+      throw new Error('Sarvam AI returned empty audio response');
+    }
+
+    const audioUrl = `data:audio/wav;base64,${data.audios[0]}`;
+    await this.playAudioUrl(audioUrl);
   }
 
-  private async elevenLabsSpeak(text: string, apiKey: string, voiceId: string): Promise<void> {
+  public async playAudioUrl(url: string): Promise<void> {
     this.wasInterrupted = false;
     return new Promise(async (resolve, reject) => {
       try {
-        const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'xi-api-key': apiKey,
-            'accept': 'audio/mpeg'
-          },
-          body: JSON.stringify({
-            text,
-            model_id: 'eleven_multilingual_v2',
-            voice_settings: {
-              stability: 0.5,
-              similarity_boost: 0.75,
-            }
-          })
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`ElevenLabs API error: ${response.status} ${response.statusText} - ${errorText}`);
-        }
-
-        const arrayBuffer = await response.arrayBuffer();
-        if (this.wasInterrupted) { resolve(); return; }
-        const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
-        const url = URL.createObjectURL(blob);
-
         const playbackToken = crypto.randomUUID();
         const audio = new Audio(url);
         this.currentAudio = audio;
-        
+
         audio.onplay = () => {
           if (this.currentAudio !== audio || this.wasInterrupted) return;
           this.beginPlayback(playbackToken);
@@ -337,7 +332,6 @@ export class TTSManager {
 
         audio.onended = () => {
           this.endPlayback(playbackToken);
-          URL.revokeObjectURL(url);
           if (this.currentAudio === audio) this.currentAudio = null;
           if (this.onSpeechEnded) this.onSpeechEnded();
           resolve();
@@ -346,9 +340,7 @@ export class TTSManager {
         audio.onerror = (e) => {
           this.endPlayback(playbackToken);
           console.error('[TTSManager] Audio playback error:', e);
-          URL.revokeObjectURL(url);
           if (this.currentAudio === audio) this.currentAudio = null;
-          // If interrupted, resolve instead of reject to avoid error propagation
           if (this.wasInterrupted) {
             resolve();
           } else {
@@ -365,6 +357,113 @@ export class TTSManager {
         }
       }
     });
+  }
+
+  public async speak(text: string): Promise<void> {
+    this.stop(); // Stop any ongoing speech and clear intervals
+    this.wasInterrupted = false;
+
+    const settings = useSettingsStore.getState();
+    const preference = settings.ttsEnginePreference;
+
+    const kokoroFn = () => this.kokoroSpeak(text);
+    const sarvamFn = () => this.sarvamSpeak(text);
+    const elevenLabsFn = () => {
+      const apiKey = settings.elevenLabsApiKey || import.meta.env.VITE_ELEVENLABS_API_KEY;
+      const voiceId = settings.elevenLabsVoiceId || '21m00Tcm4TlvDq8ikWAM';
+      if (!apiKey) throw new Error('ElevenLabs API key not configured');
+      useVoiceStore.getState().setActiveVoiceEngine('ElevenLabs (Cloud)');
+      useVoiceStore.getState().setActiveVoiceName(voiceId);
+      return this.elevenLabsSpeak(text, apiKey, voiceId);
+    };
+    const nativeFn = () => this.localSpeak(text);
+
+    // Build execution order based on selection
+    const enginesToTry: Array<{ name: string; fn: () => Promise<void> }> = [];
+
+    if (preference === 'kokoro') {
+      enginesToTry.push({ name: 'Kokoro Neural (Local)', fn: kokoroFn });
+      enginesToTry.push({ name: 'Sarvam AI (Fallback)', fn: sarvamFn });
+      enginesToTry.push({ name: 'ElevenLabs (Fallback)', fn: elevenLabsFn });
+      enginesToTry.push({ name: 'macOS Native (Fallback)', fn: nativeFn });
+    } else if (preference === 'sarvam') {
+      enginesToTry.push({ name: 'Sarvam AI (Aarti)', fn: sarvamFn });
+      enginesToTry.push({ name: 'Kokoro Neural (Fallback)', fn: kokoroFn });
+      enginesToTry.push({ name: 'ElevenLabs (Fallback)', fn: elevenLabsFn });
+      enginesToTry.push({ name: 'macOS Native (Fallback)', fn: nativeFn });
+    } else if (preference === 'elevenlabs') {
+      enginesToTry.push({ name: 'ElevenLabs', fn: elevenLabsFn });
+      enginesToTry.push({ name: 'Sarvam AI (Fallback)', fn: sarvamFn });
+      enginesToTry.push({ name: 'Kokoro Neural (Fallback)', fn: kokoroFn });
+      enginesToTry.push({ name: 'macOS Native (Fallback)', fn: nativeFn });
+    } else if (preference === 'native') {
+      enginesToTry.push({ name: 'macOS Native Speech', fn: nativeFn });
+    } else {
+      // 'auto': Kokoro -> Sarvam AI -> ElevenLabs -> macOS Native
+      enginesToTry.push({ name: 'Kokoro Neural (Local)', fn: kokoroFn });
+      enginesToTry.push({ name: 'Sarvam AI (Aarti Cloud)', fn: sarvamFn });
+      enginesToTry.push({ name: 'ElevenLabs (Cloud)', fn: elevenLabsFn });
+      enginesToTry.push({ name: 'macOS Native Speech', fn: nativeFn });
+    }
+
+    for (let i = 0; i < enginesToTry.length; i++) {
+      if (this.wasInterrupted) return;
+      const engine = enginesToTry[i];
+      try {
+        await engine.fn();
+        if (i === 0) {
+          useVoiceStore.getState().setLastTTSError(null);
+        } else {
+          console.log(`[TTSManager] ✅ Active fallback engaged: ${engine.name}`);
+        }
+        return;
+      } catch (err: any) {
+        if (this.wasInterrupted) return;
+        const msg = err.message || String(err);
+        console.warn(`[TTSManager] ⚠️ ${engine.name} failed (${msg}). Trying next fallback...`);
+        useVoiceStore.getState().setLastTTSError(`${engine.name} failed: ${msg}`);
+      }
+    }
+
+    if (!this.wasInterrupted) {
+      console.warn('[TTSManager] All engines failed. Using macOS Native fallback.');
+      await this.localSpeak(text);
+    }
+  }
+
+  private async elevenLabsSpeak(text: string, apiKey: string, voiceId: string): Promise<void> {
+    this.wasInterrupted = false;
+    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'xi-api-key': apiKey,
+        'accept': 'audio/mpeg'
+      },
+      body: JSON.stringify({
+        text,
+        model_id: 'eleven_multilingual_v2',
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.75,
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`ElevenLabs API error: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    if (this.wasInterrupted) return;
+    const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
+    const url = URL.createObjectURL(blob);
+    try {
+      await this.playAudioUrl(url);
+    } finally {
+      URL.revokeObjectURL(url);
+    }
   }
 
   private async localSpeak(text: string): Promise<void> {

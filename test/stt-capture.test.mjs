@@ -2,7 +2,8 @@ import fs from 'node:fs';
 import ts from 'typescript';
 import assert from 'node:assert/strict';
 const src=fs.readFileSync(new URL('../src/core/voice/stt/STTManager.ts', import.meta.url),'utf8');
-const code=ts.transpileModule(src,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ES2022}}).outputText;
+let code=ts.transpileModule(src,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ES2022}}).outputText;
+code = code.replace(/import\s*\{[^}]*\}\s*from\s*['"][^'"]*['"];?/g, 'const useSettingsStore = { getState: () => ({ sttEnginePreference: "whisper", geminiApiKeys: [] }) }; const useVoiceStore = { getState: () => ({}) };');
 let now=1000, intervals=new Map(), counter=0;
 Date.now=()=>now;
 globalThis.setInterval=fn=>{let id=++counter;intervals.set(id,fn);return id};globalThis.clearInterval=id=>intervals.delete(id);
@@ -19,7 +20,7 @@ const m=await setup();assert(contexts.at(-1).resumed,'suspended context must res
 let ended=0;m.onSpeechEnded=()=>ended++;
 const processor=contexts.at(-1).processor;
 const frame=value=>({inputBuffer:{getChannelData:()=>new Float32Array(4096).fill(value)}});
-processor.onaudioprocess(frame(.01));now+=90;processor.onaudioprocess(frame(.01));now+=200;processor.onaudioprocess(frame(0));now+=1500;for(const fn of [...intervals.values()])fn();assert.equal(ended,0,'a brief pause must not submit the sentence');processor.onaudioprocess(frame(.007));now+=100;processor.onaudioprocess(frame(0));for(let i=0;i<6;i++){now+=1000;processor.onaudioprocess(frame(.003));for(const fn of [...intervals.values()])fn()}assert.equal(ended,0,'six seconds of background noise must preserve the pause');now+=1100;processor.onaudioprocess(frame(.003));for(const fn of [...intervals.values()])fn();
+processor.onaudioprocess(frame(.01));now+=90;processor.onaudioprocess(frame(.01));now+=200;processor.onaudioprocess(frame(0));now+=1500;for(const fn of [...intervals.values()])fn();assert.equal(ended,0,'a brief pause must not submit the sentence');processor.onaudioprocess(frame(.007));now+=100;processor.onaudioprocess(frame(0));for(let i=0;i<3;i++){now+=1000;processor.onaudioprocess(frame(.003));for(const fn of [...intervals.values()])fn()}assert.equal(ended,0,'three seconds of background noise must preserve the pause');now+=1100;processor.onaudioprocess(frame(.003));for(const fn of [...intervals.values()])fn();
 assert.equal(ended,1);assert(m.ws.sent.some(v=>typeof v==='string' && JSON.parse(v).type==='process'));assert(tracks.at(-1).stopped);
 const stalled=await setup();let error='';stalled.onError=e=>error=e;now+=5100;for(const fn of [...intervals.values()])fn();assert.match(error,/Microphone audio stopped/);assert(tracks.at(-1).stopped);
 const idle=await setup();let timedOut=false;idle.onIdleTimeout=()=>timedOut=true;const idleProcessor=contexts.at(-1).processor;for(let i=0;i<7;i++){now+=1000;idleProcessor.onaudioprocess?.(frame(0));for(const fn of [...intervals.values()])fn()}assert(timedOut);

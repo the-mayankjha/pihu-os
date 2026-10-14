@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Download, RefreshCw, Trash2, Upload } from 'lucide-react';
-import { bundledSpirits, saveSpiritPackage } from './catalog';
+import { bundledSpirits, deleteSpiritPackage, saveSpiritPackage } from './catalog';
 import { downloadSpirit, loadSpiritDetails, loadSpiritRegistry } from './registry';
 import type { SpiritDetails } from './registry';
 import { SpiritDetailsPage } from './SpiritDetailsPage';
@@ -11,7 +11,7 @@ import { SpiritSprite } from './SpiritSprite';
 import { isTauri, invoke } from '@tauri-apps/api/core';
 
 export function SpiritMarket({ onImport, importLabel = 'Import Spirit', importDisabled = false }: { onImport?: () => void; importLabel?: string; importDisabled?: boolean }) {
-  const { activeIds, customSpirits, add, remove, importSpirit, setEnabled } = useSpiritsStore();
+  const { activeIds, customSpirits, add, remove, uninstall, importSpirit, setEnabled } = useSpiritsStore();
   const [packages, setPackages] = useState<RegistrySpirit[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -103,6 +103,7 @@ export function SpiritMarket({ onImport, importLabel = 'Import Spirit', importDi
       const name = spirit?.name ?? entry!.name;
       const description = spirit?.description ?? entry!.description;
       const installed = Boolean(spirit);
+      const removable = installed && !bundledSpirits.some(item => item.id === id);
       const updateAvailable = Boolean(entry && spirit?.version && spirit.version !== entry.version);
       const active = activeIds.includes(id);
       const localOnly = !entry;
@@ -124,14 +125,28 @@ export function SpiritMarket({ onImport, importLabel = 'Import Spirit', importDi
             </div>
           </div>
         </div>
+        <div className="relative z-20 mt-4 flex gap-2">
         <button type="button" onClick={() => {
           if (updateAvailable && entry) void install(entry);
           else if (active) remove(id);
           else if (installed) { if (atLimit) setError('Remove a Spirit from the desktop before adding another.'); else { add(id); setEnabled(true); } }
           else if (entry) void install(entry);
-        }} disabled={busyId !== null || (atLimit && !active && !updateAvailable) || (localOnly && !installed)} className="relative z-20 mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white/[0.09] px-3 py-2.5 text-xs font-medium text-neutral-200 transition hover:bg-white/[0.14] disabled:opacity-40">
+        }} disabled={busyId !== null || (atLimit && !active && !updateAvailable) || (localOnly && !installed)} className="inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-white/[0.09] px-3 py-2.5 text-xs font-medium text-neutral-200 transition hover:bg-white/[0.14] disabled:opacity-40">
           {busyId === id ? <InstallProgress update={updateAvailable} /> : <>{installed && active && !updateAvailable ? <Trash2 size={14} /> : <Download size={14} />}{updateAvailable ? 'Update Spirit' : active ? 'Remove from desktop' : installed ? 'Add Spirit' : 'Install Spirit'}</>}
         </button>
+        {removable && <button type="button" aria-label={`Delete ${name} Spirit`} title={`Delete ${name} from this computer`} disabled={busyId !== null} onClick={async () => {
+          if (!window.confirm(`Delete ${name} and its downloaded artwork from this computer?`)) return;
+          setError('');
+          setBusyId(id);
+          try {
+            await deleteSpiritPackage(id);
+            uninstall(id);
+            if (isTauri()) await invoke('refresh_spirit_windows');
+          } catch (cause) {
+            setError(cause instanceof Error ? cause.message : `Could not delete ${name}.`);
+          } finally { setBusyId(null); }
+        }} className="inline-flex w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-neutral-400 transition hover:border-red-400/30 hover:bg-red-400/10 hover:text-red-300 disabled:opacity-40"><Trash2 size={15} /></button>}
+        </div>
       </article>;
     })}</div>}
     {error && <p role="alert" className="rounded-lg bg-neutral-500/10 p-3 text-xs text-neutral-300">{error}</p>}

@@ -1,0 +1,13 @@
+- generic [active] [ref=e1]:
+  - textbox "Search" [ref=e2]
+  - button "Click me" [ref=e3]
+  - 'button "Interactive Count: 0" [ref=e4]'
+  - generic [ref=e6]:
+    - link "First video" [ref=e7] [cursor=pointer]:
+      - /url: https://www.youtube.com/watch?v=one
+    - link "Second video" [ref=e8] [cursor=pointer]:
+      - /url: https://www.youtube.com/watch?v=two
+    - link "Third video" [ref=e9] [cursor=pointer]:
+      - /url: https://www.youtube.com/watch?v=three
+    - link "First duplicate" [ref=e10] [cursor=pointer]:
+      - /url: https://www.youtube.com/watch?v=one

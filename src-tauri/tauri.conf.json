@@ -1,10 +1,10 @@
 {
   "productName": "Pihu OS",
-  "version": "1.2.1",
+  "version": "1.2.4",
   "identifier": "com.mayankjha.pihuos",
   "build": {
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "python3 src-tauri/prepare-mcp-runtime.py && npm run browser:prepare && npm run build",
+    "beforeBuildCommand": "node bin/prepare-macos-runtime.mjs && python3 src-tauri/prepare-mcp-runtime.py && npm run browser:prepare && npm ci --prefix bin/spotify-runtime --omit=dev && npm run build",
     "devUrl": "http://127.0.0.1:5173",
     "frontendDist": "../dist"
   },
@@ -31,13 +31,20 @@
   "plugins": {
     "deep-link": {
       "desktop": {
-        "schemes": ["pihu"]
+        "schemes": [
+          "pihu"
+        ]
       }
     }
   },
   "bundle": {
     "active": true,
-    "targets": ["dmg", "app", "nsis", "msi"],
+    "targets": [
+      "dmg",
+      "app",
+      "nsis",
+      "msi"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -56,13 +63,17 @@
       "python/tts_server.py",
       "python/wakeword.py",
       "python/ytmusic_server.py",
+      "python/language/",
+      "python/pihu_speech/",
       "python/requirements.txt",
       "python/automations/macos/pihu-macos-automation-v2/",
       "../models/wakeWord/*",
-      "../models/stt/ggml-small.bin",
+      "../models/stt/*.bin",
       "../bin/pihu-project-mcp.js",
       "../bin/browser-runtime/",
       "../bin/spotify-runtime/",
+      "runtime/whatsapp-bridge/bridge",
+      "runtime/tts/hub/",
       "pihu-first-launch.sh"
     ],
     "category": "Productivity",
@@ -72,9 +83,18 @@
     "macOS": {
       "minimumSystemVersion": "12.0",
       "dmg": {
-        "appPosition": { "x": 180, "y": 170 },
-        "applicationFolderPosition": { "x": 480, "y": 170 },
-        "windowSize": { "width": 660, "height": 400 }
+        "appPosition": {
+          "x": 180,
+          "y": 170
+        },
+        "applicationFolderPosition": {
+          "x": 480,
+          "y": 170
+        },
+        "windowSize": {
+          "width": 660,
+          "height": 400
+        }
       },
       "frameworks": [],
       "entitlements": null,
@@ -94,7 +114,12 @@
         "bundleMediaFramework": false
       },
       "deb": {
-        "depends": ["python3", "python3-pip", "python3-venv", "portaudio19-dev"]
+        "depends": [
+          "python3",
+          "python3-pip",
+          "python3-venv",
+          "portaudio19-dev"
+        ]
       }
     }
   }
