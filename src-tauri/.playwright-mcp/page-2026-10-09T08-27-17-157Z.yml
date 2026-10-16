@@ -1,0 +1,753 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e4]:
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - button "Guide" [active] [ref=e9] [cursor=pointer]
+          - generic [ref=e13]:
+            - link "YouTube Home" [ref=e14] [cursor=pointer]:
+              - /url: /
+            - generic [ref=e20]: IN
+          - button "Skip navigation" [ref=e24] [cursor=pointer]
+        - generic [ref=e28]:
+          - search [ref=e29]:
+            - generic [ref=e31]:
+              - generic [ref=e32]:
+                - combobox "Search" [expanded] [ref=e34]: perfect
+                - button "Clear search query" [ref=e36] [cursor=pointer]
+              - button "Search" [ref=e43] [cursor=pointer]
+          - generic [ref=e48]:
+            - button "Search with your voice" [ref=e50] [cursor=pointer]
+            - tooltip "tooltip"
+        - generic [ref=e55]:
+          - button "Settings" [ref=e60] [cursor=pointer]
+          - link "Sign in" [ref=e66] [cursor=pointer]:
+            - /url: https://accounts.google.com/ServiceLogin?service=youtube&uilel=3&passive=true&continue=https%3A%2F%2Fwww.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26app%3Ddesktop%26hl%3Den-GB%26next%3Dhttps%253A%252F%252Fwww.youtube.com%252Fresults%253Fsearch_query%253Dperfect&hl=en-GB&ec=65620
+    - navigation [ref=e70]:
+      - generic [ref=e71]:
+        - link "Home" [ref=e73] [cursor=pointer]:
+          - /url: /
+        - link "Shorts" [ref=e79] [cursor=pointer]:
+          - /url: /shorts/
+        - link "Subscriptions" [ref=e85] [cursor=pointer]:
+          - /url: /feed/subscriptions
+        - link "You" [ref=e91] [cursor=pointer]:
+          - /url: /feed/you
+    - generic [ref=e96]:
+      - main [ref=e97]:
+        - generic [ref=e98]:
+          - generic [ref=e100]:
+            - tablist [ref=e105]:
+              - tab "All" [selected] [ref=e108] [cursor=pointer]
+              - tab "Shorts" [ref=e113] [cursor=pointer]
+              - tab "Unwatched" [ref=e118] [cursor=pointer]
+              - tab "Videos" [ref=e123] [cursor=pointer]
+              - tab "Recently uploaded" [ref=e128] [cursor=pointer]
+              - tab "Live" [ref=e133] [cursor=pointer]
+            - generic [ref=e137]:
+              - button "Search filters" [ref=e139] [cursor=pointer]:
+                - generic: Filters
+              - tooltip "tooltip"
+          - generic [ref=e148]:
+            - generic [ref=e150]:
+              - link [aria-hidden] [ref=e152] [cursor=pointer]:
+                - /url: /watch?v=2Vv-BfVoq4g&list=RD2Vv-BfVoq4g&start_radio=1&pp=ygUHcGVyZmVjdKAHAQ%3D%3D
+                - img [ref=e157]:
+                  - generic [aria-hidden] [ref=e161]: 4:42
+                - generic: Now playing
+              - generic [ref=e162] [cursor=pointer]:
+                - generic [ref=e163]:
+                  - generic [ref=e164]:
+                    - heading [level=3] [ref=e165]:
+                      - link "Ed Sheeran - Perfect (Official Music Video) 4 minutes, 42 seconds" [ref=e166]:
+                        - /url: /watch?v=2Vv-BfVoq4g&list=RD2Vv-BfVoq4g&start_radio=1&pp=ygUHcGVyZmVjdKAHAQ%3D%3D
+                        - text: Ed Sheeran - Perfect (Official Music Video)
+                    - button "Action menu" [ref=e170]
+                  - generic [ref=e176]:
+                    - generic [ref=e177]: 4.2bn
+                    - generic [ref=e178]: •8 yr ago
+                - generic [ref=e179]:
+                  - link "Go to channel Ed Sheeran" [ref=e180]:
+                    - /url: /channel/UC0C-w0YjGpqDXGB8IHb662A
+                  - generic [ref=e182]:
+                    - link "Ed Sheeran" [ref=e186]:
+                      - /url: /channel/UC0C-w0YjGpqDXGB8IHb662A
+                    - img "Official Artist Channel" [ref=e191]
+                - generic [ref=e195]:
+                  - generic [ref=e196]: "Brand new album 'Play' out now: https://es.lnk.to/play The official music video for Ed Sheeran - Perfect Taken from the studio ..."
+                  - tooltip "tooltip"
+                - img "Closed captions" [ref=e201]:
+                  - generic [aria-hidden] [ref=e202]: Subtitles
+            - generic [ref=e204]:
+              - link [aria-hidden] [ref=e206] [cursor=pointer]:
+                - /url: /watch?v=cNGjD0VG4R8&list=RDcNGjD0VG4R8&start_radio=1&pp=ygUHcGVyZmVjdKAHAQ%3D%3D
+                - img [ref=e211]:
+                  - generic [aria-hidden] [ref=e215]: 4:24
+                - generic: Now playing
+              - generic [ref=e216] [cursor=pointer]:
+                - generic [ref=e217]:
+                  - generic [ref=e218]:
+                    - heading [level=3] [ref=e219]:
+                      - link "Ed Sheeran - Perfect 4 minutes, 24 seconds" [ref=e220]:
+                        - /url: /watch?v=cNGjD0VG4R8&list=RDcNGjD0VG4R8&start_radio=1&pp=ygUHcGVyZmVjdKAHAQ%3D%3D
+                        - text: Ed Sheeran - Perfect
+                    - button "Action menu" [ref=e224]
+                  - generic [ref=e230]:
+                    - generic [ref=e231]: 224m
+                    - generic [ref=e232]: •4 yr ago
+                - generic [ref=e233]:
+                  - link "Go to channel LatinHype" [ref=e234]:
+                    - /url: /@LatinHype.
+                  - link "LatinHype" [ref=e240]:
+                    - /url: /@LatinHype.
+                - generic [ref=e241]:
+                  - generic [ref=e242]: "Ed Sheeran - Perfect » Descargar: » Apoyo Ed Sheeran: http://www.facebook.com/EdSheeranMusic http://twitter.com/edsheeran ..."
+                  - tooltip "tooltip"
+            - generic [ref=e244]:
+              - link [aria-hidden] [ref=e246] [cursor=pointer]:
+                - /url: /watch?v=-9IoprWKWNY&list=RD-9IoprWKWNY&start_radio=1&pp=ygUHcGVyZmVjdKAHAQ%3D%3D
+                - img [ref=e251]:
+                  - generic [aria-hidden] [ref=e255]: 4:55
+                - generic: Now playing
+              - generic [ref=e256] [cursor=pointer]:
+                - generic [ref=e257]:
+                  - generic [ref=e258]:
+                    - heading [level=3] [ref=e259]:
+                      - link "Ed Sheeran - Perfect (Slowed+Reverb) 4 minutes, 55 seconds" [ref=e260]:
+                        - /url: /watch?v=-9IoprWKWNY&list=RD-9IoprWKWNY&start_radio=1&pp=ygUHcGVyZmVjdKAHAQ%3D%3D
+                        - text: Ed Sheeran - Perfect (Slowed+Reverb)
+                    - button "Action menu" [ref=e264]
+                  - generic [ref=e270]:
+                    - generic [ref=e271]: 17m
+                    - generic [ref=e272]: •5 yr ago
+                - generic [ref=e273]:
+                  - link "Go to channel XOHM" [ref=e274]:
+                    - /url: /@XOHMlofi
+                  - link "XOHM" [ref=e280]:
+                    - /url: /@XOHMlofi
+            - generic [ref=e289] [cursor=pointer]:
+              - link [aria-hidden] [ref=e290]:
+                - /url: https://www.googleadservices.com/pagead/aclk?sa=L&ai=CXnb3YKXIatuzIa3EjNAP_6S8uAOW0ZOQigGaqMm9uBWwkB8QASAAYOXq4wOCARdjYS1wdWItNjIxOTgxMTc0NzA0OTM3MaABi-KKoAGoAwTIAwqqBLsCT9DxpOecJlYzQ2G747yf0Hl3eP7pwL22tlSoEmBJlPrXdmoLlTltQ_HTfH-wlNyVxr85rVN06-XqvhWmjAjmXQ-tviW1kJZG91-AkqG_JCE-akCIjfA9gy8uLGL035VpZH1Js8uWDDI-QDvCw3LiPkUzl0rFAV07LsiKLu5FcYo9tOpNbCdYolI6y9u7YG-pP5C3GKhfqbM3YbJNB8Pku45MWqM6F97MZJ1na7au7S6MJZ2uzh6PKq-7KiHy3iPm7XK7btR2wrF_uf-3XyRgxRkUBcjpPGZdDb_yWBtAACCjqJIYrAaYiL9H-AYUe69Z_dX71YX7OuJyTNk82Debw9rSLuzciZm67I0UsJmkZh3xHnuMTNgU7X6vtTR-At3Yqkf2xvHvSLq4yqjXrTESqQPn7nrtMyY4mg5MiAW7oLaIV5IFCAgTeIuA8OACoAahAYAH3Z313wKQBwSoB-G2sQKoB6XPsQKoB-edsQKoB-idsQKoB_nTsQKoB8nasQKoB6ngsQKoB6jSG6gHsdwbqAewm7ECqAeusbECqAf9srECqAfIz7ECqAfJz7ECqAf81bECqAf71bECqAeM1rECqAeL1rECqAea4rECqAeb4rECqAed17ECqAed1LECqAeBxhuoB_yvsQKoB9XOG6gHvtmxAqgHq8UbqAec3BuoB7ehsQKoB9WpsQKoB-fasQKoB961sQKoB-qxsQKoB763sQKoB5m1sQKoB4XBsQKoB-ulsQKoB8qpsQKSCAs0NWZnTi15MDlUY6gIAdIILgiAQRABGF4yAoICOg-AQoDAgICAgICAAqqAgBhI2aDSNVAUWOjR0evBrJcDYAGaCUNodHRwczovL3d3dy5hZG9iZS5jb20vaW4vYWNyb2JhdC9jYW1wYWlnbi9kby10aGF0LXdpdGgtYWNyb2JhdC5odG1ssQmgnvR-P6yl18gJF8gJjwHICcIByAmXAroLPwgDEAUYBCAHKAEwHEABSABYfWAAaABwAYgBAJgBAaIBCAoAqAIB2AICqAEB2AEDgAIBiAIFugMHdmlzaW5yYtALEuALAaIMJSoKCgiV4rECjt-xAmoSChBjb20uYWRvYmUucmVhZGVyeACIAQDSDAIQAdoMJgoLELDy_Lr56sKPkwESAgEDGg0Yu6C2iFcgkZ-S9c4FQAFKAhAfmg0BEqoNAklOyA0B0g3DBGh0dHBzOi8vYWQuZG91YmxlY2xpY2submV0L2RkbS90cmFja2Nsay9OOTcyOTUyLjI3OTM4MkJJRE1BTkFHRVJfREZBU0lURS9CMjYxMjYyMDAuMzE3MTM5NDU5O2RjX3Rya19haWQ9NTA5OTYyODczO2RjX3Rya19jaWQ9MTU5OTQzMzE3O2RjX2RibV90b2tlbj1BT2plTE5FQUFBQTdDalFLREFnQUZRQUFBQUFkQUFBQUFCSU1DQUFWQUFBQUFCMEFBQUFBSWhRSXU2QzJpRmVvQW91QThPQUNzQUtSdW9YbkEwQTdFSmZudWdGVXFrUkJiSU16bGVRelp6TF9wWVRuO2RjX2xhdD07ZGNfcmRpZD07dGFnX2Zvcl9jaGlsZF9kaXJlY3RlZF90cmVhdG1lbnQ9O3RmdWE9O2x0ZD07ZGNfdGR2PTE7ZGNfdHJhbnNwYXJlbnQ9MTtkY19ydWk9MTtkY19lcHM9QUhhczhjRFJvMlRrY3VjM0JpSUQ3N0FyeHNhNFpSUkV6eFNveWJoS0l0dktoUW9YLVNHV3d0SW5PbE1LNFhFbm9xcll2X3hkVnExVC01UFFhYWJSdkE7ZGNfcHViaWQ9Nj9odHRwczovL3d3dy5hZG9iZS5jb20vaW4vYWNyb2JhdC9jYW1wYWlnbi9kby10aGF0LXdpdGgtYWNyb2JhdC5odG1sP3NkaWQ9WlhMOERQNDQmbXY9c29jaWFsJm12Mj1wYWlkc29jJmdhZF9zb3VyY2U9MrATj_G4JbgT____________AYgUA7AUA8AVgYCAQNAVAdgVAZgWAagWAeIWAggBgBcBihcYCAMYASABKAEwATgBQAFIAVABWAFgAmgBoBcBqRdXv8ICGj4Y8LoXBigAMAA4AdAYAfAYAQ&ase=2&gclid=EAIaIQobChMI2-PR68GslwMVLSIDBB1_Eg83EAEYASAAEgKRNPD_BwE&num=1&cid=CAASwwHkaPtnfyB2dINfEPh0Fx23_my7LY4v3TBes7YA6Kwb-_lMy3S_tteR2d8HpSz-Qkb13bldG4giFTzjscoqTQF13qEw2PA7873pVIVQd3SKnsN_FhN5HMLdz7pfBjk2rpMLdOiZZfNgA_fvv4SR5zo6UZ-xgIzCXEqkLHWhbRy9cfKqxh6skCgASFrARN_1N2lc9Egp1CG29xtsaxRkmcxkwBC9ZQdbFPyzXTM4-S8_jycxrpSIpQNMYO3Xlp-63aIBW1U&ad_cpn=%5BCPN%5D&sig=AOD64_1JbAwaYebd0xa34Lb6L6u6appuSg&ctype=110&video_id=45fgN-y09Tc&label=video_click_to_advertiser_site&ms=%5BCLICK_MS%5D&nb=21&nx=%5BNX%5D&ny=%5BNY%5D&dim=%5BDIM%5D
+                - button [aria-hidden] [ref=e296]
+              - generic [ref=e300]:
+                - generic [ref=e301]:
+                  - generic [ref=e302]:
+                    - link "Work smart with PDF Spaces. Compare legal contracts, pull insights, and share for review." [ref=e305]:
+                      - /url: https://www.googleadservices.com/pagead/aclk?sa=L&ai=CXnb3YKXIatuzIa3EjNAP_6S8uAOW0ZOQigGaqMm9uBWwkB8QASAAYOXq4wOCARdjYS1wdWItNjIxOTgxMTc0NzA0OTM3MaABi-KKoAGoAwTIAwqqBLsCT9DxpOecJlYzQ2G747yf0Hl3eP7pwL22tlSoEmBJlPrXdmoLlTltQ_HTfH-wlNyVxr85rVN06-XqvhWmjAjmXQ-tviW1kJZG91-AkqG_JCE-akCIjfA9gy8uLGL035VpZH1Js8uWDDI-QDvCw3LiPkUzl0rFAV07LsiKLu5FcYo9tOpNbCdYolI6y9u7YG-pP5C3GKhfqbM3YbJNB8Pku45MWqM6F97MZJ1na7au7S6MJZ2uzh6PKq-7KiHy3iPm7XK7btR2wrF_uf-3XyRgxRkUBcjpPGZdDb_yWBtAACCjqJIYrAaYiL9H-AYUe69Z_dX71YX7OuJyTNk82Debw9rSLuzciZm67I0UsJmkZh3xHnuMTNgU7X6vtTR-At3Yqkf2xvHvSLq4yqjXrTESqQPn7nrtMyY4mg5MiAW7oLaIV5IFCAgTeIuA8OACoAahAYAH3Z313wKQBwSoB-G2sQKoB6XPsQKoB-edsQKoB-idsQKoB_nTsQKoB8nasQKoB6ngsQKoB6jSG6gHsdwbqAewm7ECqAeusbECqAf9srECqAfIz7ECqAfJz7ECqAf81bECqAf71bECqAeM1rECqAeL1rECqAea4rECqAeb4rECqAed17ECqAed1LECqAeBxhuoB_yvsQKoB9XOG6gHvtmxAqgHq8UbqAec3BuoB7ehsQKoB9WpsQKoB-fasQKoB961sQKoB-qxsQKoB763sQKoB5m1sQKoB4XBsQKoB-ulsQKoB8qpsQKSCAs0NWZnTi15MDlUY6gIAdIILgiAQRABGF4yAoICOg-AQoDAgICAgICAAqqAgBhI2aDSNVAUWOjR0evBrJcDYAGaCUNodHRwczovL3d3dy5hZG9iZS5jb20vaW4vYWNyb2JhdC9jYW1wYWlnbi9kby10aGF0LXdpdGgtYWNyb2JhdC5odG1ssQmgnvR-P6yl18gJF8gJjwHICcIByAmXAroLPwgDEAUYBCAHKAEwHEABSABYfWAAaABwAYgBAJgBAaIBCAoAqAIB2AICqAEB2AEDgAIBiAIFugMHdmlzaW5yYtALEuALAaIMJSoKCgiV4rECjt-xAmoSChBjb20uYWRvYmUucmVhZGVyeACIAQDSDAIQAdoMJgoLELDy_Lr56sKPkwESAgEDGg0Yu6C2iFcgkZ-S9c4FQAFKAhAfmg0BEqoNAklOyA0B0g3DBGh0dHBzOi8vYWQuZG91YmxlY2xpY2submV0L2RkbS90cmFja2Nsay9OOTcyOTUyLjI3OTM4MkJJRE1BTkFHRVJfREZBU0lURS9CMjYxMjYyMDAuMzE3MTM5NDU5O2RjX3Rya19haWQ9NTA5OTYyODczO2RjX3Rya19jaWQ9MTU5OTQzMzE3O2RjX2RibV90b2tlbj1BT2plTE5FQUFBQTdDalFLREFnQUZRQUFBQUFkQUFBQUFCSU1DQUFWQUFBQUFCMEFBQUFBSWhRSXU2QzJpRmVvQW91QThPQUNzQUtSdW9YbkEwQTdFSmZudWdGVXFrUkJiSU16bGVRelp6TF9wWVRuO2RjX2xhdD07ZGNfcmRpZD07dGFnX2Zvcl9jaGlsZF9kaXJlY3RlZF90cmVhdG1lbnQ9O3RmdWE9O2x0ZD07ZGNfdGR2PTE7ZGNfdHJhbnNwYXJlbnQ9MTtkY19ydWk9MTtkY19lcHM9QUhhczhjRFJvMlRrY3VjM0JpSUQ3N0FyeHNhNFpSUkV6eFNveWJoS0l0dktoUW9YLVNHV3d0SW5PbE1LNFhFbm9xcll2X3hkVnExVC01UFFhYWJSdkE7ZGNfcHViaWQ9Nj9odHRwczovL3d3dy5hZG9iZS5jb20vaW4vYWNyb2JhdC9jYW1wYWlnbi9kby10aGF0LXdpdGgtYWNyb2JhdC5odG1sP3NkaWQ9WlhMOERQNDQmbXY9c29jaWFsJm12Mj1wYWlkc29jJmdhZF9zb3VyY2U9MrATj_G4JbgT____________AYgUA7AUA8AVgYCAQNAVAdgVAZgWAagWAeIWAggBgBcBihcYCAMYASABKAEwATgBQAFIAVABWAFgAmgBoBcBqRdXv8ICGj4Y8LoXBigAMAA4AdAYAfAYAQ&ase=2&gclid=EAIaIQobChMI2-PR68GslwMVLSIDBB1_Eg83EAEYASAAEgKRNPD_BwE&num=1&cid=CAASwwHkaPtnfyB2dINfEPh0Fx23_my7LY4v3TBes7YA6Kwb-_lMy3S_tteR2d8HpSz-Qkb13bldG4giFTzjscoqTQF13qEw2PA7873pVIVQd3SKnsN_FhN5HMLdz7pfBjk2rpMLdOiZZfNgA_fvv4SR5zo6UZ-xgIzCXEqkLHWhbRy9cfKqxh6skCgASFrARN_1N2lc9Egp1CG29xtsaxRkmcxkwBC9ZQdbFPyzXTM4-S8_jycxrpSIpQNMYO3Xlp-63aIBW1U&ad_cpn=%5BCPN%5D&sig=AOD64_1JbAwaYebd0xa34Lb6L6u6appuSg&ctype=110&video_id=45fgN-y09Tc&label=video_click_to_advertiser_site&ms=%5BCLICK_MS%5D&nb=0&nx=%5BNX%5D&ny=%5BNY%5D&dim=%5BDIM%5D
+                    - link "Use AI Assistant to compare contracts, pull insights and save important findings to notes." [ref=e308]:
+                      - /url: https://www.googleadservices.com/pagead/aclk?sa=L&ai=CXnb3YKXIatuzIa3EjNAP_6S8uAOW0ZOQigGaqMm9uBWwkB8QASAAYOXq4wOCARdjYS1wdWItNjIxOTgxMTc0NzA0OTM3MaABi-KKoAGoAwTIAwqqBLsCT9DxpOecJlYzQ2G747yf0Hl3eP7pwL22tlSoEmBJlPrXdmoLlTltQ_HTfH-wlNyVxr85rVN06-XqvhWmjAjmXQ-tviW1kJZG91-AkqG_JCE-akCIjfA9gy8uLGL035VpZH1Js8uWDDI-QDvCw3LiPkUzl0rFAV07LsiKLu5FcYo9tOpNbCdYolI6y9u7YG-pP5C3GKhfqbM3YbJNB8Pku45MWqM6F97MZJ1na7au7S6MJZ2uzh6PKq-7KiHy3iPm7XK7btR2wrF_uf-3XyRgxRkUBcjpPGZdDb_yWBtAACCjqJIYrAaYiL9H-AYUe69Z_dX71YX7OuJyTNk82Debw9rSLuzciZm67I0UsJmkZh3xHnuMTNgU7X6vtTR-At3Yqkf2xvHvSLq4yqjXrTESqQPn7nrtMyY4mg5MiAW7oLaIV5IFCAgTeIuA8OACoAahAYAH3Z313wKQBwSoB-G2sQKoB6XPsQKoB-edsQKoB-idsQKoB_nTsQKoB8nasQKoB6ngsQKoB6jSG6gHsdwbqAewm7ECqAeusbECqAf9srECqAfIz7ECqAfJz7ECqAf81bECqAf71bECqAeM1rECqAeL1rECqAea4rECqAeb4rECqAed17ECqAed1LECqAeBxhuoB_yvsQKoB9XOG6gHvtmxAqgHq8UbqAec3BuoB7ehsQKoB9WpsQKoB-fasQKoB961sQKoB-qxsQKoB763sQKoB5m1sQKoB4XBsQKoB-ulsQKoB8qpsQKSCAs0NWZnTi15MDlUY6gIAdIILgiAQRABGF4yAoICOg-AQoDAgICAgICAAqqAgBhI2aDSNVAUWOjR0evBrJcDYAGaCUNodHRwczovL3d3dy5hZG9iZS5jb20vaW4vYWNyb2JhdC9jYW1wYWlnbi9kby10aGF0LXdpdGgtYWNyb2JhdC5odG1ssQmgnvR-P6yl18gJF8gJjwHICcIByAmXAroLPwgDEAUYBCAHKAEwHEABSABYfWAAaABwAYgBAJgBAaIBCAoAqAIB2AICqAEB2AEDgAIBiAIFugMHdmlzaW5yYtALEuALAaIMJSoKCgiV4rECjt-xAmoSChBjb20uYWRvYmUucmVhZGVyeACIAQDSDAIQAdoMJgoLELDy_Lr56sKPkwESAgEDGg0Yu6C2iFcgkZ-S9c4FQAFKAhAfmg0BEqoNAklOyA0B0g3DBGh0dHBzOi8vYWQuZG91YmxlY2xpY2submV0L2RkbS90cmFja2Nsay9OOTcyOTUyLjI3OTM4MkJJRE1BTkFHRVJfREZBU0lURS9CMjYxMjYyMDAuMzE3MTM5NDU5O2RjX3Rya19haWQ9NTA5OTYyODczO2RjX3Rya19jaWQ9MTU5OTQzMzE3O2RjX2RibV90b2tlbj1BT2plTE5FQUFBQTdDalFLREFnQUZRQUFBQUFkQUFBQUFCSU1DQUFWQUFBQUFCMEFBQUFBSWhRSXU2QzJpRmVvQW91QThPQUNzQUtSdW9YbkEwQTdFSmZudWdGVXFrUkJiSU16bGVRelp6TF9wWVRuO2RjX2xhdD07ZGNfcmRpZD07dGFnX2Zvcl9jaGlsZF9kaXJlY3RlZF90cmVhdG1lbnQ9O3RmdWE9O2x0ZD07ZGNfdGR2PTE7ZGNfdHJhbnNwYXJlbnQ9MTtkY19ydWk9MTtkY19lcHM9QUhhczhjRFJvMlRrY3VjM0JpSUQ3N0FyeHNhNFpSUkV6eFNveWJoS0l0dktoUW9YLVNHV3d0SW5PbE1LNFhFbm9xcll2X3hkVnExVC01UFFhYWJSdkE7ZGNfcHViaWQ9Nj9odHRwczovL3d3dy5hZG9iZS5jb20vaW4vYWNyb2JhdC9jYW1wYWlnbi9kby10aGF0LXdpdGgtYWNyb2JhdC5odG1sP3NkaWQ9WlhMOERQNDQmbXY9c29jaWFsJm12Mj1wYWlkc29jJmdhZF9zb3VyY2U9MrATj_G4JbgT____________AYgUA7AUA8AVgYCAQNAVAdgVAZgWAagWAeIWAggBgBcBihcYCAMYASABKAEwATgBQAFIAVABWAFgAmgBoBcBqRdXv8ICGj4Y8LoXBigAMAA4AdAYAfAYAQ&ase=2&gclid=EAIaIQobChMI2-PR68GslwMVLSIDBB1_Eg83EAEYASAAEgKRNPD_BwE&num=1&cid=CAASwwHkaPtnfyB2dINfEPh0Fx23_my7LY4v3TBes7YA6Kwb-_lMy3S_tteR2d8HpSz-Qkb13bldG4giFTzjscoqTQF13qEw2PA7873pVIVQd3SKnsN_FhN5HMLdz7pfBjk2rpMLdOiZZfNgA_fvv4SR5zo6UZ-xgIzCXEqkLHWhbRy9cfKqxh6skCgASFrARN_1N2lc9Egp1CG29xtsaxRkmcxkwBC9ZQdbFPyzXTM4-S8_jycxrpSIpQNMYO3Xlp-63aIBW1U&ad_cpn=%5BCPN%5D&sig=AOD64_1JbAwaYebd0xa34Lb6L6u6appuSg&ctype=110&video_id=45fgN-y09Tc&label=video_click_to_advertiser_site&ms=%5BCLICK_MS%5D&nb=7&nx=%5BNX%5D&ny=%5BNY%5D&dim=%5BDIM%5D
+                    - generic [ref=e309]:
+                      - button "Adobe Document Cloud Media" [ref=e313]
+                      - generic [ref=e317]:
+                        - generic [ref=e318]: Sponsored
+                        - text: ·
+                      - generic [ref=e319]: Adobe Acrobat
+                  - button "My Ad Centre" [ref=e323]
+                - generic [ref=e329]:
+                  - link "Watch" [ref=e332]:
+                    - /url: /watch?v=45fgN-y09Tc
+                  - link "Learn more" [ref=e338]:
+                    - /url: https://www.googleadservices.com/pagead/aclk?sa=L&ai=CXnb3YKXIatuzIa3EjNAP_6S8uAOW0ZOQigGaqMm9uBWwkB8QASAAYOXq4wOCARdjYS1wdWItNjIxOTgxMTc0NzA0OTM3MaABi-KKoAGoAwTIAwqqBLsCT9DxpOecJlYzQ2G747yf0Hl3eP7pwL22tlSoEmBJlPrXdmoLlTltQ_HTfH-wlNyVxr85rVN06-XqvhWmjAjmXQ-tviW1kJZG91-AkqG_JCE-akCIjfA9gy8uLGL035VpZH1Js8uWDDI-QDvCw3LiPkUzl0rFAV07LsiKLu5FcYo9tOpNbCdYolI6y9u7YG-pP5C3GKhfqbM3YbJNB8Pku45MWqM6F97MZJ1na7au7S6MJZ2uzh6PKq-7KiHy3iPm7XK7btR2wrF_uf-3XyRgxRkUBcjpPGZdDb_yWBtAACCjqJIYrAaYiL9H-AYUe69Z_dX71YX7OuJyTNk82Debw9rSLuzciZm67I0UsJmkZh3xHnuMTNgU7X6vtTR-At3Yqkf2xvHvSLq4yqjXrTESqQPn7nrtMyY4mg5MiAW7oLaIV5IFCAgTeIuA8OACoAahAYAH3Z313wKQBwSoB-G2sQKoB6XPsQKoB-edsQKoB-idsQKoB_nTsQKoB8nasQKoB6ngsQKoB6jSG6gHsdwbqAewm7ECqAeusbECqAf9srECqAfIz7ECqAfJz7ECqAf81bECqAf71bECqAeM1rECqAeL1rECqAea4rECqAeb4rECqAed17ECqAed1LECqAeBxhuoB_yvsQKoB9XOG6gHvtmxAqgHq8UbqAec3BuoB7ehsQKoB9WpsQKoB-fasQKoB961sQKoB-qxsQKoB763sQKoB5m1sQKoB4XBsQKoB-ulsQKoB8qpsQKSCAs0NWZnTi15MDlUY6gIAdIILgiAQRABGF4yAoICOg-AQoDAgICAgICAAqqAgBhI2aDSNVAUWOjR0evBrJcDYAGaCUNodHRwczovL3d3dy5hZG9iZS5jb20vaW4vYWNyb2JhdC9jYW1wYWlnbi9kby10aGF0LXdpdGgtYWNyb2JhdC5odG1ssQmgnvR-P6yl18gJF8gJjwHICcIByAmXAroLPwgDEAUYBCAHKAEwHEABSABYfWAAaABwAYgBAJgBAaIBCAoAqAIB2AICqAEB2AEDgAIBiAIFugMHdmlzaW5yYtALEuALAaIMJSoKCgiV4rECjt-xAmoSChBjb20uYWRvYmUucmVhZGVyeACIAQDSDAIQAdoMJgoLELDy_Lr56sKPkwESAgEDGg0Yu6C2iFcgkZ-S9c4FQAFKAhAfmg0BEqoNAklOyA0B0g3DBGh0dHBzOi8vYWQuZG91YmxlY2xpY2submV0L2RkbS90cmFja2Nsay9OOTcyOTUyLjI3OTM4MkJJRE1BTkFHRVJfREZBU0lURS9CMjYxMjYyMDAuMzE3MTM5NDU5O2RjX3Rya19haWQ9NTA5OTYyODczO2RjX3Rya19jaWQ9MTU5OTQzMzE3O2RjX2RibV90b2tlbj1BT2plTE5FQUFBQTdDalFLREFnQUZRQUFBQUFkQUFBQUFCSU1DQUFWQUFBQUFCMEFBQUFBSWhRSXU2QzJpRmVvQW91QThPQUNzQUtSdW9YbkEwQTdFSmZudWdGVXFrUkJiSU16bGVRelp6TF9wWVRuO2RjX2xhdD07ZGNfcmRpZD07dGFnX2Zvcl9jaGlsZF9kaXJlY3RlZF90cmVhdG1lbnQ9O3RmdWE9O2x0ZD07ZGNfdGR2PTE7ZGNfdHJhbnNwYXJlbnQ9MTtkY19ydWk9MTtkY19lcHM9QUhhczhjRFJvMlRrY3VjM0JpSUQ3N0FyeHNhNFpSUkV6eFNveWJoS0l0dktoUW9YLVNHV3d0SW5PbE1LNFhFbm9xcll2X3hkVnExVC01UFFhYWJSdkE7ZGNfcHViaWQ9Nj9odHRwczovL3d3dy5hZG9iZS5jb20vaW4vYWNyb2JhdC9jYW1wYWlnbi9kby10aGF0LXdpdGgtYWNyb2JhdC5odG1sP3NkaWQ9WlhMOERQNDQmbXY9c29jaWFsJm12Mj1wYWlkc29jJmdhZF9zb3VyY2U9MrATj_G4JbgT____________AYgUA7AUA8AVgYCAQNAVAdgVAZgWAagWAeIWAggBgBcBihcYCAMYASABKAEwATgBQAFIAVABWAFgAmgBoBcBqRdXv8ICGj4Y8LoXBigAMAA4AdAYAfAYAQ&ase=2&gclid=EAIaIQobChMI2-PR68GslwMVLSIDBB1_Eg83EAEYASAAEgKRNPD_BwE&num=1&cid=CAASwwHkaPtnfyB2dINfEPh0Fx23_my7LY4v3TBes7YA6Kwb-_lMy3S_tteR2d8HpSz-Qkb13bldG4giFTzjscoqTQF13qEw2PA7873pVIVQd3SKnsN_FhN5HMLdz7pfBjk2rpMLdOiZZfNgA_fvv4SR5zo6UZ-xgIzCXEqkLHWhbRy9cfKqxh6skCgASFrARN_1N2lc9Egp1CG29xtsaxRkmcxkwBC9ZQdbFPyzXTM4-S8_jycxrpSIpQNMYO3Xlp-63aIBW1U&ad_cpn=%5BCPN%5D&sig=AOD64_1JbAwaYebd0xa34Lb6L6u6appuSg&ctype=110&video_id=45fgN-y09Tc&label=video_click_to_advertiser_site&ms=%5BCLICK_MS%5D&nb=8&nx=%5BNX%5D&ny=%5BNY%5D&dim=%5BDIM%5D
+            - generic [ref=e343]:
+              - link [aria-hidden] [ref=e345] [cursor=pointer]:
+                - /url: /watch?v=QvrnmDy-lZU&list=RDQvrnmDy-lZU&start_radio=1&pp=ygUHcGVyZmVjdKAHAQ%3D%3D
+              - generic [ref=e347] [cursor=pointer]:
+                - generic [ref=e348]:
+                  - generic [ref=e349]:
+                    - heading [level=3] [ref=e350]:
+                      - link "Perfect [Slowed Down To Perfection + Reverb] - Ed Sheeran | 3 AM 🌃 4 minutes, 49 seconds" [ref=e351]:
+                        - /url: /watch?v=QvrnmDy-lZU&list=RDQvrnmDy-lZU&start_radio=1&pp=ygUHcGVyZmVjdKAHAQ%3D%3D
+                        - text: Perfect [Slowed Down To Perfection + Reverb] - Ed Sheeran | 3 AM 🌃
+                    - button "Action menu" [ref=e355]
+                  - generic [ref=e361]:
+                    - generic [ref=e362]: 12m
+                    - generic [ref=e363]: •5 yr ago
+                - generic [ref=e364]:
+                  - link "Go to channel TANZ-T" [ref=e365]:
+                    - /url: /@TANZT
+                  - link "TANZ-T" [ref=e370]:
+                    - /url: /@TANZT
+            - generic [ref=e372]:
+              - link [aria-hidden] [ref=e374] [cursor=pointer]:
+                - /url: /watch?v=Ho32Oh6b4jc&list=RDHo32Oh6b4jc&start_radio=1&pp=ygUHcGVyZmVjdKAHAQ%3D%3D
+              - generic [ref=e376] [cursor=pointer]:
+                - generic [ref=e377]:
+                  - generic [ref=e378]:
+                    - heading [level=3] [ref=e379]:
+                      - link "One Direction - Perfect (Official Video) 3 minutes, 49 seconds" [ref=e380]:
+                        - /url: /watch?v=Ho32Oh6b4jc&list=RDHo32Oh6b4jc&start_radio=1&pp=ygUHcGVyZmVjdKAHAQ%3D%3D
+                        - text: One Direction - Perfect (Official Video)
+                    - button "Action menu" [ref=e384]
+                  - generic [ref=e390]:
+                    - generic [ref=e391]: 615m
+                    - generic [ref=e392]: •10 yr ago
+                - generic [ref=e393]:
+                  - link "Go to channel OneDirectionVEVO" [ref=e394]:
+                    - /url: /channel/UCb2HGwORFBo94DmRx4oLzow
+                  - generic [ref=e395]:
+                    - link "One Direction" [ref=e399]:
+                      - /url: /channel/UCb2HGwORFBo94DmRx4oLzow
+                    - img "Official Artist Channel" [ref=e404]
+                - generic [ref=e408]:
+                  - generic [ref=e409]: One Direction – Perfect (Official Video) Follow on Spotify - https://1D.lnk.to/Spotify Listen on Apple Music ...
+                  - tooltip "tooltip"
+            - generic [ref=e411]:
+              - link [aria-hidden] [ref=e413] [cursor=pointer]:
+                - /url: /watch?v=8e1S7Y5KAFM&list=RD8e1S7Y5KAFM&start_radio=1&pp=ygUHcGVyZmVjdKAHAQ%3D%3D
+              - generic [ref=e415] [cursor=pointer]:
+                - generic [ref=e416]:
+                  - generic [ref=e417]:
+                    - heading [level=3] [ref=e418]:
+                      - link "PERFECT - Guru Randhawa, Varun Dhawan, Janhvi Kapoor | Sunny Sanskari Ki Tulsi Kumari 2 minutes, 51 seconds" [ref=e419]:
+                        - /url: /watch?v=8e1S7Y5KAFM&list=RD8e1S7Y5KAFM&start_radio=1&pp=ygUHcGVyZmVjdKAHAQ%3D%3D
+                        - text: PERFECT - Guru Randhawa, Varun Dhawan, Janhvi Kapoor | Sunny Sanskari Ki Tulsi Kumari
+                    - button "Action menu" [ref=e423]
+                  - generic [ref=e429]:
+                    - generic [ref=e430]: 72m
+                    - generic [ref=e431]: •1 yr ago
+                - generic [ref=e432]:
+                  - link "Go to channel Sony Music India" [ref=e433]:
+                    - /url: /@SonyMusicIndia
+                  - generic [ref=e434]:
+                    - link "Sony Music India" [ref=e438]:
+                      - /url: /@SonyMusicIndia
+                    - img "Verified" [ref=e443]
+                - generic [ref=e447]:
+                  - generic [ref=e448]: Sir to pairan de takk, You so perfect! Adding to the fire of 'Sunny Sanskari Ki Tulsi Kumari', Guru Randhawa joins the party with ...
+                  - tooltip "tooltip"
+                - img "4K" [ref=e453]:
+                  - generic [aria-hidden] [ref=e454]: 4K
+            - generic [ref=e456]:
+              - link [aria-hidden] [ref=e458] [cursor=pointer]:
+                - /url: /watch?v=9vDIzVuDzTs&list=RD9vDIzVuDzTs&start_radio=1&pp=ygUHcGVyZmVjdKAHAQ%3D%3D
+              - generic [ref=e460] [cursor=pointer]:
+                - generic [ref=e461]:
+                  - generic [ref=e462]:
+                    - heading [level=3] [ref=e463]:
+                      - link "Perfect (Acoustic) 4 minutes, 21 seconds" [ref=e464]:
+                        - /url: /watch?v=9vDIzVuDzTs&list=RD9vDIzVuDzTs&start_radio=1&pp=ygUHcGVyZmVjdKAHAQ%3D%3D
+                        - text: Perfect (Acoustic)
+                    - button "Action menu" [ref=e468]
+                  - generic [ref=e472]: 39m
+                - generic [ref=e476]:
+                  - link "Go to channel Ed Sheeran - Topic" [ref=e477]:
+                    - /url: /channel/UC0C-w0YjGpqDXGB8IHb662A
+                  - generic [ref=e478]:
+                    - link "Ed Sheeran" [ref=e482]:
+                      - /url: /channel/UC0C-w0YjGpqDXGB8IHb662A
+                    - img "Official Artist Channel" [ref=e487]
+                - generic [ref=e491]:
+                  - generic [ref=e492]: Provided to YouTube by Atlantic Records UK Perfect (Acoustic) · Ed Sheeran Perfect ℗ 2017 Warner Music UK Limited Bass, ...
+                  - tooltip "tooltip"
+            - generic [ref=e493]:
+              - heading "Shorts" [level=2] [ref=e503]
+              - generic [ref=e505]:
+                - generic [ref=e508]:
+                  - link [aria-hidden] [ref=e509] [cursor=pointer]:
+                    - /url: /shorts/lygu3SvwRoE
+                  - generic [ref=e513] [cursor=pointer]:
+                    - generic [ref=e514]:
+                      - heading [level=3] [ref=e515]:
+                        - 'link "ed Sheeran - perfect (lyrics) | Baby, I''m dancing in the dark | #lyrics #perfect #edsheeran #shorts" [ref=e516]':
+                          - /url: /shorts/lygu3SvwRoE
+                      - generic [ref=e517]: 2m views
+                    - button "More actions" [ref=e519]
+                - generic [ref=e525]:
+                  - link [aria-hidden] [ref=e526] [cursor=pointer]:
+                    - /url: /shorts/jdBRc7tktjQ
+                  - generic [ref=e530] [cursor=pointer]:
+                    - generic [ref=e531]:
+                      - heading [level=3] [ref=e532]:
+                        - link "Perfect || Boy Voice || School Guitar Cover || English Lyrics | Dabb Music" [ref=e533]:
+                          - /url: /shorts/jdBRc7tktjQ
+                      - generic [ref=e534]: 20m views
+                    - button "More actions" [ref=e536]
+                - generic [ref=e542]:
+                  - link [aria-hidden] [ref=e543] [cursor=pointer]:
+                    - /url: /shorts/DEr8pg6H6vM
+                  - generic [ref=e547] [cursor=pointer]:
+                    - generic [ref=e548]:
+                      - heading [level=3] [ref=e549]:
+                        - 'link "Ed Sheeran - Perfect (lyrics) | Edit Audio | WhatsApp Status | #shorts #short #trending #lyrics" [ref=e550]':
+                          - /url: /shorts/DEr8pg6H6vM
+                      - generic [ref=e551]: 3.5m views
+                    - button "More actions" [ref=e553]
+                - generic [ref=e559]:
+                  - link [aria-hidden] [ref=e560] [cursor=pointer]:
+                    - /url: /shorts/w9jwLRx2yhY
+                  - generic [ref=e564] [cursor=pointer]:
+                    - generic [ref=e565]:
+                      - heading [level=3] [ref=e566]:
+                        - 'link "Ed sheeran - Perfect (lyrics) #lyrics #music #perfectedsheeran" [ref=e567]':
+                          - /url: /shorts/w9jwLRx2yhY
+                      - generic [ref=e568]: 2m views
+                    - button "More actions" [ref=e570]
+                - generic [ref=e576]:
+                  - link [aria-hidden] [ref=e577] [cursor=pointer]:
+                    - /url: /shorts/8PziLTWq6k0
+                  - generic [ref=e581] [cursor=pointer]:
+                    - generic [ref=e582]:
+                      - heading [level=3] [ref=e583]:
+                        - link "Wednesday | Titanic | Harry Potter |4K Edits ❤||Ed Sheeran - Perfect ||" [ref=e584]:
+                          - /url: /shorts/8PziLTWq6k0
+                      - generic [ref=e585]: 13m views
+                    - button "More actions" [ref=e587]
+            - generic [ref=e592]:
+              - link [aria-hidden] [ref=e594] [cursor=pointer]:
+                - /url: /watch?v=hIvcu6291ik&list=RDhIvcu6291ik&start_radio=1&pp=ygUHcGVyZmVjdKAHAQ%3D%3D
+              - generic [ref=e596] [cursor=pointer]:
+                - generic [ref=e597]:
+                  - generic [ref=e598]:
+                    - heading [level=3] [ref=e599]:
+                      - link "Ed Sheeran - Perfect (Lyrics) 4 minutes, 13 seconds" [ref=e600]:
+                        - /url: /watch?v=hIvcu6291ik&list=RDhIvcu6291ik&start_radio=1&pp=ygUHcGVyZmVjdKAHAQ%3D%3D
+                        - text: Ed Sheeran - Perfect (Lyrics)
+                    - button "Action menu" [ref=e604]
+                  - generic [ref=e610]:
+                    - generic [ref=e611]: 6.8m
+                    - generic [ref=e612]: •3 mo ago
+                - generic [ref=e613]:
+                  - link "Go to channel Cakes & Eclairs" [ref=e614]:
+                    - /url: /@CakesEclairsMusic
+                  - generic [ref=e615]:
+                    - link "Cakes & Eclairs" [ref=e619]:
+                      - /url: /@CakesEclairsMusic
+                    - img "Verified" [ref=e624]
+                - generic [ref=e628]:
+                  - generic [ref=e629]: Ed Sheeran - Perfect perfect ed sheeran Don't forget to subscribe and turn on notifications! "Perfect" is out now. Follow Ed ...
+                  - tooltip "tooltip"
+            - generic [ref=e631]:
+              - link [aria-hidden] [ref=e633] [cursor=pointer]:
+                - /url: /watch?v=MjIobmG3qqA&list=RDMjIobmG3qqA&start_radio=1&pp=ygUHcGVyZmVjdKAHAQ%3D%3D
+              - generic [ref=e635] [cursor=pointer]:
+                - generic [ref=e636]:
+                  - generic [ref=e637]:
+                    - heading [level=3] [ref=e638]:
+                      - link "Perfect Lyric Video I Cinderella I Prime Video 3 minutes, 21 seconds" [ref=e639]:
+                        - /url: /watch?v=MjIobmG3qqA&list=RDMjIobmG3qqA&start_radio=1&pp=ygUHcGVyZmVjdKAHAQ%3D%3D
+                        - text: Perfect Lyric Video I Cinderella I Prime Video
+                    - button "Action menu" [ref=e643]
+                  - generic [ref=e649]:
+                    - generic [ref=e650]: 11m
+                    - generic [ref=e651]: •5 yr ago
+                - generic [ref=e652]:
+                  - link "Go to channel Prime Video" [ref=e653]:
+                    - /url: /@PrimeVideo
+                  - generic [ref=e654]:
+                    - link "Prime Video" [ref=e658]:
+                      - /url: /@PrimeVideo
+                    - img "Verified" [ref=e663]
+                - generic [ref=e667]:
+                  - text: "Anyone wanna take us ballroom dancing? Or..? » Watch Cinderella on Prime Video: https://bit.ly/CinderllaPVOriginal ..."
+                  - tooltip "tooltip"
+            - generic [ref=e669]:
+              - link [aria-hidden] [ref=e671] [cursor=pointer]:
+                - /url: /watch?v=b8J4iRLxxE4&list=RDb8J4iRLxxE4&start_radio=1&pp=ygUHcGVyZmVjdKAHAQ%3D%3D
+              - generic [ref=e673] [cursor=pointer]:
+                - generic [ref=e674]:
+                  - generic [ref=e675]:
+                    - heading [level=3] [ref=e676]:
+                      - link "Ed Sheeran - Perfect (Lyrics) 4 minutes, 23 seconds" [ref=e677]:
+                        - /url: /watch?v=b8J4iRLxxE4&list=RDb8J4iRLxxE4&start_radio=1&pp=ygUHcGVyZmVjdKAHAQ%3D%3D
+                        - text: Ed Sheeran - Perfect (Lyrics)
+                    - button "Action menu" [ref=e681]
+                  - generic [ref=e687]:
+                    - generic [ref=e688]: 1.6m
+                    - generic [ref=e689]: •3 yr ago
+                - generic [ref=e690]:
+                  - link "Go to channel Lost Panda" [ref=e691]:
+                    - /url: /@LostPanda
+                  - generic [ref=e692]:
+                    - link "Lost Panda" [ref=e696]:
+                      - /url: /@LostPanda
+                    - img "Verified" [ref=e701]
+                - generic [ref=e705]:
+                  - generic [ref=e706]: "Welcome to Lost Panda “Ed Sheeran - Perfect” Lyrics / Lyric Video by Lost Panda ⏬ Stream “Ed Sheeran - Perfect” here: ..."
+                  - tooltip "tooltip"
+                - img "Closed captions" [ref=e711]:
+                  - generic [aria-hidden] [ref=e712]: Subtitles
+            - generic [ref=e713]:
+              - heading "Shorts" [level=2] [ref=e723]
+              - generic [ref=e724]:
+                - generic [ref=e725]:
+                  - generic [ref=e728]:
+                    - link [aria-hidden] [ref=e729] [cursor=pointer]:
+                      - /url: /shorts/rDQp0y_z4hY
+                    - generic [ref=e733] [cursor=pointer]:
+                      - generic [ref=e734]:
+                        - heading [level=3] [ref=e735]:
+                          - link "Perfect 🫶🏻🤍 Perfect Ed Sheeran, Perfect song lyrics, Ed Sheeran slow version, romantic English songs" [ref=e736]:
+                            - /url: /shorts/rDQp0y_z4hY
+                        - generic [ref=e737]: 883k views
+                      - button "More actions" [ref=e739]
+                  - generic [ref=e745]:
+                    - link [aria-hidden] [ref=e746] [cursor=pointer]:
+                      - /url: /shorts/OMlUrrhS18g
+                    - generic [ref=e750] [cursor=pointer]:
+                      - generic [ref=e751]:
+                        - heading [level=3] [ref=e752]:
+                          - link "PERFECT - GURU RANDHAWA" [ref=e753]:
+                            - /url: /shorts/OMlUrrhS18g
+                        - generic [ref=e754]: 6.4m views
+                      - button "More actions" [ref=e756]
+                  - generic [ref=e762]:
+                    - link [aria-hidden] [ref=e763] [cursor=pointer]:
+                      - /url: /shorts/3bjzaUg6arI
+                    - generic [ref=e767] [cursor=pointer]:
+                      - generic [ref=e768]:
+                        - heading [level=3] [ref=e769]:
+                          - link "Perfect Ed Sheeran (cover in the car)" [ref=e770]:
+                            - /url: /shorts/3bjzaUg6arI
+                        - generic [ref=e771]: 1.5m views
+                      - button "More actions" [ref=e773]
+                  - generic [ref=e779]:
+                    - link [aria-hidden] [ref=e780] [cursor=pointer]:
+                      - /url: /shorts/mHIwg9UkZeI
+                      - img [ref=e785]:
+                        - generic [aria-hidden] [ref=e786]: New
+                    - generic [ref=e787] [cursor=pointer]:
+                      - generic [ref=e788]:
+                        - heading [level=3] [ref=e789]:
+                          - link "Ranking epic perfect moments 😀." [ref=e790]:
+                            - /url: /shorts/mHIwg9UkZeI
+                        - generic [ref=e791]: 19k views
+                      - button "More actions" [ref=e793]
+                  - generic [ref=e799]:
+                    - link [aria-hidden] [ref=e800] [cursor=pointer]:
+                      - /url: /shorts/XnMLXcd50X0
+                    - generic [ref=e804] [cursor=pointer]:
+                      - generic [ref=e805]:
+                        - heading [level=3] [ref=e806]:
+                          - 'link "''Perfect'' lyrics - Ed Sheeran #song #lyrics #shorts" [ref=e807]':
+                            - /url: /shorts/XnMLXcd50X0
+                        - generic [ref=e808]: 3.5m views
+                      - button "More actions" [ref=e810]
+                - generic [ref=e814]:
+                  - generic [ref=e817]:
+                    - link [aria-hidden] [ref=e818] [cursor=pointer]:
+                      - /url: /shorts/kwcFhY8Dpf4
+                    - generic [ref=e822] [cursor=pointer]:
+                      - generic [ref=e823]:
+                        - heading [level=3] [ref=e824]:
+                          - 'link "Ed Sheeran - perfect #music #artvideo #bridegroom #wedding #dance #perfect #ed_sheeran" [ref=e825]':
+                            - /url: /shorts/kwcFhY8Dpf4
+                        - generic [ref=e826]: 77k views
+                      - button "More actions" [ref=e828]
+                  - generic [ref=e834]:
+                    - link [aria-hidden] [ref=e835] [cursor=pointer]:
+                      - /url: /shorts/Rs0MCfH1sRc
+                    - generic [ref=e839] [cursor=pointer]:
+                      - generic [ref=e840]:
+                        - heading [level=3] [ref=e841]:
+                          - 'link "Perfect | Cover by - Anukriti #anukriti #cover #perfect @EdSheeran" [ref=e842]':
+                            - /url: /shorts/Rs0MCfH1sRc
+                        - generic [ref=e843]: 3.5m views
+                      - button "More actions" [ref=e845]
+                  - generic [ref=e851]:
+                    - link [aria-hidden] [ref=e852] [cursor=pointer]:
+                      - /url: /shorts/CzDmfNXHI70
+                    - generic [ref=e856] [cursor=pointer]:
+                      - generic [ref=e857]:
+                        - heading [level=3] [ref=e858]:
+                          - link "Arijit Singh x Ed Sheeran - Perfect 😌" [ref=e859]:
+                            - /url: /shorts/CzDmfNXHI70
+                        - generic [ref=e860]: 3.5m views
+                      - button "More actions" [ref=e862]
+                  - generic [ref=e868]:
+                    - link [aria-hidden] [ref=e869] [cursor=pointer]:
+                      - /url: /shorts/MZCYZ9mBHzQ
+                    - generic [ref=e873] [cursor=pointer]:
+                      - generic [ref=e874]:
+                        - heading [level=3] [ref=e875]:
+                          - 'link "Perfect x perfect x Spiderman💗 #avengers #mcuedit #shorts ....." [ref=e876]':
+                            - /url: /shorts/MZCYZ9mBHzQ
+                        - generic [ref=e877]: 5.3m views
+                      - button "More actions" [ref=e879]
+                  - generic [ref=e885]:
+                    - link [aria-hidden] [ref=e886] [cursor=pointer]:
+                      - /url: /shorts/56_rSyGUA1s
+                    - generic [ref=e890] [cursor=pointer]:
+                      - generic [ref=e891]:
+                        - heading [level=3] [ref=e892]:
+                          - link "Perfect Ed Sheeran Guitar Tutorial // Perfect Guitar Lesson" [ref=e893]:
+                            - /url: /shorts/56_rSyGUA1s
+                        - generic [ref=e894]: 2.2m views
+                      - button "More actions" [ref=e896]
+              - button "Show more" [ref=e903] [cursor=pointer]
+            - generic [ref=e908]:
+              - link [aria-hidden] [ref=e910] [cursor=pointer]:
+                - /url: /watch?v=kPhpHvnnn0Q&list=RDkPhpHvnnn0Q&start_radio=1&pp=ygUHcGVyZmVjdKAHAdIHCQk3DAGHKiGM7w%3D%3D
+              - generic [ref=e912] [cursor=pointer]:
+                - generic [ref=e913]:
+                  - generic [ref=e914]:
+                    - heading [level=3] [ref=e915]:
+                      - link "Ed Sheeran - Perfect (Lyrics) 4 minutes, 24 seconds" [ref=e916]:
+                        - /url: /watch?v=kPhpHvnnn0Q&list=RDkPhpHvnnn0Q&start_radio=1&pp=ygUHcGVyZmVjdKAHAdIHCQk3DAGHKiGM7w%3D%3D
+                        - text: Ed Sheeran - Perfect (Lyrics)
+                    - button "Action menu" [ref=e920]
+                  - generic [ref=e926]:
+                    - generic [ref=e927]: 220m
+                    - generic [ref=e928]: •7 yr ago
+                - generic [ref=e929]:
+                  - link "Go to channel 7clouds" [ref=e930]:
+                    - /url: /@7clouds
+                  - generic [ref=e931]:
+                    - link "7clouds" [ref=e935]:
+                      - /url: /@7clouds
+                    - img "Verified" [ref=e940]
+                - generic [ref=e944]:
+                  - generic [ref=e945]: "Ed Sheeran - Perfect (Lyrics) ⏬ Download / Stream: https://ad.gt/yt-perfect Turn on notifications to stay updated with new ..."
+                  - tooltip "tooltip"
+            - generic [ref=e947]:
+              - link [aria-hidden] [ref=e949] [cursor=pointer]:
+                - /url: /watch?v=JGwWNGJdvx8&list=RDJGwWNGJdvx8&start_radio=1&pp=ygUHcGVyZmVjdKAHAQ%3D%3D
+              - generic [ref=e951] [cursor=pointer]:
+                - generic [ref=e952]:
+                  - generic [ref=e953]:
+                    - heading [level=3] [ref=e954]:
+                      - link "Ed Sheeran - Shape of You (Official Music Video) 4 minutes, 24 seconds" [ref=e955]:
+                        - /url: /watch?v=JGwWNGJdvx8&list=RDJGwWNGJdvx8&start_radio=1&pp=ygUHcGVyZmVjdKAHAQ%3D%3D
+                        - text: Ed Sheeran - Shape of You (Official Music Video)
+                    - button "Action menu" [ref=e959]
+                  - generic [ref=e965]:
+                    - generic [ref=e966]: 6.8bn
+                    - generic [ref=e967]: •9 yr ago
+                - generic [ref=e968]:
+                  - link "Go to channel Ed Sheeran" [ref=e969]:
+                    - /url: /channel/UC0C-w0YjGpqDXGB8IHb662A
+                  - generic [ref=e970]:
+                    - link "Ed Sheeran" [ref=e974]:
+                      - /url: /channel/UC0C-w0YjGpqDXGB8IHb662A
+                    - img "Official Artist Channel" [ref=e979]
+                - generic [ref=e983]:
+                  - text: "Brand new album 'Play' out now: https://es.lnk.to/play The official music video for Ed Sheeran - Shape Of You Taken from the ..."
+                  - tooltip "tooltip"
+                - generic [ref=e985]:
+                  - img "4K" [ref=e988]:
+                    - generic [aria-hidden] [ref=e989]: 4K
+                  - img "Closed captions" [ref=e992]:
+                    - generic [aria-hidden] [ref=e993]: Subtitles
+            - generic [ref=e995]:
+              - link [aria-hidden] [ref=e997] [cursor=pointer]:
+                - /url: /watch?v=iKzRIweSBLA&list=RDiKzRIweSBLA&start_radio=1&pp=ygUHcGVyZmVjdKAHAQ%3D%3D
+              - generic [ref=e999] [cursor=pointer]:
+                - generic [ref=e1000]:
+                  - generic [ref=e1001]:
+                    - heading [level=3] [ref=e1002]:
+                      - link "Ed Sheeran - Perfect [Official Lyric Video] 4 minutes, 24 seconds" [ref=e1003]:
+                        - /url: /watch?v=iKzRIweSBLA&list=RDiKzRIweSBLA&start_radio=1&pp=ygUHcGVyZmVjdKAHAQ%3D%3D
+                        - text: Ed Sheeran - Perfect [Official Lyric Video]
+                    - button "Action menu" [ref=e1007]
+                  - generic [ref=e1013]:
+                    - generic [ref=e1014]: 284m
+                    - generic [ref=e1015]: •9 yr ago
+                - generic [ref=e1016]:
+                  - link "Go to channel Ed Sheeran" [ref=e1017]:
+                    - /url: /channel/UC0C-w0YjGpqDXGB8IHb662A
+                  - generic [ref=e1018]:
+                    - link "Ed Sheeran" [ref=e1022]:
+                      - /url: /channel/UC0C-w0YjGpqDXGB8IHb662A
+                    - img "Official Artist Channel" [ref=e1027]
+                - generic [ref=e1031]:
+                  - generic [ref=e1032]: The official lyric video for Ed Sheeran - Perfect Taken from the studio album ÷ (divide) released in 2017, which featured the hit ...
+                  - tooltip "tooltip"
+            - generic [ref=e1034]:
+              - link [aria-hidden] [ref=e1036] [cursor=pointer]:
+                - /url: /watch?v=ZijHy_4VNXY&pp=ygUHcGVyZmVjdA%3D%3D
+              - generic [ref=e1038] [cursor=pointer]:
+                - generic [ref=e1039]:
+                  - generic [ref=e1040]:
+                    - heading [level=3] [ref=e1041]:
+                      - 'link "REVEALED: THE SECRET REASON DON LARSEN THREW A PERFECT GAME IN THE WORLD SERIES 13 minutes, 56 seconds" [ref=e1042]':
+                        - /url: /watch?v=ZijHy_4VNXY&pp=ygUHcGVyZmVjdA%3D%3D
+                        - text: "REVEALED: THE SECRET REASON DON LARSEN THREW A PERFECT GAME IN THE WORLD SERIES"
+                    - button "Action menu" [ref=e1046]
+                  - generic [ref=e1052]:
+                    - generic [ref=e1053]: 7.6k
+                    - generic [ref=e1054]: •16 hr ago
+                - generic [ref=e1055]:
+                  - link "Go to channel Keith Olbermann" [ref=e1056]:
+                    - /url: /@CountdownWithKO
+                  - generic [ref=e1057]:
+                    - link "Keith Olbermann" [ref=e1061]:
+                      - /url: /@CountdownWithKO
+                    - img "Verified" [ref=e1066]
+                - generic [ref=e1070]:
+                  - generic [ref=e1071]: "If You're New Subscribe ▻ https://bit.ly/CKOSubscribe REVEALED: THE SECRET REASON DON LARSEN THREW A PERFECT ..."
+                  - tooltip "tooltip"
+                - img "New" [ref=e1076]:
+                  - generic [aria-hidden] [ref=e1077]: New
+                - generic [ref=e1080]:
+                  - generic [ref=e1081]:
+                    - generic [ref=e1082]: Summary
+                    - button "Keith Olbermann presents rare, original color photographs from the 1956 World Series that offer a fresh perspective on a legendary athletic feat. These images document the atmosphere at Yankee Stadium and provide unique insight into the conditions surrounding that historic day in sports history." [ref=e1087]
+                    - text: ·
+                  - button "More" [ref=e1092]
+            - generic [ref=e1097]:
+              - link [aria-hidden] [ref=e1099] [cursor=pointer]:
+                - /url: /watch?v=OSW-SZrxRtc&list=RDOSW-SZrxRtc&start_radio=1&pp=ygUHcGVyZmVjdKAHAQ%3D%3D
+              - generic [ref=e1101] [cursor=pointer]:
+                - generic [ref=e1102]:
+                  - generic [ref=e1103]:
+                    - heading [level=3] [ref=e1104]:
+                      - link "Ed Sheeran - Perfect (Lyrics) 4 minutes, 24 seconds" [ref=e1105]:
+                        - /url: /watch?v=OSW-SZrxRtc&list=RDOSW-SZrxRtc&start_radio=1&pp=ygUHcGVyZmVjdKAHAQ%3D%3D
+                        - text: Ed Sheeran - Perfect (Lyrics)
+                    - button "Action menu" [ref=e1109]
+                  - generic [ref=e1115]:
+                    - generic [ref=e1116]: 337k
+                    - generic [ref=e1117]: •9 mo ago
+                - generic [ref=e1118]:
+                  - link "Go to channel DopeMusic" [ref=e1119]:
+                    - /url: /@dopemusic11
+                  - generic [ref=e1120]:
+                    - link "DopeMusic" [ref=e1124]:
+                      - /url: /@dopemusic11
+                    - img "Verified" [ref=e1129]
+                - generic [ref=e1133]:
+                  - generic [ref=e1134]: "Ed Sheeran - Perfect (Lyrics) ⏬ Stream “Perfect” by \"Ed Sheeran\" here: https://ad.gt/yt-perfect Song Lyrics: Ed Sheeran ..."
+                  - tooltip "tooltip"
+            - generic [ref=e1136] [cursor=pointer]:
+              - link [aria-hidden] [ref=e1137]:
+                - /url: /watch?v=2Vv-BfVoq4g&list=RD2Vv-BfVoq4g&start_radio=1
+                - generic [ref=e1139]: Mix
+              - generic [ref=e1154]:
+                - heading "Mix - Ed Sheeran - Perfect (Official Music Video)" [level=3] [ref=e1155]:
+                  - link "Mix - Ed Sheeran - Perfect (Official Music Video)" [ref=e1156]:
+                    - /url: /watch?v=2Vv-BfVoq4g&list=RD2Vv-BfVoq4g&start_radio=1
+                - generic [ref=e1158]:
+                  - group [ref=e1159]:
+                    - generic [ref=e1160]: Ed Sheeran, Beyoncé, Adele, and more
+                    - generic [ref=e1161]: Playlist
+                  - group [ref=e1162]
+                  - group [ref=e1163]:
+                    - link "Ed Sheeran - Perfect (Official Music Video) · 4:42" [ref=e1165]:
+                      - /url: /watch?v=2Vv-BfVoq4g&list=RD2Vv-BfVoq4g&start_radio=1
+                  - group [ref=e1166]:
+                    - link "Ed Sheeran - Shape of You (Official Music Video) · 4:24" [ref=e1168]:
+                      - /url: /watch?v=JGwWNGJdvx8&list=RD2Vv-BfVoq4g&start_radio=1
+                  - group [ref=e1169]:
+                    - generic [ref=e1170]: Ed Sheeran, Beyoncé, Adele, and more
+            - generic [ref=e1172]:
+              - link [aria-hidden] [ref=e1174] [cursor=pointer]:
+                - /url: /watch?v=atRzwlp0iDk&list=RDatRzwlp0iDk&start_radio=1&pp=ygUHcGVyZmVjdKAHAQ%3D%3D
+              - generic [ref=e1176] [cursor=pointer]:
+                - generic [ref=e1177]:
+                  - generic [ref=e1178]:
+                    - heading [level=3] [ref=e1179]:
+                      - link "Until I Found You -Stephen Sanchez ft. Em Beihold (Lyric Video) 2 minutes, 50 seconds" [ref=e1180]:
+                        - /url: /watch?v=atRzwlp0iDk&list=RDatRzwlp0iDk&start_radio=1&pp=ygUHcGVyZmVjdKAHAQ%3D%3D
+                        - text: Until I Found You -Stephen Sanchez ft. Em Beihold (Lyric Video)
+                    - button "Action menu" [ref=e1184]
+                  - generic [ref=e1190]:
+                    - generic [ref=e1191]: 37m
+                    - generic [ref=e1192]: •3 yr ago
+                - generic [ref=e1193]:
+                  - link "Go to channel sydhslm" [ref=e1194]:
+                    - /url: /@sydhslm
+                  - link "sydhslm" [ref=e1199]:
+                    - /url: /@sydhslm
+                - generic [ref=e1200]:
+                  - text: "Until I Found You - Stephen Sanchez ft. Em Beihold (Lyric Video) #stephensanchez #embeihold #tiktoksong #trending #tiktokviral ..."
+                  - tooltip "tooltip"
+            - generic [ref=e1202]:
+              - link [aria-hidden] [ref=e1204] [cursor=pointer]:
+                - /url: /watch?v=JgDNFQ2RaLQ&list=RDJgDNFQ2RaLQ&start_radio=1&pp=ygUHcGVyZmVjdKAHAdIHCQk3DAGHKiGM7w%3D%3D
+              - generic [ref=e1206] [cursor=pointer]:
+                - generic [ref=e1207]:
+                  - generic [ref=e1208]:
+                    - heading [level=3] [ref=e1209]:
+                      - link "Ed Sheeran - Sapphire (Official Music Video) 3 minutes, 4 seconds" [ref=e1210]:
+                        - /url: /watch?v=JgDNFQ2RaLQ&list=RDJgDNFQ2RaLQ&start_radio=1&pp=ygUHcGVyZmVjdKAHAdIHCQk3DAGHKiGM7w%3D%3D
+                        - text: Ed Sheeran - Sapphire (Official Music Video)
+                    - button "Action menu" [ref=e1214]
+                  - generic [ref=e1220]:
+                    - generic [ref=e1221]: 327m
+                    - generic [ref=e1222]: •1 yr ago
+                - generic [ref=e1223]:
+                  - link "Go to channel Ed Sheeran" [ref=e1224]:
+                    - /url: /channel/UC0C-w0YjGpqDXGB8IHb662A
+                  - generic [ref=e1225]:
+                    - link "Ed Sheeran" [ref=e1229]:
+                      - /url: /channel/UC0C-w0YjGpqDXGB8IHb662A
+                    - img "Official Artist Channel" [ref=e1234]
+                - generic [ref=e1238]:
+                  - text: "Listen to 'Sapphire' now: https://es.lnk.to/sapphireID Play (Deluxe) is out now: https://es.lnk.to/PlayDeluxeLP Sapphire - Behind ..."
+                  - tooltip "tooltip"
+                - generic [ref=e1240]:
+                  - img "4 products" [ref=e1243]:
+                    - generic [aria-hidden] [ref=e1247]: 4 products
+                  - img "4K" [ref=e1250]:
+                    - generic [aria-hidden] [ref=e1251]: 4K
+            - generic [ref=e1253]:
+              - link [aria-hidden] [ref=e1255] [cursor=pointer]:
+                - /url: /watch?v=sPMA1tqWuf4&list=RDsPMA1tqWuf4&start_radio=1&pp=ygUHcGVyZmVjdKAHAQ%3D%3D
+              - generic [ref=e1257] [cursor=pointer]:
+                - generic [ref=e1258]:
+                  - generic [ref=e1259]:
+                    - heading [level=3] [ref=e1260]:
+                      - link "Ed Sheeran - Perfect (Karaoke Version) 4 minutes, 56 seconds" [ref=e1261]:
+                        - /url: /watch?v=sPMA1tqWuf4&list=RDsPMA1tqWuf4&start_radio=1&pp=ygUHcGVyZmVjdKAHAQ%3D%3D
+                        - text: Ed Sheeran - Perfect (Karaoke Version)
+                    - button "Action menu" [ref=e1265]
+                  - generic [ref=e1271]:
+                    - generic [ref=e1272]: 160m
+                    - generic [ref=e1273]: •9 yr ago
+                - generic [ref=e1274]:
+                  - link "Go to channel Sing King" [ref=e1275]:
+                    - /url: /@singkingkaraoke
+                  - generic [ref=e1276]:
+                    - link "Sing King" [ref=e1280]:
+                      - /url: /@singkingkaraoke
+                    - img "Verified" [ref=e1285]
+                - generic [ref=e1289]:
+                  - generic [ref=e1290]: Join our Discord - https://discord.gg/ecDYMX9js4 Karaoke sing along of “Perfect” by Ed Sheeran from Sing King Karaoke Stay ...
+                  - tooltip "tooltip"
+                - img "Closed captions" [ref=e1295]:
+                  - generic [aria-hidden] [ref=e1296]: Subtitles
+                - generic [ref=e1299]:
+                  - generic [ref=e1300]:
+                    - generic [ref=e1303]: 3 chapters
+                    - button "Intro | Ed Sheeran - Perfect (Karaoke Version) | Up Next\"" [ref=e1305]
+                  - button "More" [ref=e1310]
+            - generic [ref=e1315] [cursor=pointer]:
+              - link [aria-hidden] [ref=e1316]:
+                - /url: /watch?v=kPhpHvnnn0Q&list=PLS6693qnyWZWCYvAFURE8jjqeCBBrqSN5
+                - generic [ref=e1318]: 7 videos
+              - generic [ref=e1333]:
+                - heading "\"Ed Sheeran - Perfect (Lyrics)\" by 7clouds, etc" [level=3] [ref=e1334]:
+                  - link "\"Ed Sheeran - Perfect (Lyrics)\" by 7clouds, etc" [ref=e1335]:
+                    - /url: /watch?v=kPhpHvnnn0Q&list=PLS6693qnyWZWCYvAFURE8jjqeCBBrqSN5
+                - generic [ref=e1337]:
+                  - group [ref=e1338]:
+                    - link "Chibikana" [ref=e1341]:
+                      - /url: /@Chibikana
+                    - link "Playlist" [ref=e1344]:
+                      - /url: /@Chibikana
+                  - group [ref=e1345]
+                  - group [ref=e1346]:
+                    - link "Ed Sheeran - Perfect (Lyrics) · 4:24" [ref=e1348]:
+                      - /url: /watch?v=kPhpHvnnn0Q&list=PLS6693qnyWZWCYvAFURE8jjqeCBBrqSN5
+                  - group [ref=e1349]:
+                    - link "Christina Perri - A Thousand Years (Lyrics) · 5:20" [ref=e1351]:
+                      - /url: /watch?v=cMYYpvXPLkE&list=PLS6693qnyWZWCYvAFURE8jjqeCBBrqSN5
+                  - group [ref=e1352]:
+                    - link "View full playlist" [ref=e1355]:
+                      - /url: /playlist?list=PLS6693qnyWZWCYvAFURE8jjqeCBBrqSN5
+                  - group [ref=e1356]:
+                    - generic [ref=e1357]: "Uploads by 7clouds, Dreamy Vibez Music, Good Vibes, Summer Night , Twilight Sounds , Ellie Goulding, Mr. Music. Hope you have fun with the playlist too... Will be watching them next time I'm cooking dinner! Contains the following: Ed Sheeran - Perfect (Lyrics) Ed Sheeran, Bruno Mars, Dua Lipa, Adele, Maroon 5, Rihanna, The Weeknd - Pop music 2024 Christina Perri - A Thousand Years (Lyrics) Ellie Goulding - Love Me Like You Do (Lyrics) Ellie Goulding - Love Me Like You Do (Vevo Presents: Live in London) Ed Sheeran- Perfect (lyrics)"
+      - text: •
+  - generic:
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic "YouTube Video Player":
+                          - generic:
+                            - button "Play"

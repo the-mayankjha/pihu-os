@@ -26,7 +26,9 @@ dist-ssr
 
 # Tauri
 src-tauri/target/
+src-tauri/runtime/
 src-tauri/gen/
+src-tauri/mcp-agent-bundle/
 models/stt/*.bin
 src-tauri/python/venv/
 .pihu-setup/

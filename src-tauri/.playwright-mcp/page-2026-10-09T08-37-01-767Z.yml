@@ -1,0 +1,195 @@
+- generic [ref=e2]:
+  - banner [ref=e4]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - button "Guide" [active] [ref=e9] [cursor=pointer]
+        - generic [ref=e11]:
+          - link "YouTube Home" [ref=e12] [cursor=pointer]:
+            - /url: /
+          - generic [ref=e16]: IN
+        - button "Skip navigation" [ref=e20] [cursor=pointer]
+      - generic [ref=e24]:
+        - search [ref=e25]:
+          - generic [ref=e27]:
+            - generic [ref=e28]:
+              - combobox "Search" [expanded] [ref=e30]: Perfect by Ed Sheran
+              - button "Clear search query" [ref=e32] [cursor=pointer]
+            - button "Search" [ref=e37] [cursor=pointer]
+        - generic [ref=e40]:
+          - button "Search with your voice" [ref=e42] [cursor=pointer]
+          - tooltip "tooltip"
+  - navigation [ref=e51]
+  - main [ref=e53]:
+    - generic [ref=e54]:
+      - generic [ref=e56]:
+        - tablist [ref=e61]:
+          - tab "All" [selected] [ref=e64] [cursor=pointer]
+          - tab "Shorts" [ref=e69] [cursor=pointer]
+          - tab "Unwatched" [ref=e74] [cursor=pointer]
+          - tab "Videos" [ref=e79] [cursor=pointer]
+          - tab "Recently uploaded" [ref=e84] [cursor=pointer]
+          - tab "Live" [ref=e89] [cursor=pointer]
+        - generic [ref=e93]:
+          - button "Search filters" [ref=e95] [cursor=pointer]:
+            - generic: Filters
+          - tooltip "tooltip"
+      - generic [ref=e104]:
+        - generic [ref=e106]:
+          - text: Showing results for
+          - link "Perfect by Ed Sheeran" [ref=e107] [cursor=pointer]:
+            - /url: /results?search_query=Perfect+by+Ed+Sheeran
+          - text: Search instead for
+          - link "Perfect by Ed Sheran" [ref=e109] [cursor=pointer]:
+            - /url: /results?search_query=Perfect+by+Ed+Sheran&sp=QgIIAQ%253D%253D
+        - generic [ref=e111]:
+          - link [aria-hidden] [ref=e113] [cursor=pointer]:
+            - /url: /watch?v=2Vv-BfVoq4g&list=RD2Vv-BfVoq4g&start_radio=1&pp=ygUUUGVyZmVjdCBieSBFZCBTaGVyYW6gBwE%3D
+          - generic [ref=e115] [cursor=pointer]:
+            - generic [ref=e116]:
+              - heading [level=3] [ref=e118]:
+                - link "Ed Sheeran - Perfect (Official Music Video) 4 minutes, 42 seconds" [ref=e119]:
+                  - /url: /watch?v=2Vv-BfVoq4g&list=RD2Vv-BfVoq4g&start_radio=1&pp=ygUUUGVyZmVjdCBieSBFZCBTaGVyYW6gBwE%3D
+                  - text: Ed Sheeran - Perfect (Official Music Video)
+              - generic [ref=e122]:
+                - generic [ref=e123]: 4.2bn
+                - generic [ref=e124]: •8 yr ago
+            - generic [ref=e125]:
+              - link "Go to channel Ed Sheeran" [ref=e126]:
+                - /url: /channel/UC0C-w0YjGpqDXGB8IHb662A
+              - generic [ref=e128]:
+                - link "Ed Sheeran" [ref=e132]:
+                  - /url: /channel/UC0C-w0YjGpqDXGB8IHb662A
+                - img "Official Artist Channel" [ref=e137]
+            - generic [ref=e139]:
+              - generic [ref=e140]: "Brand new album 'Play' out now: https://es.lnk.to/play The official music video for Ed Sheeran - Perfect Taken from the studio ..."
+              - tooltip "tooltip"
+            - img "Closed captions" [ref=e145]:
+              - generic [aria-hidden] [ref=e146]: Subtitles
+        - generic [ref=e148]:
+          - link [aria-hidden] [ref=e150] [cursor=pointer]:
+            - /url: /watch?v=cNGjD0VG4R8&list=RDcNGjD0VG4R8&start_radio=1&pp=ygUUUGVyZmVjdCBieSBFZCBTaGVyYW6gBwE%3D
+          - generic [ref=e152] [cursor=pointer]:
+            - generic [ref=e153]:
+              - heading [level=3] [ref=e155]:
+                - link "Ed Sheeran - Perfect 4 minutes, 24 seconds" [ref=e156]:
+                  - /url: /watch?v=cNGjD0VG4R8&list=RDcNGjD0VG4R8&start_radio=1&pp=ygUUUGVyZmVjdCBieSBFZCBTaGVyYW6gBwE%3D
+                  - text: Ed Sheeran - Perfect
+              - generic [ref=e159]:
+                - generic [ref=e160]: 224m
+                - generic [ref=e161]: •4 yr ago
+            - generic [ref=e162]:
+              - link "Go to channel LatinHype" [ref=e163]:
+                - /url: /@LatinHype.
+              - link "LatinHype" [ref=e169]:
+                - /url: /@LatinHype.
+            - generic [ref=e170]:
+              - generic [ref=e171]: "Ed Sheeran - Perfect » Descargar: » Apoyo Ed Sheeran: http://www.facebook.com/EdSheeranMusic http://twitter.com/edsheeran ..."
+              - tooltip "tooltip"
+        - generic [ref=e173]:
+          - link [aria-hidden] [ref=e175] [cursor=pointer]:
+            - /url: /watch?v=iKzRIweSBLA&list=RDiKzRIweSBLA&start_radio=1&pp=ygUUUGVyZmVjdCBieSBFZCBTaGVyYW6gBwE%3D
+          - generic [ref=e177] [cursor=pointer]:
+            - generic [ref=e178]:
+              - heading [level=3] [ref=e180]:
+                - link "Ed Sheeran - Perfect [Official Lyric Video] 4 minutes, 24 seconds" [ref=e181]:
+                  - /url: /watch?v=iKzRIweSBLA&list=RDiKzRIweSBLA&start_radio=1&pp=ygUUUGVyZmVjdCBieSBFZCBTaGVyYW6gBwE%3D
+                  - text: Ed Sheeran - Perfect [Official Lyric Video]
+              - generic [ref=e184]:
+                - generic [ref=e185]: 284m
+                - generic [ref=e186]: •9 yr ago
+            - generic [ref=e187]:
+              - link "Go to channel Ed Sheeran" [ref=e188]:
+                - /url: /channel/UC0C-w0YjGpqDXGB8IHb662A
+              - generic [ref=e190]:
+                - link "Ed Sheeran" [ref=e194]:
+                  - /url: /channel/UC0C-w0YjGpqDXGB8IHb662A
+                - img "Official Artist Channel" [ref=e199]
+            - generic [ref=e201]:
+              - generic [ref=e202]: The official lyric video for Ed Sheeran - Perfect Taken from the studio album ÷ (divide) released in 2017, which featured the hit ...
+              - tooltip "tooltip"
+        - generic [ref=e211] [cursor=pointer]:
+          - link [aria-hidden] [ref=e212]:
+            - /url: https://www.googleadservices.com/pagead/aclk?sa=L&ai=CfRbwrKfIarm4BrPEjNAPv6S8wAeW0ZOQigGaqMm9uBWwkB8QASAAYOXq4wOCARdjYS1wdWItNjIxOTgxMTc0NzA0OTM3MaABi-KKoAGoAwTIAwqqBMgCT9A8Lm-8619Hr23PDQv443JMnLpj97Wt9Qc7CoVw1QiCm134oLFigp4aYqyqW0ah7_mN1n3Z0qwNSJ9RlZh9ZFQklOV9cjDExKC5AH-6q5kmxgANFuG6XxPfROo2b-ZsaHWB4Y_prmYy75Hd_ZBO3-NxJjESLOG8odYGnVtb02ggd8OfeJlQLCkRNIn6aUAENwL_kurOniqYMfH6x3L67pQsmQky01yuTJzSSrdoHR6CwV2TDOK_7q7j30pMS01Lrgjco5rTxXGwLD78i5YDKlz8L7CbUGOW3V8RMr8LGyYnb0dlIedqDPkSPTEHDfvz2xUcfCTCM-YVR1zguPuRXSI122PWJQUFEdrhKBbQm2CC1iKXkWBFB_4ehvqroACgUeAOusR0xSKPtqfATdsn-xX4PKDln5bFQrnhtZgvfo9nS6pB5-rSEogFu6C2iFeSBQgIE3iLgPDgAqAGoQGAB92d9d8CkAcEqAfhtrECqAelz7ECqAfnnbECqAfonbECqAf507ECqAfJ2rECqAep4LECqAeo0huoB7HcG6gHsJuxAqgHrrGxAqgH_bKxAqgHyM-xAqgHyc-xAqgH_NWxAqgH-9WxAqgHjNaxAqgHi9axAqgHmuKxAqgHm-KxAqgHndexAqgHndSxAqgHgcYbqAf8r7ECqAfVzhuoB77ZsQKoB6vFG6gHnNwbqAe3obECqAfVqbECqAfn2rECqAfetbECqAfqsbECqAe-t7ECqAeZtbECqAeFwbECqAfrpbECqAfKqbECkggLNDVmZ04teTA5VGOoCAHSCC4IgEEQARheMgKCAjoPgEKAwICAgICAgAKqgIAYSNmg0jVQFFjYqueDxKyXA2ABmglDaHR0cHM6Ly93d3cuYWRvYmUuY29tL2luL2Fjcm9iYXQvY2FtcGFpZ24vZG8tdGhhdC13aXRoLWFjcm9iYXQuaHRtbLEJoJ70fj-spdfICRfICY8ByAnCAcgJlwK6Cz8IAxAFGAQgBygBMBxAAUgAWH1gAGgAcAGIAQCYAQGiAQgKAKgCAdgCAqgBAdgBA4ACAYgCBboDB3Zpc2lucmLQCxLgCwGiDCUqCgoIleKxAo7fsQJqEgoQY29tLmFkb2JlLnJlYWRlcngAiAEA0gwCEAHaDCUKChCww-Kbga-5hWgSAgEDGg0Yu6C2iFcgkZ-S9c4FQAFKAhAfmg0BEqoNAklOyA0B0g3DBGh0dHBzOi8vYWQuZG91YmxlY2xpY2submV0L2RkbS90cmFja2Nsay9OOTcyOTUyLjI3OTM4MkJJRE1BTkFHRVJfREZBU0lURS9CMjYxMjYyMDAuMzE3MTM5NDU5O2RjX3Rya19haWQ9NTA5OTYyODczO2RjX3Rya19jaWQ9MTU5OTQzMzE3O2RjX2RibV90b2tlbj1BT2plTE5FQUFBQTdDalFLREFnQUZRQUFBQUFkQUFBQUFCSU1DQUFWQUFBQUFCMEFBQUFBSWhRSXU2QzJpRmVvQW91QThPQUNzQUtSdW9YbkEwQTdFSmZudWdGVXFrUkJiSU16bGVRelp6TF9wWVRuO2RjX2xhdD07ZGNfcmRpZD07dGFnX2Zvcl9jaGlsZF9kaXJlY3RlZF90cmVhdG1lbnQ9O3RmdWE9O2x0ZD07ZGNfdGR2PTE7ZGNfdHJhbnNwYXJlbnQ9MTtkY19ydWk9MTtkY19lcHM9QUhhczhjQVNZQlRiNmxyYmROT1ljTjV4Sml0S2E2VEFRZDR1N19oQ2wtdmFyemNtX1JLZnRXNVJiZmMxTElSRC1BV3pQWGhYelhYbF8yOTJpZWZYN3c7ZGNfcHViaWQ9Nj9odHRwczovL3d3dy5hZG9iZS5jb20vaW4vYWNyb2JhdC9jYW1wYWlnbi9kby10aGF0LXdpdGgtYWNyb2JhdC5odG1sP3NkaWQ9WlhMOERQNDQmbXY9c29jaWFsJm12Mj1wYWlkc29jJmdhZF9zb3VyY2U9MrATj_G4JbgT____________AYgUA7AUA8AVgYCAQNAVAdgVAZgWAagWAeIWAggBgBcBihcYCAMYASABKAEwATgBQAFIAVABWAFgAmgBoBcBqRdXv8ICGj4Y8LoXBigAMAA4AdAYAfAYAQ&ase=2&gclid=EAIaIQobChMIub7ng8SslwMVMyIDBB0_Eg94EAEYASAAEgLDlvD_BwE&num=1&cid=CAASwwHkaHwctRZa0t8CcRtwWCY2x4_l5kE0ABXa_1CEZUcSt80pbgVlsCtZ4lSGKxL6eLWcAytfl-py0ey821dBUZdzzS9YNwdKFkTCXp8mqEvJN6iT5i3vB1JLnOXS-ecW0GOA0oiCdUZhg9OKI6Xp47Va8H08UUnhyA0q0eOLjUOMBcTc3hNZBdxuWQiUiTpNIZn9j11dVKcMyp4R21p0BfrvNy82jGneSkRTxu_B4PZBfRjIyp6SGWMwS-c7DlsT1Gg57PA&ad_cpn=%5BCPN%5D&sig=AOD64_0vKevbV7ud5sdZ0cVqmckqt6CTbA&ctype=110&video_id=45fgN-y09Tc&label=video_click_to_advertiser_site&ms=%5BCLICK_MS%5D&nb=21&nx=%5BNX%5D&ny=%5BNY%5D&dim=%5BDIM%5D
+            - button [aria-hidden] [ref=e218]
+          - generic [ref=e222]:
+            - generic [ref=e223]:
+              - generic [ref=e224]:
+                - link "Work smart with PDF Spaces. Compare legal contracts, pull insights, and share for review." [ref=e227]:
+                  - /url: https://www.googleadservices.com/pagead/aclk?sa=L&ai=CfRbwrKfIarm4BrPEjNAPv6S8wAeW0ZOQigGaqMm9uBWwkB8QASAAYOXq4wOCARdjYS1wdWItNjIxOTgxMTc0NzA0OTM3MaABi-KKoAGoAwTIAwqqBMgCT9A8Lm-8619Hr23PDQv443JMnLpj97Wt9Qc7CoVw1QiCm134oLFigp4aYqyqW0ah7_mN1n3Z0qwNSJ9RlZh9ZFQklOV9cjDExKC5AH-6q5kmxgANFuG6XxPfROo2b-ZsaHWB4Y_prmYy75Hd_ZBO3-NxJjESLOG8odYGnVtb02ggd8OfeJlQLCkRNIn6aUAENwL_kurOniqYMfH6x3L67pQsmQky01yuTJzSSrdoHR6CwV2TDOK_7q7j30pMS01Lrgjco5rTxXGwLD78i5YDKlz8L7CbUGOW3V8RMr8LGyYnb0dlIedqDPkSPTEHDfvz2xUcfCTCM-YVR1zguPuRXSI122PWJQUFEdrhKBbQm2CC1iKXkWBFB_4ehvqroACgUeAOusR0xSKPtqfATdsn-xX4PKDln5bFQrnhtZgvfo9nS6pB5-rSEogFu6C2iFeSBQgIE3iLgPDgAqAGoQGAB92d9d8CkAcEqAfhtrECqAelz7ECqAfnnbECqAfonbECqAf507ECqAfJ2rECqAep4LECqAeo0huoB7HcG6gHsJuxAqgHrrGxAqgH_bKxAqgHyM-xAqgHyc-xAqgH_NWxAqgH-9WxAqgHjNaxAqgHi9axAqgHmuKxAqgHm-KxAqgHndexAqgHndSxAqgHgcYbqAf8r7ECqAfVzhuoB77ZsQKoB6vFG6gHnNwbqAe3obECqAfVqbECqAfn2rECqAfetbECqAfqsbECqAe-t7ECqAeZtbECqAeFwbECqAfrpbECqAfKqbECkggLNDVmZ04teTA5VGOoCAHSCC4IgEEQARheMgKCAjoPgEKAwICAgICAgAKqgIAYSNmg0jVQFFjYqueDxKyXA2ABmglDaHR0cHM6Ly93d3cuYWRvYmUuY29tL2luL2Fjcm9iYXQvY2FtcGFpZ24vZG8tdGhhdC13aXRoLWFjcm9iYXQuaHRtbLEJoJ70fj-spdfICRfICY8ByAnCAcgJlwK6Cz8IAxAFGAQgBygBMBxAAUgAWH1gAGgAcAGIAQCYAQGiAQgKAKgCAdgCAqgBAdgBA4ACAYgCBboDB3Zpc2lucmLQCxLgCwGiDCUqCgoIleKxAo7fsQJqEgoQY29tLmFkb2JlLnJlYWRlcngAiAEA0gwCEAHaDCUKChCww-Kbga-5hWgSAgEDGg0Yu6C2iFcgkZ-S9c4FQAFKAhAfmg0BEqoNAklOyA0B0g3DBGh0dHBzOi8vYWQuZG91YmxlY2xpY2submV0L2RkbS90cmFja2Nsay9OOTcyOTUyLjI3OTM4MkJJRE1BTkFHRVJfREZBU0lURS9CMjYxMjYyMDAuMzE3MTM5NDU5O2RjX3Rya19haWQ9NTA5OTYyODczO2RjX3Rya19jaWQ9MTU5OTQzMzE3O2RjX2RibV90b2tlbj1BT2plTE5FQUFBQTdDalFLREFnQUZRQUFBQUFkQUFBQUFCSU1DQUFWQUFBQUFCMEFBQUFBSWhRSXU2QzJpRmVvQW91QThPQUNzQUtSdW9YbkEwQTdFSmZudWdGVXFrUkJiSU16bGVRelp6TF9wWVRuO2RjX2xhdD07ZGNfcmRpZD07dGFnX2Zvcl9jaGlsZF9kaXJlY3RlZF90cmVhdG1lbnQ9O3RmdWE9O2x0ZD07ZGNfdGR2PTE7ZGNfdHJhbnNwYXJlbnQ9MTtkY19ydWk9MTtkY19lcHM9QUhhczhjQVNZQlRiNmxyYmROT1ljTjV4Sml0S2E2VEFRZDR1N19oQ2wtdmFyemNtX1JLZnRXNVJiZmMxTElSRC1BV3pQWGhYelhYbF8yOTJpZWZYN3c7ZGNfcHViaWQ9Nj9odHRwczovL3d3dy5hZG9iZS5jb20vaW4vYWNyb2JhdC9jYW1wYWlnbi9kby10aGF0LXdpdGgtYWNyb2JhdC5odG1sP3NkaWQ9WlhMOERQNDQmbXY9c29jaWFsJm12Mj1wYWlkc29jJmdhZF9zb3VyY2U9MrATj_G4JbgT____________AYgUA7AUA8AVgYCAQNAVAdgVAZgWAagWAeIWAggBgBcBihcYCAMYASABKAEwATgBQAFIAVABWAFgAmgBoBcBqRdXv8ICGj4Y8LoXBigAMAA4AdAYAfAYAQ&ase=2&gclid=EAIaIQobChMIub7ng8SslwMVMyIDBB0_Eg94EAEYASAAEgLDlvD_BwE&num=1&cid=CAASwwHkaHwctRZa0t8CcRtwWCY2x4_l5kE0ABXa_1CEZUcSt80pbgVlsCtZ4lSGKxL6eLWcAytfl-py0ey821dBUZdzzS9YNwdKFkTCXp8mqEvJN6iT5i3vB1JLnOXS-ecW0GOA0oiCdUZhg9OKI6Xp47Va8H08UUnhyA0q0eOLjUOMBcTc3hNZBdxuWQiUiTpNIZn9j11dVKcMyp4R21p0BfrvNy82jGneSkRTxu_B4PZBfRjIyp6SGWMwS-c7DlsT1Gg57PA&ad_cpn=%5BCPN%5D&sig=AOD64_0vKevbV7ud5sdZ0cVqmckqt6CTbA&ctype=110&video_id=45fgN-y09Tc&label=video_click_to_advertiser_site&ms=%5BCLICK_MS%5D&nb=0&nx=%5BNX%5D&ny=%5BNY%5D&dim=%5BDIM%5D
+                - link "Use AI Assistant to compare contracts, pull insights and save important findings to notes." [ref=e230]:
+                  - /url: https://www.googleadservices.com/pagead/aclk?sa=L&ai=CfRbwrKfIarm4BrPEjNAPv6S8wAeW0ZOQigGaqMm9uBWwkB8QASAAYOXq4wOCARdjYS1wdWItNjIxOTgxMTc0NzA0OTM3MaABi-KKoAGoAwTIAwqqBMgCT9A8Lm-8619Hr23PDQv443JMnLpj97Wt9Qc7CoVw1QiCm134oLFigp4aYqyqW0ah7_mN1n3Z0qwNSJ9RlZh9ZFQklOV9cjDExKC5AH-6q5kmxgANFuG6XxPfROo2b-ZsaHWB4Y_prmYy75Hd_ZBO3-NxJjESLOG8odYGnVtb02ggd8OfeJlQLCkRNIn6aUAENwL_kurOniqYMfH6x3L67pQsmQky01yuTJzSSrdoHR6CwV2TDOK_7q7j30pMS01Lrgjco5rTxXGwLD78i5YDKlz8L7CbUGOW3V8RMr8LGyYnb0dlIedqDPkSPTEHDfvz2xUcfCTCM-YVR1zguPuRXSI122PWJQUFEdrhKBbQm2CC1iKXkWBFB_4ehvqroACgUeAOusR0xSKPtqfATdsn-xX4PKDln5bFQrnhtZgvfo9nS6pB5-rSEogFu6C2iFeSBQgIE3iLgPDgAqAGoQGAB92d9d8CkAcEqAfhtrECqAelz7ECqAfnnbECqAfonbECqAf507ECqAfJ2rECqAep4LECqAeo0huoB7HcG6gHsJuxAqgHrrGxAqgH_bKxAqgHyM-xAqgHyc-xAqgH_NWxAqgH-9WxAqgHjNaxAqgHi9axAqgHmuKxAqgHm-KxAqgHndexAqgHndSxAqgHgcYbqAf8r7ECqAfVzhuoB77ZsQKoB6vFG6gHnNwbqAe3obECqAfVqbECqAfn2rECqAfetbECqAfqsbECqAe-t7ECqAeZtbECqAeFwbECqAfrpbECqAfKqbECkggLNDVmZ04teTA5VGOoCAHSCC4IgEEQARheMgKCAjoPgEKAwICAgICAgAKqgIAYSNmg0jVQFFjYqueDxKyXA2ABmglDaHR0cHM6Ly93d3cuYWRvYmUuY29tL2luL2Fjcm9iYXQvY2FtcGFpZ24vZG8tdGhhdC13aXRoLWFjcm9iYXQuaHRtbLEJoJ70fj-spdfICRfICY8ByAnCAcgJlwK6Cz8IAxAFGAQgBygBMBxAAUgAWH1gAGgAcAGIAQCYAQGiAQgKAKgCAdgCAqgBAdgBA4ACAYgCBboDB3Zpc2lucmLQCxLgCwGiDCUqCgoIleKxAo7fsQJqEgoQY29tLmFkb2JlLnJlYWRlcngAiAEA0gwCEAHaDCUKChCww-Kbga-5hWgSAgEDGg0Yu6C2iFcgkZ-S9c4FQAFKAhAfmg0BEqoNAklOyA0B0g3DBGh0dHBzOi8vYWQuZG91YmxlY2xpY2submV0L2RkbS90cmFja2Nsay9OOTcyOTUyLjI3OTM4MkJJRE1BTkFHRVJfREZBU0lURS9CMjYxMjYyMDAuMzE3MTM5NDU5O2RjX3Rya19haWQ9NTA5OTYyODczO2RjX3Rya19jaWQ9MTU5OTQzMzE3O2RjX2RibV90b2tlbj1BT2plTE5FQUFBQTdDalFLREFnQUZRQUFBQUFkQUFBQUFCSU1DQUFWQUFBQUFCMEFBQUFBSWhRSXU2QzJpRmVvQW91QThPQUNzQUtSdW9YbkEwQTdFSmZudWdGVXFrUkJiSU16bGVRelp6TF9wWVRuO2RjX2xhdD07ZGNfcmRpZD07dGFnX2Zvcl9jaGlsZF9kaXJlY3RlZF90cmVhdG1lbnQ9O3RmdWE9O2x0ZD07ZGNfdGR2PTE7ZGNfdHJhbnNwYXJlbnQ9MTtkY19ydWk9MTtkY19lcHM9QUhhczhjQVNZQlRiNmxyYmROT1ljTjV4Sml0S2E2VEFRZDR1N19oQ2wtdmFyemNtX1JLZnRXNVJiZmMxTElSRC1BV3pQWGhYelhYbF8yOTJpZWZYN3c7ZGNfcHViaWQ9Nj9odHRwczovL3d3dy5hZG9iZS5jb20vaW4vYWNyb2JhdC9jYW1wYWlnbi9kby10aGF0LXdpdGgtYWNyb2JhdC5odG1sP3NkaWQ9WlhMOERQNDQmbXY9c29jaWFsJm12Mj1wYWlkc29jJmdhZF9zb3VyY2U9MrATj_G4JbgT____________AYgUA7AUA8AVgYCAQNAVAdgVAZgWAagWAeIWAggBgBcBihcYCAMYASABKAEwATgBQAFIAVABWAFgAmgBoBcBqRdXv8ICGj4Y8LoXBigAMAA4AdAYAfAYAQ&ase=2&gclid=EAIaIQobChMIub7ng8SslwMVMyIDBB0_Eg94EAEYASAAEgLDlvD_BwE&num=1&cid=CAASwwHkaHwctRZa0t8CcRtwWCY2x4_l5kE0ABXa_1CEZUcSt80pbgVlsCtZ4lSGKxL6eLWcAytfl-py0ey821dBUZdzzS9YNwdKFkTCXp8mqEvJN6iT5i3vB1JLnOXS-ecW0GOA0oiCdUZhg9OKI6Xp47Va8H08UUnhyA0q0eOLjUOMBcTc3hNZBdxuWQiUiTpNIZn9j11dVKcMyp4R21p0BfrvNy82jGneSkRTxu_B4PZBfRjIyp6SGWMwS-c7DlsT1Gg57PA&ad_cpn=%5BCPN%5D&sig=AOD64_0vKevbV7ud5sdZ0cVqmckqt6CTbA&ctype=110&video_id=45fgN-y09Tc&label=video_click_to_advertiser_site&ms=%5BCLICK_MS%5D&nb=7&nx=%5BNX%5D&ny=%5BNY%5D&dim=%5BDIM%5D
+                - generic [ref=e231]:
+                  - button "Adobe Document Cloud Media" [ref=e235]
+                  - generic [ref=e239]:
+                    - generic [ref=e240]: Sponsored
+                    - text: ·
+                  - generic [ref=e241]: Adobe Acrobat
+              - button "My Ad Centre" [ref=e245]
+            - generic [ref=e251]:
+              - link "Watch" [ref=e254]:
+                - /url: /watch?v=45fgN-y09Tc
+              - link "Learn more" [ref=e260]:
+                - /url: https://www.googleadservices.com/pagead/aclk?sa=L&ai=CfRbwrKfIarm4BrPEjNAPv6S8wAeW0ZOQigGaqMm9uBWwkB8QASAAYOXq4wOCARdjYS1wdWItNjIxOTgxMTc0NzA0OTM3MaABi-KKoAGoAwTIAwqqBMgCT9A8Lm-8619Hr23PDQv443JMnLpj97Wt9Qc7CoVw1QiCm134oLFigp4aYqyqW0ah7_mN1n3Z0qwNSJ9RlZh9ZFQklOV9cjDExKC5AH-6q5kmxgANFuG6XxPfROo2b-ZsaHWB4Y_prmYy75Hd_ZBO3-NxJjESLOG8odYGnVtb02ggd8OfeJlQLCkRNIn6aUAENwL_kurOniqYMfH6x3L67pQsmQky01yuTJzSSrdoHR6CwV2TDOK_7q7j30pMS01Lrgjco5rTxXGwLD78i5YDKlz8L7CbUGOW3V8RMr8LGyYnb0dlIedqDPkSPTEHDfvz2xUcfCTCM-YVR1zguPuRXSI122PWJQUFEdrhKBbQm2CC1iKXkWBFB_4ehvqroACgUeAOusR0xSKPtqfATdsn-xX4PKDln5bFQrnhtZgvfo9nS6pB5-rSEogFu6C2iFeSBQgIE3iLgPDgAqAGoQGAB92d9d8CkAcEqAfhtrECqAelz7ECqAfnnbECqAfonbECqAf507ECqAfJ2rECqAep4LECqAeo0huoB7HcG6gHsJuxAqgHrrGxAqgH_bKxAqgHyM-xAqgHyc-xAqgH_NWxAqgH-9WxAqgHjNaxAqgHi9axAqgHmuKxAqgHm-KxAqgHndexAqgHndSxAqgHgcYbqAf8r7ECqAfVzhuoB77ZsQKoB6vFG6gHnNwbqAe3obECqAfVqbECqAfn2rECqAfetbECqAfqsbECqAe-t7ECqAeZtbECqAeFwbECqAfrpbECqAfKqbECkggLNDVmZ04teTA5VGOoCAHSCC4IgEEQARheMgKCAjoPgEKAwICAgICAgAKqgIAYSNmg0jVQFFjYqueDxKyXA2ABmglDaHR0cHM6Ly93d3cuYWRvYmUuY29tL2luL2Fjcm9iYXQvY2FtcGFpZ24vZG8tdGhhdC13aXRoLWFjcm9iYXQuaHRtbLEJoJ70fj-spdfICRfICY8ByAnCAcgJlwK6Cz8IAxAFGAQgBygBMBxAAUgAWH1gAGgAcAGIAQCYAQGiAQgKAKgCAdgCAqgBAdgBA4ACAYgCBboDB3Zpc2lucmLQCxLgCwGiDCUqCgoIleKxAo7fsQJqEgoQY29tLmFkb2JlLnJlYWRlcngAiAEA0gwCEAHaDCUKChCww-Kbga-5hWgSAgEDGg0Yu6C2iFcgkZ-S9c4FQAFKAhAfmg0BEqoNAklOyA0B0g3DBGh0dHBzOi8vYWQuZG91YmxlY2xpY2submV0L2RkbS90cmFja2Nsay9OOTcyOTUyLjI3OTM4MkJJRE1BTkFHRVJfREZBU0lURS9CMjYxMjYyMDAuMzE3MTM5NDU5O2RjX3Rya19haWQ9NTA5OTYyODczO2RjX3Rya19jaWQ9MTU5OTQzMzE3O2RjX2RibV90b2tlbj1BT2plTE5FQUFBQTdDalFLREFnQUZRQUFBQUFkQUFBQUFCSU1DQUFWQUFBQUFCMEFBQUFBSWhRSXU2QzJpRmVvQW91QThPQUNzQUtSdW9YbkEwQTdFSmZudWdGVXFrUkJiSU16bGVRelp6TF9wWVRuO2RjX2xhdD07ZGNfcmRpZD07dGFnX2Zvcl9jaGlsZF9kaXJlY3RlZF90cmVhdG1lbnQ9O3RmdWE9O2x0ZD07ZGNfdGR2PTE7ZGNfdHJhbnNwYXJlbnQ9MTtkY19ydWk9MTtkY19lcHM9QUhhczhjQVNZQlRiNmxyYmROT1ljTjV4Sml0S2E2VEFRZDR1N19oQ2wtdmFyemNtX1JLZnRXNVJiZmMxTElSRC1BV3pQWGhYelhYbF8yOTJpZWZYN3c7ZGNfcHViaWQ9Nj9odHRwczovL3d3dy5hZG9iZS5jb20vaW4vYWNyb2JhdC9jYW1wYWlnbi9kby10aGF0LXdpdGgtYWNyb2JhdC5odG1sP3NkaWQ9WlhMOERQNDQmbXY9c29jaWFsJm12Mj1wYWlkc29jJmdhZF9zb3VyY2U9MrATj_G4JbgT____________AYgUA7AUA8AVgYCAQNAVAdgVAZgWAagWAeIWAggBgBcBihcYCAMYASABKAEwATgBQAFIAVABWAFgAmgBoBcBqRdXv8ICGj4Y8LoXBigAMAA4AdAYAfAYAQ&ase=2&gclid=EAIaIQobChMIub7ng8SslwMVMyIDBB0_Eg94EAEYASAAEgLDlvD_BwE&num=1&cid=CAASwwHkaHwctRZa0t8CcRtwWCY2x4_l5kE0ABXa_1CEZUcSt80pbgVlsCtZ4lSGKxL6eLWcAytfl-py0ey821dBUZdzzS9YNwdKFkTCXp8mqEvJN6iT5i3vB1JLnOXS-ecW0GOA0oiCdUZhg9OKI6Xp47Va8H08UUnhyA0q0eOLjUOMBcTc3hNZBdxuWQiUiTpNIZn9j11dVKcMyp4R21p0BfrvNy82jGneSkRTxu_B4PZBfRjIyp6SGWMwS-c7DlsT1Gg57PA&ad_cpn=%5BCPN%5D&sig=AOD64_0vKevbV7ud5sdZ0cVqmckqt6CTbA&ctype=110&video_id=45fgN-y09Tc&label=video_click_to_advertiser_site&ms=%5BCLICK_MS%5D&nb=8&nx=%5BNX%5D&ny=%5BNY%5D&dim=%5BDIM%5D
+        - generic [ref=e265]:
+          - link [aria-hidden] [ref=e267] [cursor=pointer]:
+            - /url: /watch?v=eiDiKwbGfIY&list=RDeiDiKwbGfIY&start_radio=1&pp=ygUUUGVyZmVjdCBieSBFZCBTaGVyYW6gBwE%3D
+          - generic [ref=e269] [cursor=pointer]:
+            - generic [ref=e270]:
+              - heading [level=3] [ref=e272]:
+                - link "Ed Sheeran - Perfect Symphony [with Andrea Bocelli] (Official Music Video) 5 minutes, 34 seconds" [ref=e273]:
+                  - /url: /watch?v=eiDiKwbGfIY&list=RDeiDiKwbGfIY&start_radio=1&pp=ygUUUGVyZmVjdCBieSBFZCBTaGVyYW6gBwE%3D
+                  - text: Ed Sheeran - Perfect Symphony [with Andrea Bocelli] (Official Music Video)
+              - generic [ref=e276]:
+                - generic [ref=e277]: 569m
+                - generic [ref=e278]: •8 yr ago
+            - generic [ref=e279]:
+              - button "Collaboration channels" [ref=e281]
+              - generic [ref=e298]: Ed Sheeranand Andrea Bocelli
+            - generic [ref=e308]:
+              - generic [ref=e309]: "Brand new album 'Play' out now: https://es.lnk.to/play The official music video for Ed Sheeran - Perfect Symphony with @Andrea ..."
+              - tooltip "tooltip"
+        - generic [ref=e311]:
+          - link [aria-hidden] [ref=e313] [cursor=pointer]:
+            - /url: /watch?v=kPhpHvnnn0Q&list=RDkPhpHvnnn0Q&start_radio=1&pp=ygUUUGVyZmVjdCBieSBFZCBTaGVyYW6gBwE%3D
+          - generic [ref=e315] [cursor=pointer]:
+            - generic [ref=e316]:
+              - heading [level=3] [ref=e318]:
+                - link "Ed Sheeran - Perfect (Lyrics) 4 minutes, 24 seconds" [ref=e319]:
+                  - /url: /watch?v=kPhpHvnnn0Q&list=RDkPhpHvnnn0Q&start_radio=1&pp=ygUUUGVyZmVjdCBieSBFZCBTaGVyYW6gBwE%3D
+                  - text: Ed Sheeran - Perfect (Lyrics)
+              - generic [ref=e322]:
+                - generic [ref=e323]: 220m
+                - generic [ref=e324]: •7 yr ago
+            - generic [ref=e325]:
+              - link "Go to channel 7clouds" [ref=e326]:
+                - /url: /@7clouds
+              - generic [ref=e327]:
+                - link "7clouds" [ref=e331]:
+                  - /url: /@7clouds
+                - img "Verified" [ref=e336]
+            - generic [ref=e338]:
+              - generic [ref=e339]: "Ed Sheeran - Perfect (Lyrics) ⏬ Download / Stream: https://ad.gt/yt-perfect Turn on notifications to stay updated with new ..."
+              - tooltip "tooltip"
+        - generic [ref=e348] [cursor=pointer]:
+          - link [aria-hidden] [ref=e349]:
+            - /url: https://www.googleadservices.com/pagead/aclk?sa=L&ai=Cg5S5rKfIarm4BrPEjNAPv6S8wAf1y5__iQGT9vK_hBawkB8QAiAAYOXq4wOCARdjYS1wdWItNjIxOTgxMTc0NzA0OTM3MaAB9OmL_gKoAwTIAwqqBKsCT9A8Lm-8619Hr23PDQv443JMnLpj97Wt9Qc7CoVw1QiCm134oLFigp4aYqyqW0ah7_mN1n3Z0qwNSJ9RlZh9ZFQklOV9cjDExKC5AH-6q5kmxgANFuG6XxPfROo2b-ZsaHWB4Y_prmYy75Hd_ZBO3-NxJjESLOG8odYGnVtb02ggd8OfeJlQLCkRNIn6aUAENwL_kurOniqYMfH6x3L67pQsmQky01yuTJzSSrdoHR6CwV2TDOK_7q7j30pMS01Lrgjco5rTxXGwLD78i5YDKlz8L7CbUGOW3V8RKr_kguRAp41qfkRcNUxzGN1DnHCMXAT_Uw8J5Mg4SQY-0SVLtSc-BhRy6pfwo4xMTuweIWHbgNTroXJM3E_6evAxzW67ufAOOE7E9aVYUbeIBZ2DsKlXkgUICBN4m4ORggGgBqEBgAf0lfSBAZAHBKgH4baxAqgHpc-xAqgH552xAqgH6J2xAqgH-dOxAqgHydqxAqgHqeCxAqgHqNIbqAex3BuoB7CbsQKoB66xsQKoB_2ysQKoB8jPsQKoB8nPsQKoB_zVsQKoB_vVsQKoB4zWsQKoB4vWsQKoB5risQKoB5visQKoB53XsQKoB53UsQKoB4HGG6gH_K-xAqgH1c4bqAe-2bECqAerxRuoB5zcG6gHt6GxAqgH1amxAqgH59qxAqgH3rWxAqgH6rGxAqgHvrexAqgHmbWxAqgHhcGxAqgH66WxAqgHyqmxAqgHwsixApIIC05lTVBGOENCTkRFqAgB0gguCIBBEAEYXjICggI6D4BCgMCAgICAgIACqoCAGEjZoNI1UBRY2Krng8SslwNgAZoJGWh0dHBzOi8vb25lLmdvb2dsZS5jb20vYWmxCUANZaCHJB-ryAkXyAmPAcgJwgG6Cz8IAxAFGAQgBygBMBxAAUgAWH1gAGgAcAGIAQCYAQGiAQgKAKgCAdgCAqgBAdgBBoACAYgCBboDB3Zpc2lucmLQCxLgCwGiDFAqCgoIleKxAo7fsQJiEAoOY29tLmdvb2dsZS5vbmVqKwopY29tLmdvb2dsZS5hbmRyb2lkLmFwcHMuc3Vic2NyaXB0aW9ucy5yZWR4AIgBANIMAhAB2gwmCgsQgOKeqbekg_CqARICAQMaDRidg7CpVyDsqtOl3AVAAUoCEB-aDQESqg0CSU7IDQHSDY8FaHR0cHM6Ly9hZC5kb3VibGVjbGljay5uZXQvc2VhcmNoYWRzL2xpbmsvY2xpY2s_bGlkPTU4NzAwMDA4OTk2ODA1MzIzJmRzX2FfY2lkPTI3MjkwODY5OSZkc19hX2NhaWQ9MjM0NDA2NTQ3NDkmZHNfYV9hZ2lkPTE5NjU3MzcxMzc3MiZkc19hX2ZpaWQ9JmRzX2FfbGlkPSZkc19hX2V4dGlkPSYmZHNfZV9hZGlkPTgxODYyMjg2NDYwNSZkc19lX21hdGNodHlwZT1jb250ZW50JmRzX2VfZGV2aWNlPWMmZHNfZV9uZXR3b3JrPXl0aWYmJmRzX3VybF92PTImZHNfZGVzdF91cmw9aHR0cHM6Ly9hZC5kb3VibGVjbGljay5uZXQvZGRtL3RyYWNrY2xrL041Mjk1LjUwODc4MTNERU1BTkRHRU4vQjM0NzEyODczLjQ1Mjg2MjU4NjtkY190cmtfYWlkPTY0NjkzNzgxNztkY190cmtfY2lkPTI0NjQ4NDI4MztkY19sYXQ9O2RjX3JkaWQ9O3RhZ19mb3JfY2hpbGRfZGlyZWN0ZWRfdHJlYXRtZW50PTt0ZnVhPTtnZHByPSR7R0RQUn07Z2Rwcl9jb25zZW50PSR7R0RQUl9DT05TRU5UXzc1NX07bHRkPTtkY190ZHY9MTtkY190cmFuc3BhcmVudD0xOz9odHRwczovL29uZS5nb29nbGUuY29tL2FpP3V0bV9zb3VyY2U9ZzEmdXRtX21lZGl1bT1wYWlkX21lZGlhJnV0bV9jYW1wYWlnbj1kZ19haXBsYW5zJmdhZF9zb3VyY2U9MiZnYWRfY2FtcGFpZ25pZD0yMzQ0MDY1NDc0ObgT____________AYgUBLAUA8AVgYCAQNAVAdgVAZgWAeIWAggBgBcBihcYCAMYASABKAEwATgBQAFIAVABWAFgAmgBoBcBuhcGKAAwADgB0BgB8BgBwhkCCAE&ase=2&gclid=EAIaIQobChMIub7ng8SslwMVMyIDBB0_Eg94EAEYAiAAEgLZTvD_BwE&num=2&cid=CAASwwHkaHwctRZa0t8CcRtwWCY2x4_l5kE0ABXa_1CEZUcSt80pbgVlsCtZ4lSGKxL6eLWcAytfl-py0ey821dBUZdzzS9YNwdKFkTCXp8mqEvJN6iT5i3vB1JLnOXS-ecW0GOA0oiCdUZhg9OKI6Xp47Va8H08UUnhyA0q0eOLjUOMBcTc3hNZBdxuWQiUiTpNIZn9j11dVKcMyp4R21p0BfrvNy82jGneSkRTxu_B4PZBfRjIyp6SGWMwS-c7DlsT1Gg57PA&ad_cpn=%5BCPN%5D&sig=AOD64_2P3UBDAIOWkvStMIkFb2aaeam4RA&ctype=110&video_id=NeMPF8CBNDE&label=video_click_to_advertiser_site&ms=%5BCLICK_MS%5D&nb=21&nx=%5BNX%5D&ny=%5BNY%5D&dim=%5BDIM%5D
+            - button [aria-hidden] [ref=e355]
+          - generic [ref=e359]:
+            - generic [ref=e360]:
+              - generic [ref=e361]:
+                - link "Gemini Omni makes creating videos as easy as having a conversation." [ref=e364]:
+                  - /url: https://www.googleadservices.com/pagead/aclk?sa=L&ai=Cg5S5rKfIarm4BrPEjNAPv6S8wAf1y5__iQGT9vK_hBawkB8QAiAAYOXq4wOCARdjYS1wdWItNjIxOTgxMTc0NzA0OTM3MaAB9OmL_gKoAwTIAwqqBKsCT9A8Lm-8619Hr23PDQv443JMnLpj97Wt9Qc7CoVw1QiCm134oLFigp4aYqyqW0ah7_mN1n3Z0qwNSJ9RlZh9ZFQklOV9cjDExKC5AH-6q5kmxgANFuG6XxPfROo2b-ZsaHWB4Y_prmYy75Hd_ZBO3-NxJjESLOG8odYGnVtb02ggd8OfeJlQLCkRNIn6aUAENwL_kurOniqYMfH6x3L67pQsmQky01yuTJzSSrdoHR6CwV2TDOK_7q7j30pMS01Lrgjco5rTxXGwLD78i5YDKlz8L7CbUGOW3V8RKr_kguRAp41qfkRcNUxzGN1DnHCMXAT_Uw8J5Mg4SQY-0SVLtSc-BhRy6pfwo4xMTuweIWHbgNTroXJM3E_6evAxzW67ufAOOE7E9aVYUbeIBZ2DsKlXkgUICBN4m4ORggGgBqEBgAf0lfSBAZAHBKgH4baxAqgHpc-xAqgH552xAqgH6J2xAqgH-dOxAqgHydqxAqgHqeCxAqgHqNIbqAex3BuoB7CbsQKoB66xsQKoB_2ysQKoB8jPsQKoB8nPsQKoB_zVsQKoB_vVsQKoB4zWsQKoB4vWsQKoB5risQKoB5visQKoB53XsQKoB53UsQKoB4HGG6gH_K-xAqgH1c4bqAe-2bECqAerxRuoB5zcG6gHt6GxAqgH1amxAqgH59qxAqgH3rWxAqgH6rGxAqgHvrexAqgHmbWxAqgHhcGxAqgH66WxAqgHyqmxAqgHwsixApIIC05lTVBGOENCTkRFqAgB0gguCIBBEAEYXjICggI6D4BCgMCAgICAgIACqoCAGEjZoNI1UBRY2Krng8SslwNgAZoJGWh0dHBzOi8vb25lLmdvb2dsZS5jb20vYWmxCUANZaCHJB-ryAkXyAmPAcgJwgG6Cz8IAxAFGAQgBygBMBxAAUgAWH1gAGgAcAGIAQCYAQGiAQgKAKgCAdgCAqgBAdgBBoACAYgCBboDB3Zpc2lucmLQCxLgCwGiDFAqCgoIleKxAo7fsQJiEAoOY29tLmdvb2dsZS5vbmVqKwopY29tLmdvb2dsZS5hbmRyb2lkLmFwcHMuc3Vic2NyaXB0aW9ucy5yZWR4AIgBANIMAhAB2gwmCgsQgOKeqbekg_CqARICAQMaDRidg7CpVyDsqtOl3AVAAUoCEB-aDQESqg0CSU7IDQHSDY8FaHR0cHM6Ly9hZC5kb3VibGVjbGljay5uZXQvc2VhcmNoYWRzL2xpbmsvY2xpY2s_bGlkPTU4NzAwMDA4OTk2ODA1MzIzJmRzX2FfY2lkPTI3MjkwODY5OSZkc19hX2NhaWQ9MjM0NDA2NTQ3NDkmZHNfYV9hZ2lkPTE5NjU3MzcxMzc3MiZkc19hX2ZpaWQ9JmRzX2FfbGlkPSZkc19hX2V4dGlkPSYmZHNfZV9hZGlkPTgxODYyMjg2NDYwNSZkc19lX21hdGNodHlwZT1jb250ZW50JmRzX2VfZGV2aWNlPWMmZHNfZV9uZXR3b3JrPXl0aWYmJmRzX3VybF92PTImZHNfZGVzdF91cmw9aHR0cHM6Ly9hZC5kb3VibGVjbGljay5uZXQvZGRtL3RyYWNrY2xrL041Mjk1LjUwODc4MTNERU1BTkRHRU4vQjM0NzEyODczLjQ1Mjg2MjU4NjtkY190cmtfYWlkPTY0NjkzNzgxNztkY190cmtfY2lkPTI0NjQ4NDI4MztkY19sYXQ9O2RjX3JkaWQ9O3RhZ19mb3JfY2hpbGRfZGlyZWN0ZWRfdHJlYXRtZW50PTt0ZnVhPTtnZHByPSR7R0RQUn07Z2Rwcl9jb25zZW50PSR7R0RQUl9DT05TRU5UXzc1NX07bHRkPTtkY190ZHY9MTtkY190cmFuc3BhcmVudD0xOz9odHRwczovL29uZS5nb29nbGUuY29tL2FpP3V0bV9zb3VyY2U9ZzEmdXRtX21lZGl1bT1wYWlkX21lZGlhJnV0bV9jYW1wYWlnbj1kZ19haXBsYW5zJmdhZF9zb3VyY2U9MiZnYWRfY2FtcGFpZ25pZD0yMzQ0MDY1NDc0ObgT____________AYgUBLAUA8AVgYCAQNAVAdgVAZgWAeIWAggBgBcBihcYCAMYASABKAEwATgBQAFIAVABWAFgAmgBoBcBuhcGKAAwADgB0BgB8BgBwhkCCAE&ase=2&gclid=EAIaIQobChMIub7ng8SslwMVMyIDBB0_Eg94EAEYAiAAEgLZTvD_BwE&num=2&cid=CAASwwHkaHwctRZa0t8CcRtwWCY2x4_l5kE0ABXa_1CEZUcSt80pbgVlsCtZ4lSGKxL6eLWcAytfl-py0ey821dBUZdzzS9YNwdKFkTCXp8mqEvJN6iT5i3vB1JLnOXS-ecW0GOA0oiCdUZhg9OKI6Xp47Va8H08UUnhyA0q0eOLjUOMBcTc3hNZBdxuWQiUiTpNIZn9j11dVKcMyp4R21p0BfrvNy82jGneSkRTxu_B4PZBfRjIyp6SGWMwS-c7DlsT1Gg57PA&ad_cpn=%5BCPN%5D&sig=AOD64_2P3UBDAIOWkvStMIkFb2aaeam4RA&ctype=110&video_id=NeMPF8CBNDE&label=video_click_to_advertiser_site&ms=%5BCLICK_MS%5D&nb=0&nx=%5BNX%5D&ny=%5BNY%5D&dim=%5BDIM%5D
+                - link "Create & edit videos in Gemini. Upgrade to a Google AI plan." [ref=e367]:
+                  - /url: https://www.googleadservices.com/pagead/aclk?sa=L&ai=Cg5S5rKfIarm4BrPEjNAPv6S8wAf1y5__iQGT9vK_hBawkB8QAiAAYOXq4wOCARdjYS1wdWItNjIxOTgxMTc0NzA0OTM3MaAB9OmL_gKoAwTIAwqqBKsCT9A8Lm-8619Hr23PDQv443JMnLpj97Wt9Qc7CoVw1QiCm134oLFigp4aYqyqW0ah7_mN1n3Z0qwNSJ9RlZh9ZFQklOV9cjDExKC5AH-6q5kmxgANFuG6XxPfROo2b-ZsaHWB4Y_prmYy75Hd_ZBO3-NxJjESLOG8odYGnVtb02ggd8OfeJlQLCkRNIn6aUAENwL_kurOniqYMfH6x3L67pQsmQky01yuTJzSSrdoHR6CwV2TDOK_7q7j30pMS01Lrgjco5rTxXGwLD78i5YDKlz8L7CbUGOW3V8RKr_kguRAp41qfkRcNUxzGN1DnHCMXAT_Uw8J5Mg4SQY-0SVLtSc-BhRy6pfwo4xMTuweIWHbgNTroXJM3E_6evAxzW67ufAOOE7E9aVYUbeIBZ2DsKlXkgUICBN4m4ORggGgBqEBgAf0lfSBAZAHBKgH4baxAqgHpc-xAqgH552xAqgH6J2xAqgH-dOxAqgHydqxAqgHqeCxAqgHqNIbqAex3BuoB7CbsQKoB66xsQKoB_2ysQKoB8jPsQKoB8nPsQKoB_zVsQKoB_vVsQKoB4zWsQKoB4vWsQKoB5risQKoB5visQKoB53XsQKoB53UsQKoB4HGG6gH_K-xAqgH1c4bqAe-2bECqAerxRuoB5zcG6gHt6GxAqgH1amxAqgH59qxAqgH3rWxAqgH6rGxAqgHvrexAqgHmbWxAqgHhcGxAqgH66WxAqgHyqmxAqgHwsixApIIC05lTVBGOENCTkRFqAgB0gguCIBBEAEYXjICggI6D4BCgMCAgICAgIACqoCAGEjZoNI1UBRY2Krng8SslwNgAZoJGWh0dHBzOi8vb25lLmdvb2dsZS5jb20vYWmxCUANZaCHJB-ryAkXyAmPAcgJwgG6Cz8IAxAFGAQgBygBMBxAAUgAWH1gAGgAcAGIAQCYAQGiAQgKAKgCAdgCAqgBAdgBBoACAYgCBboDB3Zpc2lucmLQCxLgCwGiDFAqCgoIleKxAo7fsQJiEAoOY29tLmdvb2dsZS5vbmVqKwopY29tLmdvb2dsZS5hbmRyb2lkLmFwcHMuc3Vic2NyaXB0aW9ucy5yZWR4AIgBANIMAhAB2gwmCgsQgOKeqbekg_CqARICAQMaDRidg7CpVyDsqtOl3AVAAUoCEB-aDQESqg0CSU7IDQHSDY8FaHR0cHM6Ly9hZC5kb3VibGVjbGljay5uZXQvc2VhcmNoYWRzL2xpbmsvY2xpY2s_bGlkPTU4NzAwMDA4OTk2ODA1MzIzJmRzX2FfY2lkPTI3MjkwODY5OSZkc19hX2NhaWQ9MjM0NDA2NTQ3NDkmZHNfYV9hZ2lkPTE5NjU3MzcxMzc3MiZkc19hX2ZpaWQ9JmRzX2FfbGlkPSZkc19hX2V4dGlkPSYmZHNfZV9hZGlkPTgxODYyMjg2NDYwNSZkc19lX21hdGNodHlwZT1jb250ZW50JmRzX2VfZGV2aWNlPWMmZHNfZV9uZXR3b3JrPXl0aWYmJmRzX3VybF92PTImZHNfZGVzdF91cmw9aHR0cHM6Ly9hZC5kb3VibGVjbGljay5uZXQvZGRtL3RyYWNrY2xrL041Mjk1LjUwODc4MTNERU1BTkRHRU4vQjM0NzEyODczLjQ1Mjg2MjU4NjtkY190cmtfYWlkPTY0NjkzNzgxNztkY190cmtfY2lkPTI0NjQ4NDI4MztkY19sYXQ9O2RjX3JkaWQ9O3RhZ19mb3JfY2hpbGRfZGlyZWN0ZWRfdHJlYXRtZW50PTt0ZnVhPTtnZHByPSR7R0RQUn07Z2Rwcl9jb25zZW50PSR7R0RQUl9DT05TRU5UXzc1NX07bHRkPTtkY190ZHY9MTtkY190cmFuc3BhcmVudD0xOz9odHRwczovL29uZS5nb29nbGUuY29tL2FpP3V0bV9zb3VyY2U9ZzEmdXRtX21lZGl1bT1wYWlkX21lZGlhJnV0bV9jYW1wYWlnbj1kZ19haXBsYW5zJmdhZF9zb3VyY2U9MiZnYWRfY2FtcGFpZ25pZD0yMzQ0MDY1NDc0ObgT____________AYgUBLAUA8AVgYCAQNAVAdgVAZgWAeIWAggBgBcBihcYCAMYASABKAEwATgBQAFIAVABWAFgAmgBoBcBuhcGKAAwADgB0BgB8BgBwhkCCAE&ase=2&gclid=EAIaIQobChMIub7ng8SslwMVMyIDBB0_Eg94EAEYAiAAEgLZTvD_BwE&num=2&cid=CAASwwHkaHwctRZa0t8CcRtwWCY2x4_l5kE0ABXa_1CEZUcSt80pbgVlsCtZ4lSGKxL6eLWcAytfl-py0ey821dBUZdzzS9YNwdKFkTCXp8mqEvJN6iT5i3vB1JLnOXS-ecW0GOA0oiCdUZhg9OKI6Xp47Va8H08UUnhyA0q0eOLjUOMBcTc3hNZBdxuWQiUiTpNIZn9j11dVKcMyp4R21p0BfrvNy82jGneSkRTxu_B4PZBfRjIyp6SGWMwS-c7DlsT1Gg57PA&ad_cpn=%5BCPN%5D&sig=AOD64_2P3UBDAIOWkvStMIkFb2aaeam4RA&ctype=110&video_id=NeMPF8CBNDE&label=video_click_to_advertiser_site&ms=%5BCLICK_MS%5D&nb=7&nx=%5BNX%5D&ny=%5BNY%5D&dim=%5BDIM%5D
+                - generic [ref=e368]:
+                  - button "Google" [ref=e372]
+                  - generic [ref=e376]:
+                    - generic [ref=e377]: Sponsored
+                    - text: ·
+                  - generic [ref=e378]: Google AI Plus
+              - button "My Ad Centre" [ref=e382]
+            - generic [ref=e388]:
+              - link "Watch" [ref=e391]:
+                - /url: /watch?v=NeMPF8CBNDE
+              - link "Sign up" [ref=e397]:
+                - /url: https://www.googleadservices.com/pagead/aclk?sa=L&ai=Cg5S5rKfIarm4BrPEjNAPv6S8wAf1y5__iQGT9vK_hBawkB8QAiAAYOXq4wOCARdjYS1wdWItNjIxOTgxMTc0NzA0OTM3MaAB9OmL_gKoAwTIAwqqBKsCT9A8Lm-8619Hr23PDQv443JMnLpj97Wt9Qc7CoVw1QiCm134oLFigp4aYqyqW0ah7_mN1n3Z0qwNSJ9RlZh9ZFQklOV9cjDExKC5AH-6q5kmxgANFuG6XxPfROo2b-ZsaHWB4Y_prmYy75Hd_ZBO3-NxJjESLOG8odYGnVtb02ggd8OfeJlQLCkRNIn6aUAENwL_kurOniqYMfH6x3L67pQsmQky01yuTJzSSrdoHR6CwV2TDOK_7q7j30pMS01Lrgjco5rTxXGwLD78i5YDKlz8L7CbUGOW3V8RKr_kguRAp41qfkRcNUxzGN1DnHCMXAT_Uw8J5Mg4SQY-0SVLtSc-BhRy6pfwo4xMTuweIWHbgNTroXJM3E_6evAxzW67ufAOOE7E9aVYUbeIBZ2DsKlXkgUICBN4m4ORggGgBqEBgAf0lfSBAZAHBKgH4baxAqgHpc-xAqgH552xAqgH6J2xAqgH-dOxAqgHydqxAqgHqeCxAqgHqNIbqAex3BuoB7CbsQKoB66xsQKoB_2ysQKoB8jPsQKoB8nPsQKoB_zVsQKoB_vVsQKoB4zWsQKoB4vWsQKoB5risQKoB5visQKoB53XsQKoB53UsQKoB4HGG6gH_K-xAqgH1c4bqAe-2bECqAerxRuoB5zcG6gHt6GxAqgH1amxAqgH59qxAqgH3rWxAqgH6rGxAqgHvrexAqgHmbWxAqgHhcGxAqgH66WxAqgHyqmxAqgHwsixApIIC05lTVBGOENCTkRFqAgB0gguCIBBEAEYXjICggI6D4BCgMCAgICAgIACqoCAGEjZoNI1UBRY2Krng8SslwNgAZoJGWh0dHBzOi8vb25lLmdvb2dsZS5jb20vYWmxCUANZaCHJB-ryAkXyAmPAcgJwgG6Cz8IAxAFGAQgBygBMBxAAUgAWH1gAGgAcAGIAQCYAQGiAQgKAKgCAdgCAqgBAdgBBoACAYgCBboDB3Zpc2lucmLQCxLgCwGiDFAqCgoIleKxAo7fsQJiEAoOY29tLmdvb2dsZS5vbmVqKwopY29tLmdvb2dsZS5hbmRyb2lkLmFwcHMuc3Vic2NyaXB0aW9ucy5yZWR4AIgBANIMAhAB2gwmCgsQgOKeqbekg_CqARICAQMaDRidg7CpVyDsqtOl3AVAAUoCEB-aDQESqg0CSU7IDQHSDY8FaHR0cHM6Ly9hZC5kb3VibGVjbGljay5uZXQvc2VhcmNoYWRzL2xpbmsvY2xpY2s_bGlkPTU4NzAwMDA4OTk2ODA1MzIzJmRzX2FfY2lkPTI3MjkwODY5OSZkc19hX2NhaWQ9MjM0NDA2NTQ3NDkmZHNfYV9hZ2lkPTE5NjU3MzcxMzc3MiZkc19hX2ZpaWQ9JmRzX2FfbGlkPSZkc19hX2V4dGlkPSYmZHNfZV9hZGlkPTgxODYyMjg2NDYwNSZkc19lX21hdGNodHlwZT1jb250ZW50JmRzX2VfZGV2aWNlPWMmZHNfZV9uZXR3b3JrPXl0aWYmJmRzX3VybF92PTImZHNfZGVzdF91cmw9aHR0cHM6Ly9hZC5kb3VibGVjbGljay5uZXQvZGRtL3RyYWNrY2xrL041Mjk1LjUwODc4MTNERU1BTkRHRU4vQjM0NzEyODczLjQ1Mjg2MjU4NjtkY190cmtfYWlkPTY0NjkzNzgxNztkY190cmtfY2lkPTI0NjQ4NDI4MztkY19sYXQ9O2RjX3JkaWQ9O3RhZ19mb3JfY2hpbGRfZGlyZWN0ZWRfdHJlYXRtZW50PTt0ZnVhPTtnZHByPSR7R0RQUn07Z2Rwcl9jb25zZW50PSR7R0RQUl9DT05TRU5UXzc1NX07bHRkPTtkY190ZHY9MTtkY190cmFuc3BhcmVudD0xOz9odHRwczovL29uZS5nb29nbGUuY29tL2FpP3V0bV9zb3VyY2U9ZzEmdXRtX21lZGl1bT1wYWlkX21lZGlhJnV0bV9jYW1wYWlnbj1kZ19haXBsYW5zJmdhZF9zb3VyY2U9MiZnYWRfY2FtcGFpZ25pZD0yMzQ0MDY1NDc0ObgT____________AYgUBLAUA8AVgYCAQNAVAdgVAZgWAeIWAggBgBcBihcYCAMYASABKAEwATgBQAFIAVABWAFgAmgBoBcBuhcGKAAwADgB0BgB8BgBwhkCCAE&ase=2&gclid=EAIaIQobChMIub7ng8SslwMVMyIDBB0_Eg94EAEYAiAAEgLZTvD_BwE&num=2&cid=CAASwwHkaHwctRZa0t8CcRtwWCY2x4_l5kE0ABXa_1CEZUcSt80pbgVlsCtZ4lSGKxL6eLWcAytfl-py0ey821dBUZdzzS9YNwdKFkTCXp8mqEvJN6iT5i3vB1JLnOXS-ecW0GOA0oiCdUZhg9OKI6Xp47Va8H08UUnhyA0q0eOLjUOMBcTc3hNZBdxuWQiUiTpNIZn9j11dVKcMyp4R21p0BfrvNy82jGneSkRTxu_B4PZBfRjIyp6SGWMwS-c7DlsT1Gg57PA&ad_cpn=%5BCPN%5D&sig=AOD64_2P3UBDAIOWkvStMIkFb2aaeam4RA&ctype=110&video_id=NeMPF8CBNDE&label=video_click_to_advertiser_site&ms=%5BCLICK_MS%5D&nb=8&nx=%5BNX%5D&ny=%5BNY%5D&dim=%5BDIM%5D

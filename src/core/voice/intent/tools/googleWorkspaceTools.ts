@@ -4,21 +4,11 @@ import type { ActionTool, ToolResult } from './types';
 export const runGoogleApiClient = async (command: string, ...args: string[]): Promise<any> => {
   try {
     const { invoke } = await import('@tauri-apps/api/core');
-    const { useSettingsStore } = await import('../../../../stores/settingsStore');
-
-    const settings = useSettingsStore.getState();
-    const cId = settings.googleClientId.trim();
-    const cSecret = settings.googleClientSecret.trim();
-
-    const envPrefix = (cId && cSecret)
-      ? `GOOGLE_CLIENT_ID='${cId.replace(/'/g, "\\'")}' GOOGLE_CLIENT_SECRET='${cSecret.replace(/'/g, "\\'")}' `
-      : '';
-
     // Encode [command, ...args] cleanly into base64 to avoid shell escaping / multiline issues
     const payloadJson = JSON.stringify([command, ...args]);
     const b64Payload = btoa(unescape(encodeURIComponent(payloadJson)));
 
-    const pyCmd = `${envPrefix}python3 -c "import os, sys, subprocess, base64, json; payload = json.loads(base64.b64decode('${b64Payload}').decode('utf-8')); script = next((p for p in ['src-tauri/pihu_mcps/mcp/servers/google_api_client.py', 'pihu_mcps/mcp/servers/google_api_client.py', '/Users/mayankjha/Documents/projects/pihu-os/src-tauri/pihu_mcps/mcp/servers/google_api_client.py'] if os.path.exists(p)), None); print(subprocess.check_output(['python3', script] + payload).decode('utf-8')) if script else print('{}')"`;
+    const pyCmd = `python3 -c "import os, sys, subprocess, base64, json; payload = json.loads(base64.b64decode('${b64Payload}').decode('utf-8')); script = next((p for p in ['src-tauri/pihu_mcps/mcp/servers/google_api_client.py', 'pihu_mcps/mcp/servers/google_api_client.py', '/Users/mayankjha/Documents/projects/pihu-os/src-tauri/pihu_mcps/mcp/servers/google_api_client.py'] if os.path.exists(p)), None); print(subprocess.check_output(['python3', script] + payload).decode('utf-8')) if script else print('{}')"`;
     
     const result = await invoke<string>('execute_shell_command', { command: pyCmd });
     if (result && result.trim().startsWith('{')) {
@@ -690,27 +680,13 @@ export const googleWorkspaceTools: ActionTool[] = [
     execute: async (): Promise<ToolResult> => {
       try {
         const { invoke } = await import('@tauri-apps/api/core');
-        const { useSettingsStore } = await import('../../../../stores/settingsStore');
-
-        const settings = useSettingsStore.getState();
-        const cId = settings.googleClientId.trim();
-        const cSecret = settings.googleClientSecret.trim();
-
-        if (!cId || !cSecret) {
-          return {
-            success: false,
-            error: 'Google OAuth Client ID and Client Secret are missing! Please paste your Desktop Client ID and Secret in Settings -> Google Workspace tab first.'
-          };
-        }
-
-        await invoke('google_oauth_start', { clientId: cId, clientSecret: cSecret });
-        settings.setGoogleWorkspaceConfig(cId, cSecret, true);
+        await invoke('google_oauth_start');
 
         return {
           success: true,
           data: {
             action: 'launched_google_oauth',
-            message: 'Started a dedicated local Google OAuth listener and opened sign-in in your browser. Please approve permissions to complete account linking!',
+            message: 'Opened PIHU secure sign-in. Complete Google authorization in your browser to link the account.',
           },
         };
       } catch (e: any) {

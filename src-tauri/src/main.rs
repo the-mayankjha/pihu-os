@@ -11,11 +11,13 @@ mod spotify_mcp;
 mod browser_mcp;
 mod vtop_credentials;
 mod spirits;
+mod mcp_market;
+mod shortcuts;
 use tauri::Manager;
 
 pub fn get_python_cmd() -> String {
     // 1. Check ~/.pihu-os/venv (installed app)
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/Users/mayankjha".to_string());
+    let home = std::env::var("HOME").unwrap_or_default();
     let installed_venv = format!("{home}/.pihu-os/venv/bin/python");
     if std::path::Path::new(&installed_venv).exists() {
         return installed_venv;
@@ -90,11 +92,22 @@ fn run_first_launch_setup() {
 }
 
 fn main() {
-    let builder = tauri::Builder::default();
+    let builder = tauri::Builder::default()
+        .plugin(tauri_plugin_deep_link::init())
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(|app, shortcut, event| {
+                    if event.state == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                        shortcuts::dispatch(app, shortcut);
+                    }
+                })
+                .build(),
+        );
     #[cfg(target_os = "macos")]
     let builder = builder.plugin(tauri_nspanel::init());
     builder
         .manage(browser_mcp::BrowserMcpState::default())
+        .manage(shortcuts::DynamicShortcutState::default())
         .manage(wakeword::WakewordState {
             stdin: std::sync::Mutex::new(None),
         })
@@ -105,7 +118,15 @@ fn main() {
         .manage(spotify_mcp::SpotifyMcpState::default())
         .invoke_handler(tauri::generate_handler![
             spirits::sync_spirits,
+            spirits::refresh_spirit_windows,
             spirits::sync_voice_overlay,
+            spirits::sync_command_palette,
+            shortcuts::set_global_shortcut,
+            shortcuts::clear_global_shortcut,
+            mcp_market::mcp_install_package,
+            mcp_market::mcp_list_installed,
+            mcp_market::mcp_list_tools,
+            mcp_market::mcp_call_tool,
             wakeword::trigger_listening,
             wakeword::speech_done,
             wakeword::resume_wakeword,
@@ -135,9 +156,9 @@ fn main() {
 
             let app_handle = app.handle().clone();
             wakeword::start_wakeword_engine(app_handle.clone());
-            ytmusic::start_ytmusic_engine();
+            ytmusic::start_ytmusic_engine(app_handle.clone());
             stt::start_stt_server(app_handle);
-            tts::start_tts_server();
+            tts::start_tts_server(app.handle().clone());
             Ok(())
         })
         .run(tauri::generate_context!())

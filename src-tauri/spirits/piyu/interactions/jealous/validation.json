@@ -1,0 +1,37 @@
+{
+  "ok": true,
+  "frames": 4,
+  "cell": [
+    192,
+    208
+  ],
+  "subject": "piyu",
+  "action": "jealous",
+  "sourceBounds": [
+    [
+      98,
+      10,
+      397,
+      871
+    ],
+    [
+      516,
+      11,
+      819,
+      871
+    ],
+    [
+      935,
+      10,
+      1243,
+      871
+    ],
+    [
+      1368,
+      9,
+      1693,
+      871
+    ]
+  ],
+  "method": "connected pose extraction, shared baseline and bundled despill"
+}

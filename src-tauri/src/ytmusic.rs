@@ -1,16 +1,24 @@
 use std::process::{Command, Stdio};
 use std::io::{BufRead, BufReader};
 use std::thread;
+use tauri::Manager;
 
-pub fn start_ytmusic_engine() {
+pub fn start_ytmusic_engine(app: tauri::AppHandle) {
     println!("Starting YTMusic Engine...");
     
     let python_cmd = crate::get_python_cmd();
     println!("YTMusic Engine using python binary: {}", python_cmd);
 
+    let resource_dir = match app.path().resource_dir() {
+        Ok(path) => path,
+        Err(error) => { eprintln!("Could not locate app resources for YTMusic: {error}"); return; }
+    };
+
     // Spawn the Python process for YTMusic API Server
     let mut child = match Command::new(&python_cmd)
-        .arg("python/ytmusic_server.py")
+        .arg(resource_dir.join("python/ytmusic_server.py"))
+        .current_dir(&resource_dir)
+        .env("PIHU_RESOURCE_DIR", &resource_dir)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn() 

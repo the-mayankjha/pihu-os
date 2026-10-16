@@ -1,0 +1,17 @@
+{
+  "frames": [
+    "00-REST",
+    "01-MBP",
+    "02-AA",
+    "03-EE",
+    "04-OH",
+    "05-OO",
+    "06-FV",
+    "07-L"
+  ],
+  "cell": [
+    192,
+    208
+  ],
+  "note": "Full-body poses updated to Pihu\u2019s fuller bust; existing mouth overlay PNGs remain compatible."
+}

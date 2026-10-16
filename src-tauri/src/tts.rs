@@ -1,6 +1,7 @@
 use std::process::{Command, Child};
 use std::thread;
 use std::time::Duration;
+use tauri::Manager;
 
 pub struct TtsServer {
     process: Option<Child>,
@@ -11,14 +12,17 @@ impl TtsServer {
         TtsServer { process: None }
     }
 
-    pub fn start(&mut self) -> Result<(), String> {
+    pub fn start(&mut self, resource_dir: &std::path::Path) -> Result<(), String> {
         println!("Starting TTS Server...");
         
         let python_cmd = crate::get_python_cmd();
         println!("TTS Server using python binary: {}", python_cmd);
 
         let mut command = Command::new(&python_cmd);
-        command.arg("python/tts_server.py");
+        command.arg(resource_dir.join("python/tts_server.py"))
+            .current_dir(resource_dir)
+            .env("PIHU_RESOURCE_DIR", resource_dir)
+            .env("HF_HUB_CACHE", resource_dir.join("runtime/tts/hub"));
 
         match command.spawn() {
             Ok(child) => {
@@ -40,10 +44,14 @@ impl TtsServer {
     }
 }
 
-pub fn start_tts_server() {
+pub fn start_tts_server(app: tauri::AppHandle) {
     thread::spawn(move || {
         let mut server = TtsServer::new();
-        if let Err(e) = server.start() {
+        let resource_dir = match app.path().resource_dir() {
+            Ok(path) => path,
+            Err(error) => { eprintln!("Could not locate app resources for TTS: {error}"); return; }
+        };
+        if let Err(e) = server.start(&resource_dir) {
             eprintln!("TTS Server error: {}", e);
         }
 

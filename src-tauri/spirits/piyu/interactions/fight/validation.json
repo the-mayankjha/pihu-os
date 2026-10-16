@@ -1,0 +1,75 @@
+{
+  "ok": true,
+  "frames": 8,
+  "cell": [
+    384,
+    208
+  ],
+  "layout": "4x2 source grid",
+  "sourceBounds": [
+    [
+      6,
+      33,
+      423,
+      424
+    ],
+    [
+      1,
+      33,
+      431,
+      423
+    ],
+    [
+      0,
+      71,
+      431,
+      422
+    ],
+    [
+      2,
+      49,
+      432,
+      422
+    ],
+    [
+      1,
+      45,
+      432,
+      405
+    ],
+    [
+      5,
+      29,
+      429,
+      406
+    ],
+    [
+      0,
+      29,
+      431,
+      405
+    ],
+    [
+      23,
+      28,
+      429,
+      406
+    ]
+  ],
+  "sequence": [
+    "face-off",
+    "initial-grab",
+    "Pihu-pulls",
+    "Piyu-resists",
+    "stagger-and-tug",
+    "pause-and-glare",
+    "release-and-step-apart",
+    "rub-own-scalp"
+  ],
+  "participants": [
+    "pihu",
+    "piyu"
+  ],
+  "mayankIncluded": false,
+  "method": "chroma removal, per-panel trim, shared baseline, aspect-preserving fit, bundled despill"
+}

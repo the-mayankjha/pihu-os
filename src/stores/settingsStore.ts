@@ -1,6 +1,19 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+export const DEFAULT_KEYBINDINGS = {
+  voice: 'CommandOrControl+Shift+Space',
+  settings: 'CommandOrControl+Comma',
+  commandPalette: 'CommandOrControl+K',
+  globalCommandPalette: 'CommandOrControl+Shift+K',
+  tasks: 'CommandOrControl+T',
+  music: 'CommandOrControl+M',
+  dismissOverlay: 'Escape',
+} as const;
+
+export type KeybindingAction = keyof typeof DEFAULT_KEYBINDINGS;
+export type Keybindings = Record<KeybindingAction, string>;
+
 export interface GoogleAccount {
   email: string;
   name: string;
@@ -20,6 +33,9 @@ export interface PihuContact {
 }
 
 export interface SettingsState {
+  keybindings: Keybindings;
+  setKeybinding: (action: KeybindingAction, accelerator: string) => void;
+  setKeybindings: (keybindings: Keybindings) => void;
   messageVoiceAlerts: boolean;
   setMessageVoiceAlerts: (enabled: boolean) => void;
   // PIHU Token Protocol (Gemini Keys)
@@ -27,15 +43,21 @@ export interface SettingsState {
   activeKeyIndex: number;
   exhaustedKeyIndices: number[];
 
-  // Voice Engine Settings (ElevenLabs)
+  // Voice Engine Settings (ElevenLabs & Sarvam AI & Engine Preferences)
   elevenLabsApiKey: string;
   elevenLabsVoiceId: string;
+  sarvamApiKey: string;
+  sarvamSpeaker: string;
+  sarvamLanguageCode: string;
+  sttEnginePreference: 'auto' | 'whisper' | 'sarvam' | 'gemini_live';
+  ttsEnginePreference: 'auto' | 'kokoro' | 'sarvam' | 'elevenlabs' | 'native';
 
   // Google Workspace Settings
   googleClientId: string;
   googleClientSecret: string;
   googleAccountConnected: boolean;
   connectedGoogleAccounts: GoogleAccount[];
+  developerMode: boolean;
 
   // Appearance & Workspace Preferences
   themeAccent: 'pink' | 'purple' | 'cyan' | 'emerald' | 'amber';
@@ -58,10 +80,16 @@ export interface SettingsState {
   markKeyExhausted: (index: number) => void;
   resetExhaustedKeys: () => void;
   setElevenLabsConfig: (apiKey: string, voiceId: string) => void;
+  setSarvamApiKey: (apiKey: string) => void;
+  setSarvamSpeaker: (speaker: string) => void;
+  setSarvamLanguageCode: (code: string) => void;
+  setSttEnginePreference: (pref: 'auto' | 'whisper' | 'sarvam' | 'gemini_live') => void;
+  setTtsEnginePreference: (pref: 'auto' | 'kokoro' | 'sarvam' | 'elevenlabs' | 'native') => void;
   setGoogleWorkspaceConfig: (clientId: string, clientSecret: string, connected?: boolean) => void;
   addConnectedGoogleAccount: (account: GoogleAccount) => void;
   removeConnectedGoogleAccount: (email: string) => void;
   setPrimaryGoogleAccount: (email: string) => void;
+  setDeveloperMode: (enabled: boolean) => void;
   setThemeAccent: (accent: 'pink' | 'purple' | 'cyan' | 'emerald' | 'amber') => void;
   setBlurIntensity: (val: number) => void;
   setDockPosition: (pos: 'bottom' | 'left' | 'right') => void;
@@ -83,6 +111,11 @@ export interface SettingsState {
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set, get) => ({
+      keybindings: { ...DEFAULT_KEYBINDINGS },
+      setKeybinding: (action, accelerator) => set(state => ({
+        keybindings: { ...state.keybindings, [action]: accelerator },
+      })),
+      setKeybindings: (keybindings) => set({ keybindings }),
       messageVoiceAlerts: true,
       setMessageVoiceAlerts: (messageVoiceAlerts) => set({ messageVoiceAlerts }),
       geminiApiKeys: [],
@@ -90,10 +123,16 @@ export const useSettingsStore = create<SettingsState>()(
       exhaustedKeyIndices: [],
       elevenLabsApiKey: '',
       elevenLabsVoiceId: 'MmQVkVZnQ0dUbfWzcW6f',
+      sarvamApiKey: (import.meta.env.VITE_SARVAM_API_KEY as string) || '',
+      sarvamSpeaker: 'aarti_hi_customer',
+      sarvamLanguageCode: 'hi-IN',
+      sttEnginePreference: 'auto',
+      ttsEnginePreference: 'auto',
       googleClientId: '',
       googleClientSecret: '',
       googleAccountConnected: false,
       connectedGoogleAccounts: [],
+      developerMode: false,
       themeAccent: 'pink',
       blurIntensity: 24,
       dockPosition: 'bottom',
@@ -114,6 +153,7 @@ export const useSettingsStore = create<SettingsState>()(
       setFocusMode: (focusModeActive) => set({ focusModeActive }),
       setTtsSpeed: (ttsSpeed) => set({ ttsSpeed }),
       setActiveSidebarCategory: (activeSidebarCategory) => set({ activeSidebarCategory }),
+      setDeveloperMode: (developerMode) => set({ developerMode }),
 
       addGeminiKey: (key: string) => {
         const trimmed = key.trim();
@@ -166,6 +206,12 @@ export const useSettingsStore = create<SettingsState>()(
         elevenLabsApiKey: apiKey.trim(),
         elevenLabsVoiceId: voiceId.trim() || 'MmQVkVZnQ0dUbfWzcW6f'
       }),
+
+      setSarvamApiKey: (apiKey: string) => set({ sarvamApiKey: apiKey.trim() }),
+      setSarvamSpeaker: (speaker: string) => set({ sarvamSpeaker: speaker.trim() }),
+      setSarvamLanguageCode: (code: string) => set({ sarvamLanguageCode: code.trim() }),
+      setSttEnginePreference: (pref: 'auto' | 'whisper' | 'sarvam' | 'gemini_live') => set({ sttEnginePreference: pref }),
+      setTtsEnginePreference: (pref: 'auto' | 'kokoro' | 'sarvam' | 'elevenlabs' | 'native') => set({ ttsEnginePreference: pref }),
 
       setGoogleWorkspaceConfig: (clientId: string, clientSecret: string, connected: boolean = true) => set({
         googleClientId: clientId.trim(),

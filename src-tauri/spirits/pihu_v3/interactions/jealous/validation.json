@@ -1,0 +1,38 @@
+{
+  "ok": true,
+  "frames": 4,
+  "cell": [
+    192,
+    208
+  ],
+  "subject": "pihu",
+  "action": "jealous",
+  "outfit": "white floral kurta, light blue jeans, pink sneakers",
+  "sourceBounds": [
+    [
+      45,
+      2,
+      286,
+      576
+    ],
+    [
+      43,
+      2,
+      288,
+      577
+    ],
+    [
+      33,
+      4,
+      306,
+      577
+    ],
+    [
+      42,
+      4,
+      304,
+      577
+    ]
+  ],
+  "method": "2x4 grid cell extraction, shared baseline, bundled despill"
+}

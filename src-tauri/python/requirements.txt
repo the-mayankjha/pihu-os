@@ -14,3 +14,7 @@ onnx
 onnxruntime
 sounddevice
 requests
+mcp>=1.3,<2
+pydantic-settings
+mcp>=1.3,<2
+pydantic-settings

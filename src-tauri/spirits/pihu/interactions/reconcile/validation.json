@@ -1,0 +1,19 @@
+{
+  "ok": true,
+  "frames": 4,
+  "cell": [
+    384,
+    208
+  ],
+  "participants": [
+    "pihu",
+    "piyu"
+  ],
+  "sequence": [
+    "rub-head-sheepishly",
+    "offer-apology",
+    "handshake",
+    "hug"
+  ],
+  "mayankIncluded": false
+}

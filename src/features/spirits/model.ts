@@ -3,6 +3,8 @@ export interface Spirit {
   name: string;
   description: string;
   custom?: boolean;
+  version?: string;
+  author?: string;
 }
 
 export const CELL_WIDTH = 192;
@@ -19,7 +21,7 @@ export const ANIMATIONS = {
   review: { row: 8, frames: 6, fps: 6 },
 } as const;
 export type SpiritAnimation = keyof typeof ANIMATIONS;
-export type SpiritPose = SpiritAnimation | 'cat-play' | 'hair-flip' | 'speaking';
+export type SpiritPose = SpiritAnimation | 'cat-play' | 'hair-flip' | 'speaking' | 'listening' | 'thinking';
 
 export function pihuPose(animation: SpiritAnimation, speaking: boolean, idleMs: number): SpiritPose {
   if (speaking && animation !== 'failed') return 'speaking';
@@ -33,6 +35,8 @@ export function poseConfig(pose: SpiritPose) {
   if (pose === 'cat-play') return { ...ANIMATIONS.running, fps: 4 };
   if (pose === 'hair-flip') return ANIMATIONS.review;
   if (pose === 'speaking') return { row: 3, frames: 8, fps: 10 };
+  if (pose === 'listening') return { row: 0, frames: 16, fps: 8 };
+  if (pose === 'thinking') return { ...ANIMATIONS.running, fps: 6 };
   return ANIMATIONS[pose];
 }
 
@@ -40,6 +44,8 @@ export interface SpiritActivity {
   animation: SpiritAnimation;
   resting: boolean;
   speaking?: boolean;
+  listening?: boolean;
+  thinking?: boolean;
 }
 
 export const SPIRIT_SHORTCUTS = {
@@ -83,7 +89,7 @@ export function spiritActivity(orb: string, agent: string, pending: boolean, rev
   else if (processing) state = 'executing';
   else if (pending) state = reviewing ? 'review' : 'waiting';
   else if (agent === 'success') state = 'success';
-  return { animation: AGENT_SPIRIT_MAP[state] ?? 'idle', resting: state === 'sleeping', speaking: state === 'speaking' };
+  return { animation: AGENT_SPIRIT_MAP[state] ?? 'idle', resting: state === 'sleeping', speaking: state === 'speaking', listening: state === 'listening', thinking: state === 'thinking' };
 }
 
 export interface SpiritPresence { id: string; x: number; y: number; size: number; busy: boolean; at: number; greetingAt?: number }

@@ -11,7 +11,7 @@
 PIHU_HOME="$HOME/.pihu-os"
 VENV_DIR="$PIHU_HOME/venv"
 MODELS_DIR="$PIHU_HOME/models"
-STT_MODEL="$MODELS_DIR/stt/ggml-base.en.bin"
+STT_MODEL="$MODELS_DIR/stt/ggml-small.bin"
 LOCK_FILE="$PIHU_HOME/.setup_complete"
 LOG_FILE="$PIHU_HOME/setup.log"
 
@@ -119,14 +119,20 @@ fi
 # ─── 2. Whisper STT Model ───────────────────────────
 if [ ! -f "$STT_MODEL" ]; then
     # Check if we can copy from project source
-    SOURCE_STT="$HOME/Documents/projects/pihu-os/models/stt/ggml-base.en.bin"
-    if [ -f "$SOURCE_STT" ]; then
-        echo "[PIHU] Copying Whisper STT model from source..." | tee -a "$LOG_FILE"
+    SOURCE_STT=""
+    for candidate in \
+        "$SCRIPT_DIR/../Resources/_up_/models/stt/ggml-small.bin" \
+        "$SCRIPT_DIR/../_up_/models/stt/ggml-small.bin" \
+        "$HOME/Documents/projects/pihu-os/models/stt/ggml-small.bin"; do
+        if [ -f "$candidate" ]; then SOURCE_STT="$candidate"; break; fi
+    done
+    if [ -n "$SOURCE_STT" ]; then
+        echo "[PIHU] Copying multilingual Whisper STT model from app resources..." | tee -a "$LOG_FILE"
         cp "$SOURCE_STT" "$STT_MODEL" 2>>"$LOG_FILE" || true
     else
-        echo "[PIHU] Downloading Whisper STT model (141MB)..." | tee -a "$LOG_FILE"
+        echo "[PIHU] Downloading multilingual Whisper STT model (465MB)..." | tee -a "$LOG_FILE"
         curl -L --progress-bar \
-            "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin" \
+            "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin" \
             -o "$STT_MODEL" 2>>"$LOG_FILE" || true
     fi
 fi
@@ -148,7 +154,7 @@ done
 # ─── 4. Pre-cache Kokoro TTS Model ───────────────────
 if [ -f "$PYTHON" ]; then
     echo "[PIHU] Pre-caching TTS model..." | tee -a "$LOG_FILE"
-    "$PYTHON" -c "from kokoro import KPipeline; KPipeline(lang_code='a')" >>"$LOG_FILE" 2>&1 || true
+    HF_HUB_CACHE="$SCRIPT_DIR/runtime/tts/hub" "$PYTHON" -c "from kokoro import KPipeline; KPipeline(lang_code='a')" >>"$LOG_FILE" 2>&1 || true
 fi
 
 # ─── 5. Google OAuth & YTMusic Credentials ───────────
@@ -171,7 +177,7 @@ fi
 # ─── 6. Write Master Config & Lock File ──────────────
 cat > "$PIHU_HOME/config.json" << CONFIG_EOF
 {
-  "version": "1.0.0",
+  "version": "1.2.4",
   "venv_path": "$VENV_DIR",
   "models_path": "$MODELS_DIR",
   "stt_model": "$STT_MODEL",

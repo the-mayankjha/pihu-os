@@ -1,0 +1,19 @@
+{
+  "images": 4,
+  "framesPerImage": 4,
+  "totalFrames": 16,
+  "layout": "horizontal 1x4 strips",
+  "frameCell": [
+    192,
+    208
+  ],
+  "imageSize": [
+    768,
+    208
+  ],
+  "characterHeightConsistent": true,
+  "hair": "deep brown",
+  "headphones": "cream/ivory",
+  "outline": "white sticker border",
+  "sequence": "strip 00 puts headphones on; strips 01-02 finish placement; strip 03 attentive loop"
+}

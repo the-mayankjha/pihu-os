@@ -23,6 +23,7 @@ const WIDGET_ALIASES: Record<string, string[]> = {
   // Windows & Plugins
   'task-window':             ['task window', 'tasks window', 'task details', 'open tasks', 'task plugin', 'task manager', 'todo window'],
   'settings-window':         ['settings window', 'settings', 'preferences', 'configuration', 'options'],
+  'marketplace-window':      ['marketplace', 'market', 'pihu marketplace', 'mcp marketplace', 'spirits marketplace'],
   'code-output-window':      ['output window', 'code output', 'terminal output', 'program output', 'console output', 'output console', 'output'],
 
   // Orb

@@ -3,6 +3,19 @@ import type { GeminiRequestBody, GeminiResponse, GeminiContent, LLMRequest, LLMT
 
 import { useSettingsStore } from '../../stores/settingsStore';
 
+// ── Error Diagnostics ────────────────────────────────────────────────────────
+export type ErrorSeverity = 'transient' | 'config' | 'fatal';
+
+export interface PihuErrorDiagnostic {
+  severity: ErrorSeverity;
+  /** Human-readable cause suitable for TTS / VoiceOverlay */
+  cause: string;
+  /** Actionable suggestion for the user */
+  suggestion: string;
+  /** Technical detail for console logging */
+  technical: string;
+}
+
 export class LLMManager {
   private static instance: LLMManager;
 
@@ -55,8 +68,9 @@ export class LLMManager {
     const newIndex = useSettingsStore.getState().activeKeyIndex;
 
     if (newIndex === currentIndex) {
-      console.warn('[LLMManager] All configured Gemini API keys are currently exhausted.');
-      return false;
+      console.warn('[LLMManager] All configured Gemini API keys were exhausted. Resetting key exhaustion tracker...');
+      useSettingsStore.getState().resetExhaustedKeys();
+      return true;
     }
 
     console.log(`[LLMManager] PIHU Token Protocol rotated key to index ${newIndex}`);
@@ -66,8 +80,148 @@ export class LLMManager {
   private static readonly FALLBACK_MODELS = [
     'gemini-3.1-flash-lite',
     'gemini-2.5-flash',
-    'gemini-3-flash',
+    'gemini-flash-latest',
+    'gemini-2.5-pro',
+    'gemini-pro-latest',
   ];
+
+  /**
+   * Helper to parse Google API error messages safely.
+   */
+  private parseGoogleError(status: number, rawText: string): string {
+    try {
+      const parsed = JSON.parse(rawText);
+      if (parsed.error?.message) {
+        return `[HTTP ${status}] ${parsed.error.message}`;
+      }
+    } catch {}
+    return `[HTTP ${status}] ${rawText.slice(0, 250)}`;
+  }
+
+  /**
+   * Classifies a raw error into a structured diagnostic with human-readable
+   * cause, suggestion, and severity — suitable for VoiceOverlay and TTS.
+   */
+  public static classifyError(error: any): PihuErrorDiagnostic {
+    const msg = (error?.message || String(error)).toLowerCase();
+    const raw = error?.message || String(error);
+
+    // ── Network / Connectivity ──
+    if (msg.includes('failed to fetch') || msg.includes('networkerror') || msg.includes('net::') || msg.includes('econnrefused') || msg.includes('enotfound')) {
+      return {
+        severity: 'transient',
+        cause: 'Network connection failed. Your device may be offline or the API server is unreachable.',
+        suggestion: 'Please check your internet connection and try again.',
+        technical: `Network error: ${raw}`,
+      };
+    }
+
+    // ── Server Capacity / Overload (503) ──
+    if (msg.includes('503') || msg.includes('no capacity available') || msg.includes('overloaded') || msg.includes('service unavailable')) {
+      const modelMatch = raw.match(/model\s+([\w.-]+)/i);
+      const modelName = modelMatch?.[1] || 'the requested model';
+      return {
+        severity: 'transient',
+        cause: `The AI model server is temporarily overloaded. ${modelName} has no available capacity right now.`,
+        suggestion: 'This is a temporary issue. Please wait a moment and try again, or I will automatically try a fallback model.',
+        technical: `503 capacity error on ${modelName}: ${raw}`,
+      };
+    }
+
+    // ── Internal Server Error (500) ──
+    if (msg.includes('500') || msg.includes('internal server error') || msg.includes('internal error')) {
+      return {
+        severity: 'transient',
+        cause: 'The AI server encountered an internal error while processing the request.',
+        suggestion: 'This is usually temporary. Please try again in a few seconds.',
+        technical: `500 server error: ${raw}`,
+      };
+    }
+
+    // ── Rate Limiting (429) ──
+    if (msg.includes('429') || msg.includes('rate limit') || msg.includes('quota') || msg.includes('resource exhausted')) {
+      return {
+        severity: 'transient',
+        cause: 'API rate limit reached. Too many requests were sent in a short time.',
+        suggestion: 'I am rotating to another API key. If this persists, please wait a minute before trying again.',
+        technical: `429 rate limit: ${raw}`,
+      };
+    }
+
+    // ── Authentication / Permission (403, 401) ──
+    if (msg.includes('403') || msg.includes('401') || msg.includes('permission denied') || msg.includes('api key not valid') || msg.includes('unauthorized') || msg.includes('forbidden')) {
+      return {
+        severity: 'config',
+        cause: 'The API key is invalid or does not have permission to access this model.',
+        suggestion: 'Please check your Gemini API key in Settings, Token Protocol section. Make sure the key is valid and has the correct permissions.',
+        technical: `Auth error (403/401): ${raw}`,
+      };
+    }
+
+    // ── Model Not Found (404) ──
+    if (msg.includes('404') || msg.includes('not found') || msg.includes('is not found')) {
+      const modelMatch = raw.match(/model\s+([\w.-]+)/i);
+      return {
+        severity: 'transient',
+        cause: `The AI model ${modelMatch?.[1] || ''} was not found. It may have been deprecated or renamed.`,
+        suggestion: 'I am automatically falling back to an available model.',
+        technical: `404 model not found: ${raw}`,
+      };
+    }
+
+    // ── No API Keys Configured ──
+    if (msg.includes('no gemini api key') || msg.includes('no api key') || msg.includes('token protocol')) {
+      return {
+        severity: 'config',
+        cause: 'No Gemini API keys are configured in PIHU.',
+        suggestion: 'Please open Settings, go to the Token Protocol section, and add at least one Gemini API key.',
+        technical: `Missing API keys: ${raw}`,
+      };
+    }
+
+    // ── Timeout ──
+    if (msg.includes('timed out') || msg.includes('timeout') || msg.includes('aborted')) {
+      return {
+        severity: 'transient',
+        cause: 'The request took too long and timed out.',
+        suggestion: 'The server may be slow right now. Please try a simpler request or try again shortly.',
+        technical: `Timeout: ${raw}`,
+      };
+    }
+
+    // ── All Models Failed ──
+    if (msg.includes('gemini api failed')) {
+      // Extract the most meaningful sub-error
+      const subErrors = raw.split('\n•').filter(Boolean);
+      const primaryError = subErrors[0]?.trim() || raw;
+      // Recursively classify the primary sub-error
+      const subDiag = LLMManager.classifyError(new Error(primaryError));
+      return {
+        severity: subDiag.severity,
+        cause: `All AI models failed. Primary issue: ${subDiag.cause}`,
+        suggestion: subDiag.suggestion,
+        technical: raw,
+      };
+    }
+
+    // ── No Candidates ──
+    if (msg.includes('no candidates')) {
+      return {
+        severity: 'transient',
+        cause: 'The AI model returned an empty response. This can happen with safety filters or server issues.',
+        suggestion: 'Please try rephrasing your request.',
+        technical: `Empty response: ${raw}`,
+      };
+    }
+
+    // ── Unknown / Fallback ──
+    return {
+      severity: 'fatal',
+      cause: `An unexpected error occurred: ${raw.slice(0, 150)}`,
+      suggestion: 'Please try again. If this keeps happening, check the console for details.',
+      technical: raw,
+    };
+  }
 
   /**
    * Internal fetch — returns the raw first candidate (not just text).
@@ -81,6 +235,7 @@ export class LLMManager {
     if (!this.currentApiKey) throw new Error('No Gemini API Keys configured in PIHU Token Protocol.');
     
     const candidateModels = Array.from(new Set([primaryModel, ...LLMManager.FALLBACK_MODELS]));
+    const failureLog: string[] = [];
 
     for (const model of candidateModels) {
       let attempts = 0;
@@ -98,6 +253,10 @@ export class LLMManager {
             return data.candidates ?? [];
           }
 
+          const rawError = await response.text();
+          const detail = this.parseGoogleError(response.status, rawError);
+          failureLog.push(`${model}: ${detail}`);
+
           if (response.status === 429 || response.status === 403) {
             if (this.rotateKey()) {
               attempts++;
@@ -105,22 +264,32 @@ export class LLMManager {
             }
           }
 
+          if (response.status === 503 || response.status === 500) {
+            const backoffMs = Math.min(800 * Math.pow(2, attempts), 5000);
+            console.warn(`[LLMManager] Model "${model}" temporarily unavailable (${response.status}). Retrying in ${backoffMs}ms... (attempt ${attempts + 1}/${maxRetries})`);
+            await new Promise(r => setTimeout(r, backoffMs));
+            attempts++;
+            if (attempts < maxRetries) continue;
+            break; // Try next fallback model
+          }
+
           if (response.status === 404) {
             console.warn(`[LLMManager] Model "${model}" returned 404. Falling back to next candidate model...`);
             break; // Try next fallback model
           }
 
-          const errorText = await response.text();
-          console.warn(`[LLMManager] Gemini error ${response.status} on model ${model}:`, errorText);
+          console.warn(`[LLMManager] Gemini error ${response.status} on model ${model}:`, rawError);
           break; // Try next fallback model
-        } catch (error) {
+        } catch (error: any) {
+          failureLog.push(`${model} (Network): ${error?.message || String(error)}`);
           if (attempts >= maxRetries - 1) break;
           attempts++;
         }
       }
     }
 
-    throw new Error('Failed to communicate with Gemini API across all configured models and keys.');
+    const uniqueErrors = Array.from(new Set(failureLog)).join(' \n• ');
+    throw new Error(`Gemini API failed:\n• ${uniqueErrors}`);
   }
 
   /**
@@ -132,10 +301,11 @@ export class LLMManager {
     maxRetries: number = 3
   ): Promise<string> {
     if (!this.currentApiKey) {
-      throw new Error("No Gemini API Keys configured.");
+      throw new Error("No Gemini API Keys configured in PIHU Token Protocol.");
     }
 
     const candidateModels = Array.from(new Set([primaryModel, ...LLMManager.FALLBACK_MODELS]));
+    const failureLog: string[] = [];
 
     for (const model of candidateModels) {
       let attempts = 0;
@@ -156,6 +326,10 @@ export class LLMManager {
             throw new Error("No candidates returned from Gemini");
           }
 
+          const rawError = await response.text();
+          const detail = this.parseGoogleError(response.status, rawError);
+          failureLog.push(`${model}: ${detail}`);
+
           if (response.status === 429 || response.status === 403) {
             if (this.rotateKey()) {
               attempts++;
@@ -163,20 +337,32 @@ export class LLMManager {
             }
           }
 
+          if (response.status === 503 || response.status === 500) {
+            const backoffMs = Math.min(800 * Math.pow(2, attempts), 5000);
+            console.warn(`[LLMManager] Model "${model}" ${response.status} busy. Retrying in ${backoffMs}ms... (attempt ${attempts + 1}/${maxRetries})`);
+            await new Promise(r => setTimeout(r, backoffMs));
+            attempts++;
+            if (attempts < maxRetries) continue;
+            break;
+          }
+
           if (response.status === 404) {
             console.warn(`[LLMManager] Model "${model}" 404. Falling back to next model...`);
             break;
           }
 
+          console.warn(`[LLMManager] Gemini error ${response.status} on model ${model}:`, rawError);
           break;
-        } catch (error) {
+        } catch (error: any) {
+          failureLog.push(`${model} (Network): ${error?.message || String(error)}`);
           if (attempts >= maxRetries - 1) break;
           attempts++;
         }
       }
     }
 
-    throw new Error('Failed to generate response across all fallback Gemini models.');
+    const uniqueErrors = Array.from(new Set(failureLog)).join(' \n• ');
+    throw new Error(`Gemini API failed:\n• ${uniqueErrors}`);
   }
 
   private buildRequestBody(req: LLMRequest): GeminiRequestBody {

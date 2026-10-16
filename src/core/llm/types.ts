@@ -1,7 +1,7 @@
 export const GeminiModel = {
   PRIMARY: 'gemini-3.1-flash-lite',
   SECONDARY: 'gemini-2.5-flash',
-  TERTIARY: 'gemini-3-flash',
+  TERTIARY: 'gemini-flash-latest',
 } as const;
 
 export type GeminiModel = typeof GeminiModel[keyof typeof GeminiModel];

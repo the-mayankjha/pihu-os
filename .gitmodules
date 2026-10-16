@@ -1,3 +1,10 @@
 [submodule "src-tauri/pihu_mcps"]
 	path = src-tauri/pihu_mcps
 	url = https://github.com/the-mayankjha/pihu_mcp.git
+[submodule "pihu_web"]
+	path = pihu_web
+	url = https://github.com/the-mayankjha/pihu-web.git
+[submodule "pihu_spirits"]
+	path = pihu_spirits
+	url = https://github.com/the-mayankjha/pihu_spirits.git
+	branch = pihu_market

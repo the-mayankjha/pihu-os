@@ -1,0 +1,973 @@
+{
+  "ok": true,
+  "frames_root": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames",
+  "states": [
+    "idle",
+    "running-right",
+    "running-left",
+    "waving",
+    "jumping",
+    "failed",
+    "waiting",
+    "running",
+    "review"
+  ],
+  "errors": [],
+  "warnings": [],
+  "rows": [
+    {
+      "state": "idle",
+      "expected_frames": 6,
+      "actual_frames": 6,
+      "extraction_method": null,
+      "ok": true,
+      "errors": [],
+      "warnings": [],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/idle/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 11508,
+          "bbox": [
+            54,
+            5,
+            138,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 1,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/idle/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 11602,
+          "bbox": [
+            54,
+            5,
+            138,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 2,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/idle/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 11573,
+          "bbox": [
+            54,
+            5,
+            138,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 3,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/idle/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 11590,
+          "bbox": [
+            54,
+            5,
+            138,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 4,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/idle/04.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 11563,
+          "bbox": [
+            54,
+            5,
+            138,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 5,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/idle/05.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 11660,
+          "bbox": [
+            54,
+            5,
+            138,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        }
+      ]
+    },
+    {
+      "state": "running-right",
+      "expected_frames": 8,
+      "actual_frames": 8,
+      "extraction_method": null,
+      "ok": true,
+      "errors": [],
+      "warnings": [],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/running-right/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 15484,
+          "bbox": [
+            34,
+            8,
+            157,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 1,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/running-right/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 14752,
+          "bbox": [
+            34,
+            8,
+            157,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 2,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/running-right/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 15864,
+          "bbox": [
+            32,
+            7,
+            159,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 3,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/running-right/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 15446,
+          "bbox": [
+            32,
+            5,
+            159,
+            197
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 4,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/running-right/04.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 15315,
+          "bbox": [
+            32,
+            7,
+            158,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 5,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/running-right/05.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 15574,
+          "bbox": [
+            30,
+            7,
+            161,
+            201
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 6,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/running-right/06.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 15240,
+          "bbox": [
+            33,
+            7,
+            158,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 7,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/running-right/07.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 15709,
+          "bbox": [
+            32,
+            7,
+            159,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        }
+      ]
+    },
+    {
+      "state": "running-left",
+      "expected_frames": 8,
+      "actual_frames": 8,
+      "extraction_method": null,
+      "ok": true,
+      "errors": [],
+      "warnings": [],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/running-left/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 15910,
+          "bbox": [
+            31,
+            5,
+            161,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 1,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/running-left/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 14810,
+          "bbox": [
+            32,
+            5,
+            160,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 2,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/running-left/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 15634,
+          "bbox": [
+            31,
+            5,
+            161,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 3,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/running-left/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 15276,
+          "bbox": [
+            31,
+            5,
+            161,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 4,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/running-left/04.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 15793,
+          "bbox": [
+            32,
+            5,
+            160,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 5,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/running-left/05.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 15995,
+          "bbox": [
+            31,
+            5,
+            161,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 6,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/running-left/06.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16088,
+          "bbox": [
+            31,
+            5,
+            161,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 7,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/running-left/07.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16050,
+          "bbox": [
+            31,
+            5,
+            161,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        }
+      ]
+    },
+    {
+      "state": "waving",
+      "expected_frames": 4,
+      "actual_frames": 4,
+      "extraction_method": null,
+      "ok": true,
+      "errors": [],
+      "warnings": [],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/waving/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 11528,
+          "bbox": [
+            54,
+            5,
+            138,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 1,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/waving/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 12815,
+          "bbox": [
+            47,
+            5,
+            145,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 2,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/waving/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 13493,
+          "bbox": [
+            47,
+            5,
+            145,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 3,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/waving/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 11608,
+          "bbox": [
+            54,
+            5,
+            138,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        }
+      ]
+    },
+    {
+      "state": "jumping",
+      "expected_frames": 5,
+      "actual_frames": 5,
+      "extraction_method": null,
+      "ok": true,
+      "errors": [],
+      "warnings": [],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/jumping/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 10385,
+          "bbox": [
+            50,
+            45,
+            141,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 1,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/jumping/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 11656,
+          "bbox": [
+            42,
+            14,
+            149,
+            193
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 2,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/jumping/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 12473,
+          "bbox": [
+            38,
+            5,
+            153,
+            171
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 3,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/jumping/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 12090,
+          "bbox": [
+            38,
+            25,
+            153,
+            195
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 4,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/jumping/04.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 11330,
+          "bbox": [
+            48,
+            34,
+            143,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        }
+      ]
+    },
+    {
+      "state": "failed",
+      "expected_frames": 8,
+      "actual_frames": 8,
+      "extraction_method": null,
+      "ok": true,
+      "errors": [],
+      "warnings": [],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/failed/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 13295,
+          "bbox": [
+            48,
+            5,
+            143,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 1,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/failed/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 12538,
+          "bbox": [
+            49,
+            9,
+            142,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 2,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/failed/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 12327,
+          "bbox": [
+            48,
+            20,
+            143,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 3,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/failed/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 10737,
+          "bbox": [
+            46,
+            59,
+            145,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 4,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/failed/04.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 9887,
+          "bbox": [
+            46,
+            72,
+            145,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 5,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/failed/05.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 10625,
+          "bbox": [
+            46,
+            64,
+            145,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 6,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/failed/06.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 10317,
+          "bbox": [
+            46,
+            64,
+            144,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 7,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/failed/07.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 12456,
+          "bbox": [
+            49,
+            9,
+            142,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        }
+      ]
+    },
+    {
+      "state": "waiting",
+      "expected_frames": 6,
+      "actual_frames": 6,
+      "extraction_method": null,
+      "ok": true,
+      "errors": [],
+      "warnings": [],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/waiting/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 11464,
+          "bbox": [
+            52,
+            5,
+            140,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 1,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/waiting/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 11752,
+          "bbox": [
+            52,
+            5,
+            140,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 2,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/waiting/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 11847,
+          "bbox": [
+            49,
+            6,
+            143,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 3,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/waiting/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 11858,
+          "bbox": [
+            51,
+            5,
+            140,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 4,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/waiting/04.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 12067,
+          "bbox": [
+            52,
+            5,
+            140,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 5,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/waiting/05.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 11605,
+          "bbox": [
+            49,
+            6,
+            143,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        }
+      ]
+    },
+    {
+      "state": "running",
+      "expected_frames": 6,
+      "actual_frames": 6,
+      "extraction_method": null,
+      "ok": true,
+      "errors": [],
+      "warnings": [],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/running/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 10779,
+          "bbox": [
+            58,
+            5,
+            134,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 1,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/running/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 10824,
+          "bbox": [
+            58,
+            5,
+            134,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 2,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/running/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 10724,
+          "bbox": [
+            58,
+            5,
+            134,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 3,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/running/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 10909,
+          "bbox": [
+            58,
+            5,
+            134,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 4,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/running/04.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 10674,
+          "bbox": [
+            58,
+            5,
+            134,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 5,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/running/05.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 10667,
+          "bbox": [
+            59,
+            5,
+            133,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        }
+      ]
+    },
+    {
+      "state": "review",
+      "expected_frames": 6,
+      "actual_frames": 6,
+      "extraction_method": null,
+      "ok": true,
+      "errors": [],
+      "warnings": [],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/review/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 11512,
+          "bbox": [
+            53,
+            5,
+            138,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 1,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/review/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 11750,
+          "bbox": [
+            52,
+            6,
+            138,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 2,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/review/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 12150,
+          "bbox": [
+            52,
+            5,
+            139,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 3,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/review/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 11605,
+          "bbox": [
+            52,
+            5,
+            139,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 4,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/review/04.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 12161,
+          "bbox": [
+            53,
+            5,
+            137,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        },
+        {
+          "index": 5,
+          "file": "/Users/mayankjha/Documents/Codex/2026-10-10/pets-plugin-work-pets-openai-curated-4/work/pihu-v2/intermediate/frames/review/05.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 12741,
+          "bbox": [
+            52,
+            5,
+            139,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 0
+        }
+      ]
+    }
+  ]
+}

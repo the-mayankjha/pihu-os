@@ -1,12 +1,20 @@
-import { SpotifyConnection } from './SpotifyConnection';
+import { SpotifyConnection, SpotifyDeveloperSettings } from './SpotifyConnection';
 import spotifyCatalog from '../../core/services/spotifyToolCatalog.json';
 import { useVoiceStore } from '../../stores/voiceStore';
 import { ensureWhatsAppBridge, WHATSAPP_API_URL } from '../../core/services/whatsappBridge';
 import { GlassCard } from '../../shared/components/GlassCard/GlassCard';
-import React, { useState, useEffect } from 'react';
-import { useSettingsStore } from '../../stores/settingsStore';
+import React, { useState, useEffect, useRef } from 'react';
+import { listen } from '@tauri-apps/api/event';
+import { isTauri } from '@tauri-apps/api/core';
+import { getVersion } from '@tauri-apps/api/app';
+import { DEFAULT_KEYBINDINGS, useSettingsStore } from '../../stores/settingsStore';
+import type { KeybindingAction } from '../../stores/settingsStore';
+import { acceleratorFromKeyboardEvent, formatAccelerator } from '../../core/shortcuts';
 import { SpiritsSettings } from '../../features/spirits/SpiritsSettings';
 import { useLayoutStore } from '../../core/layout/LayoutStore';
+import { useDiagnosticsStore } from '../../core/voice/diagnosis/EngineDiagnostics';
+import { motion } from 'framer-motion';
+import pihuLogo from '../../assets/logo.png';
 import {
   Settings,
   Briefcase,
@@ -27,7 +35,6 @@ import {
   Copy,
   Check,
   Cpu,
-  FolderGit2,
   Search,
   ChevronRight,
   ArrowLeft,
@@ -62,6 +69,83 @@ interface McpServerDef {
   tools: McpToolDef[];
 }
 
+const SHORTCUT_ROWS: { action: KeybindingAction; label: string; scope: 'Global' | 'In PIHU' }[] = [
+  { action: 'voice', label: 'Activate PIHU Voice Assistant', scope: 'Global' },
+  { action: 'settings', label: 'Open PIHU Settings Window', scope: 'In PIHU' },
+  { action: 'commandPalette', label: 'Open Command Palette', scope: 'In PIHU' },
+  { action: 'globalCommandPalette', label: 'Open Command Palette from any app', scope: 'Global' },
+  { action: 'tasks', label: 'Toggle Task Window', scope: 'In PIHU' },
+  { action: 'music', label: 'Toggle YouTube Music Player', scope: 'In PIHU' },
+  { action: 'dismissOverlay', label: 'Dismiss active voice overlay', scope: 'In PIHU' },
+];
+
+const ShortcutSettings = () => {
+  const keybindings = useSettingsStore(state => state.keybindings);
+  const setKeybinding = useSettingsStore(state => state.setKeybinding);
+  const setKeybindings = useSettingsStore(state => state.setKeybindings);
+  const [recording, setRecording] = useState<KeybindingAction | null>(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!recording) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      const accelerator = acceleratorFromKeyboardEvent(event);
+      if (!accelerator) return;
+      event.preventDefault();
+      event.stopPropagation();
+
+      const conflict = SHORTCUT_ROWS.find(row => row.action !== recording && keybindings[row.action] === accelerator);
+      if (conflict) {
+        setError(`That key is already assigned to “${conflict.label}”.`);
+        setRecording(null);
+        return;
+      }
+
+      setError('');
+      setKeybinding(recording, accelerator);
+      setRecording(null);
+    };
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  }, [keybindings, recording, setKeybinding]);
+
+  useEffect(() => {
+    const onShortcutError = (event: Event) => {
+      const detail = (event as CustomEvent<string>).detail;
+      setError(detail || 'PIHU could not register that global shortcut. Choose another combination.');
+    };
+    window.addEventListener('pihu-shortcut-error', onShortcutError);
+    return () => window.removeEventListener('pihu-shortcut-error', onShortcutError);
+  }, []);
+
+  return (
+    <div className="space-y-3">
+      <div className="mb-4 flex items-end justify-between gap-4">
+        <div>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-300">Keyboard Shortcuts</h3>
+          <p className="mt-1 text-[11px] text-neutral-500">Select a shortcut, then press your preferred key combination.</p>
+        </div>
+        <button type="button" onClick={() => { setError(''); setKeybindings({ ...DEFAULT_KEYBINDINGS }); }} className="rounded-lg border border-white/10 px-3 py-1.5 text-[11px] text-neutral-300 hover:bg-white/5">Restore defaults</button>
+      </div>
+
+      {SHORTCUT_ROWS.map(row => (
+        <div key={row.action} className="flex items-center justify-between gap-4 rounded-2xl border border-white/5 bg-white/[0.045] p-3.5 backdrop-blur-md">
+          <div className="min-w-0">
+            <span className="block text-xs font-medium text-neutral-200">{row.label}</span>
+            <span className="mt-1 block text-[10px] text-neutral-500">{row.scope === 'Global' ? 'Works while PIHU is in the background' : 'Works while PIHU is focused'}</span>
+          </div>
+          <button type="button" onClick={() => { setError(''); setRecording(row.action); }} className={`flex shrink-0 items-center gap-1.5 rounded-xl border px-2.5 py-2 transition-colors ${recording === row.action ? 'border-emerald-400/50 bg-emerald-400/10 text-emerald-200' : 'border-white/10 bg-white/[0.04] text-neutral-200 hover:bg-white/10'}`} aria-label={`Change shortcut for ${row.label}`}>
+            {recording === row.action ? <span className="px-2 text-[11px]">Press keys…</span> : formatAccelerator(keybindings[row.action]).map((key, index) => <kbd key={`${key}-${index}`} className="min-w-7 rounded-md border border-white/10 bg-white/10 px-2 py-1 text-center text-[11px] font-mono font-bold">{key}</kbd>)}
+          </button>
+        </div>
+      ))}
+
+      {error && <p role="alert" className="rounded-xl border border-rose-400/20 bg-rose-400/5 px-3 py-2 text-xs text-rose-200">{error}</p>}
+      {!isTauri() && <p className="text-[10px] text-neutral-500">Global shortcuts activate only in the installed desktop app.</p>}
+    </div>
+  );
+};
+
 export const SettingsWindow: React.FC = () => {
   const {
     geminiApiKeys,
@@ -74,10 +158,9 @@ export const SettingsWindow: React.FC = () => {
     elevenLabsApiKey,
     elevenLabsVoiceId,
     setElevenLabsConfig,
-    googleClientId,
-    googleClientSecret,
     connectedGoogleAccounts,
-    setGoogleWorkspaceConfig,
+    developerMode,
+    setDeveloperMode,
     removeConnectedGoogleAccount,
     setPrimaryGoogleAccount,
     themeAccent,
@@ -99,10 +182,47 @@ export const SettingsWindow: React.FC = () => {
     setContacts,
     updateContact,
     removeContact,
+    sarvamApiKey,
+    setSarvamApiKey,
+    sarvamSpeaker,
+    setSarvamSpeaker,
+    sarvamLanguageCode,
+    setSarvamLanguageCode,
+    sttEnginePreference,
+    setSttEnginePreference,
+    ttsEnginePreference,
+    setTtsEnginePreference,
   } = useSettingsStore();
+
+  const diagnostics = useDiagnosticsStore();
+  const [sarvamKeyInput, setSarvamKeyInput] = useState(sarvamApiKey);
+  const [showSarvamKey, setShowSarvamKey] = useState(false);
+  const [isTestingSarvam, setIsTestingSarvam] = useState(false);
+  const [sarvamTestStatus, setSarvamTestStatus] = useState<string | null>(null);
+  const [isTestingElevenLabs, setIsTestingElevenLabs] = useState(false);
+  const [elevenLabsTestStatus, setElevenLabsTestStatus] = useState<string | null>(null);
 
   const [newKeyInput, setNewKeyInput] = useState('');
   const [copiedKeyIdx, setCopiedKeyIdx] = useState<number | null>(null);
+  const [googleOAuthStarting, setGoogleOAuthStarting] = useState(false);
+  const [googleOAuthMessage, setGoogleOAuthMessage] = useState('');
+  const [googleOAuthError, setGoogleOAuthError] = useState('');
+  const [appVersion, setAppVersion] = useState('Loading…');
+
+  useEffect(() => {
+    // Run diagnostics immediately on opening settings
+    diagnostics.runDiagnosis().catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    void getVersion().then(version => {
+      if (active) setAppVersion(version);
+    }).catch(() => {
+      if (active) setAppVersion(import.meta.env.VITE_APP_VERSION || 'Development');
+    });
+    return () => { active = false; };
+  }, []);
   
   // MCP Inspector & In-Place Navigation states
   const [activeMcpDetailId, setActiveMcpDetailId] = useState<string | null>(null);
@@ -126,42 +246,62 @@ export const SettingsWindow: React.FC = () => {
     platform?: string;
     auth_state?: string;
   }>({ connected: false, logged_in: false, jid: '' });
-  const [waQrCode, setWaQrCode] = useState<string>('');
   const [waLoading, setWaLoading] = useState(false);
+  const [waUnlinking, setWaUnlinking] = useState(false);
+  const waUnlinkingRef = useRef(false);
+  const waStatusRevisionRef = useRef(0);
+  const [waAuthPageOpened, setWaAuthPageOpened] = useState(false);
   const [waError, setWaError] = useState('');
-  const [waCopiedQr, setWaCopiedQr] = useState(false);
+  const waHasSession = waStatus.has_session ?? waStatus.logged_in;
 
   // WhatsApp authentication belongs to the local bridge. The desktop, CLI and
   // REPL deliberately consume this same API/session instead of owning separate clients.
   const handleScanQr = async () => {
+    const reopenExistingPage = waAuthPageOpened;
     setWaError('');
     setWaLoading(true);
-    const safetyTimer = setTimeout(() => setWaLoading(false), 30000);
     try {
       await ensureWhatsAppBridge();
-      await fetch(`${WHATSAPP_API_URL}/pair`, { method: 'POST', signal: AbortSignal.timeout(2000) }).catch(() => {});
-      for (let i = 0; i < 12; i++) {
-        try {
-          const res = await fetch(`${WHATSAPP_API_URL}/pair`, { signal: AbortSignal.timeout(1500) });
-          if (res.ok) {
-            const d = await res.json();
-            if (d.qr_code) {
-              setWaQrCode(d.qr_code);
-              break;
-            }
-            if (d.logged_in) {
-              setWaStatus(prev => ({ ...prev, connected: true, logged_in: true, jid: d.jid || 'PIHU Desktop' }));
-              setWaQrCode('');
-              break;
-            }
-          }
-        } catch (e) {}
-        await new Promise(r => setTimeout(r, 400));
+      if (reopenExistingPage) {
+        const reopenResponse = await fetch(`${WHATSAPP_API_URL}/open-auth-page?reopen=true`, {
+          method: 'POST',
+          signal: AbortSignal.timeout(10000),
+        });
+        if (!reopenResponse.ok) {
+          const detail = await reopenResponse.text();
+          throw new Error(detail || `Could not reopen the PIHU WhatsApp auth page (HTTP ${reopenResponse.status}).`);
+        }
+        setWaAuthPageOpened(true);
+        return;
       }
+      setWaAuthPageOpened(false);
+      const startResponse = await fetch(`${WHATSAPP_API_URL}/pair`, {
+        method: 'POST',
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!startResponse.ok) {
+        const detail = await startResponse.text();
+        throw new Error(detail || `WhatsApp pairing could not start (HTTP ${startResponse.status}).`);
+      }
+
+      const started = await startResponse.json().catch(() => ({}));
+      if (started.logged_in && started.connected) {
+        setWaStatus(prev => ({ ...prev, connected: true, logged_in: true, has_session: true, reachable: true, jid: started.jid || 'PIHU Desktop' }));
+      }
+
+      // Open the auth page served by this bridge. QR and sync state stay local.
+      const openResponse = await fetch(`${WHATSAPP_API_URL}/open-auth-page`, {
+        method: 'POST',
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!openResponse.ok) {
+        const detail = await openResponse.text();
+        throw new Error(detail || `Could not open the PIHU WhatsApp auth page (HTTP ${openResponse.status}).`);
+      }
+      setWaAuthPageOpened(true);
     } catch (e) {
       setWaError(e instanceof Error ? e.message : String(e));
     } finally {
-      clearTimeout(safetyTimer);
       setWaLoading(false);
     }
   };
@@ -171,7 +311,9 @@ export const SettingsWindow: React.FC = () => {
     let isMounted = true;
     let polling = false;
     const fetchWaStatus = async () => {
-      if (polling) return;
+      if (polling || waUnlinkingRef.current) return;
+      const revision = waStatusRevisionRef.current;
+      const isCurrent = () => revision === waStatusRevisionRef.current && !waUnlinkingRef.current;
       polling = true;
       try {
         let isConnected = false;
@@ -180,7 +322,7 @@ export const SettingsWindow: React.FC = () => {
 
         // 1. Check status endpoint
         try {
-          const res = await fetch(`${WHATSAPP_API_URL}/status`, { signal: AbortSignal.timeout(4000) });
+          const res = await fetch(`${WHATSAPP_API_URL}/status`, { signal: AbortSignal.timeout(4000), cache: 'no-store' });
           if (res.ok) {
             const data = await res.json();
             if (typeof data.logged_in !== 'boolean' || typeof data.connected !== 'boolean') {
@@ -190,7 +332,7 @@ export const SettingsWindow: React.FC = () => {
             if (isMounted) setWaError('');
             isLoggedIn = !!data.logged_in;
             hasSession = data.has_session ?? (data.logged_in || data.auth_state === "reconnecting");
-            if (isMounted) {
+            if (isMounted && isCurrent()) {
               setWaStatus({
                 has_session: hasSession,
                 reachable: true,
@@ -201,11 +343,6 @@ export const SettingsWindow: React.FC = () => {
                 platform: data.platform || 'PIHU Desktop',
                 auth_state: data.auth_state,
               });
-              if (data.logged_in) {
-                setWaQrCode('');
-              } else if (data.qr_code) {
-                setWaQrCode(data.qr_code);
-              }
             }
           }
         } catch (_) {}
@@ -213,15 +350,14 @@ export const SettingsWindow: React.FC = () => {
         // 2. If bridge is active and not logged in, query /api/pair for active QR code
         if (isConnected && !isLoggedIn && !hasSession) {
           try {
-            const pairRes = await fetch(`${WHATSAPP_API_URL}/pair`, { signal: AbortSignal.timeout(1500) });
+            const pairRes = await fetch(`${WHATSAPP_API_URL}/pair`, { signal: AbortSignal.timeout(1500), cache: 'no-store' });
             if (pairRes.ok) {
               const pairData = await pairRes.json();
-              if (isMounted) {
-                if (pairData.logged_in) {
-                  setWaStatus(prev => ({ ...prev, logged_in: true, connected: true }));
-                  setWaQrCode('');
+              if (isMounted && isCurrent()) {
+                if (pairData.logged_in && pairData.connected) {
+                  setWaStatus(prev => ({ ...prev, logged_in: true, has_session: true, connected: true, reachable: true }));
                 } else if (pairData.qr_code) {
-                  setWaQrCode(pairData.qr_code);
+                  setWaAuthPageOpened(true);
                 }
               }
             }
@@ -230,7 +366,7 @@ export const SettingsWindow: React.FC = () => {
 
         // 3. If bridge is offline
         if (!isConnected) {
-          if (isMounted) {
+          if (isMounted && isCurrent()) {
             setWaStatus(prev => ({ ...prev, connected: false, logged_in: false, reachable: false }));
           }
           // Auto-start bridge if user is actively in the Connections section
@@ -241,7 +377,7 @@ export const SettingsWindow: React.FC = () => {
           }
         }
       } catch (e) {
-        if (isMounted) {
+        if (isMounted && isCurrent()) {
           setWaStatus(prev => ({ ...prev, connected: false, logged_in: false, reachable: false }));
         }
       } finally {
@@ -689,6 +825,8 @@ export const SettingsWindow: React.FC = () => {
   // Sync Google Workspace accounts from token file
   useEffect(() => {
     let isMounted = true;
+    let unlistenGoogleConnected: (() => void) | undefined;
+    let unlistenGoogleError: (() => void) | undefined;
 
     const syncAccountsFromFile = async () => {
       try {
@@ -737,10 +875,30 @@ export const SettingsWindow: React.FC = () => {
 
     syncAccountsFromFile();
     const interval = setInterval(syncAccountsFromFile, 2500);
+    void listen<{ name?: string; email?: string; picture?: string }>('google-oauth-connected', (event) => {
+      void syncAccountsFromFile();
+      const account = event.payload.email || event.payload.name || 'Google account';
+      setGoogleOAuthMessage(`${account} connected successfully. PIHU is ready to use Google Workspace.`);
+      setGoogleOAuthError('');
+      setGoogleOAuthStarting(false);
+    }).then((unlisten) => {
+      if (isMounted) unlistenGoogleConnected = unlisten;
+      else unlisten();
+    });
+    void listen<string>('google-oauth-error', (event) => {
+      setGoogleOAuthMessage('');
+      setGoogleOAuthError(event.payload || 'Google sign-in could not be completed.');
+      setGoogleOAuthStarting(false);
+    }).then((unlisten) => {
+      if (isMounted) unlistenGoogleError = unlisten;
+      else unlisten();
+    });
 
     return () => {
       isMounted = false;
       clearInterval(interval);
+      unlistenGoogleConnected?.();
+      unlistenGoogleError?.();
     };
   }, []);
 
@@ -802,10 +960,11 @@ export const SettingsWindow: React.FC = () => {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  // 10 Streamlined Sidebar Menu Items as requested
+  // Settings sections
   const sidebarItems = [
     { id: 'general', label: 'General', icon: Settings },
     { id: 'connections', label: 'Connections', icon: Briefcase, badge: 'MCP' },
+    { id: 'advanced', label: 'Advanced Settings', icon: Wrench },
     { id: 'widgets', label: 'Widgets', icon: LayoutGrid },
     { id: 'spirits', label: 'Spirits', icon: Sparkles },
     { id: 'notifications', label: 'Notifications', icon: Bell },
@@ -819,10 +978,21 @@ export const SettingsWindow: React.FC = () => {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 backdrop-blur-sm p-4 sm:p-6 select-none animate-in fade-in duration-200">
+    <motion.div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 backdrop-blur-md p-4 sm:p-6 select-none"
+      initial={{ opacity: 0, backdropFilter: 'blur(0px)' }}
+      animate={{ opacity: 1, backdropFilter: 'blur(14px)' }}
+      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+    >
       
       {/* Main Glass Window Frame */}
-      <GlassCard blur="xl" frost="heavy" className="relative w-full max-w-5xl h-[min(760px,90vh)] rounded-3xl overflow-hidden flex text-white font-sans" style={{ backgroundColor: 'rgba(18,18,18,0.18)', backdropFilter: 'blur(40px) saturate(115%)', WebkitBackdropFilter: 'blur(40px) saturate(115%)', borderRadius: 24, border: '1px solid rgba(255,255,255,0.16)', boxShadow: '0 24px 80px rgba(0,0,0,0.35)' }}>
+      <motion.div
+        className="relative w-full max-w-5xl"
+        initial={{ opacity: 0, scale: 0.92, y: 18, filter: 'blur(12px)' }}
+        animate={{ opacity: 1, scale: 1, y: 0, filter: 'blur(0px)' }}
+        transition={{ type: 'spring', stiffness: 300, damping: 25, mass: 0.82 }}
+      >
+      <GlassCard blur="xl" frost="heavy" className="relative w-full h-[min(760px,90vh)] rounded-3xl overflow-hidden flex text-white font-sans" style={{ backgroundColor: 'rgba(18,18,18,0.18)', backdropFilter: 'blur(40px) saturate(115%)', WebkitBackdropFilter: 'blur(40px) saturate(115%)', borderRadius: 24, border: '1px solid rgba(255,255,255,0.16)', boxShadow: '0 24px 80px rgba(0,0,0,0.35)' }}>
         
         {/* Ambient Neon Glow Accents */}
 
@@ -855,8 +1025,8 @@ export const SettingsWindow: React.FC = () => {
 
           {/* Logo & Workspace Title */}
           <div className="flex items-center gap-3 px-2 py-3 mb-3 border-b border-white/5">
-            <div className="w-9 h-9 rounded-2xl bg-white/10    flex items-center justify-center text-white shadow-lg shadow-neutral-500/30 ring-1 ring-white/20">
-              <Sparkles className="w-5 h-5 animate-pulse" />
+            <div className="w-9 h-9 shrink-0 flex items-center justify-center">
+              <img src={pihuLogo} alt="PIHU logo" className="w-9 h-9 object-contain" />
             </div>
             <div>
               <h2 className="text-sm font-bold tracking-wide text-white">PIHU OS</h2>
@@ -875,9 +1045,7 @@ export const SettingsWindow: React.FC = () => {
                   key={item.id}
                   onClick={() => {
                     setActiveSidebarCategory(item.id);
-                    if (item.id === 'connections') {
-                      setActiveMcpDetailId(null);
-                    }
+                    setActiveMcpDetailId(null);
                   }}
                   className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition duration-150 ${
                     isActive
@@ -920,6 +1088,7 @@ export const SettingsWindow: React.FC = () => {
               <h1 className="text-lg font-bold text-white tracking-wide">
                 {activeSidebarCategory === 'general' && 'PIHU OS System Profile'}
                 {activeSidebarCategory === 'connections' && (activeMcpDetailId ? `${currentSelectedMcp?.name} • Tools Explorer` : 'Connections & MCP Servers')}
+                {activeSidebarCategory === 'advanced' && 'Advanced Settings'}
                 {activeSidebarCategory === 'widgets' && 'Active Desktop Widgets'}
                 {activeSidebarCategory === 'spirits' && 'Spirits'}
                 {activeSidebarCategory === 'notifications' && 'Notification Preferences'}
@@ -934,6 +1103,7 @@ export const SettingsWindow: React.FC = () => {
               <p className="text-xs text-neutral-400">
                 {activeSidebarCategory === 'general' && 'Operating system profile, runtime context, memory cache, and assistant persona.'}
                 {activeSidebarCategory === 'connections' && (activeMcpDetailId ? `Listing all ${currentSelectedMcp?.tools.length} executable tool declarations and parameters.` : 'Google Workspace OAuth, project MCP, file MCP, and external tool protocols.')}
+                {activeSidebarCategory === 'advanced' && 'Developer options and advanced service configuration.'}
                 {activeSidebarCategory === 'widgets' && 'Toggle canvas widgets, dock magnification, and screen layout.'}
                 {activeSidebarCategory === 'spirits' && 'Add animated companions to your desktop and make them your own.'}
                 {activeSidebarCategory === 'notifications' && 'Control voice spoken alerts, desktop banners, and chime sounds.'}
@@ -943,7 +1113,7 @@ export const SettingsWindow: React.FC = () => {
                 {activeSidebarCategory === 'privacy' && 'On-device local AI processing, encrypted keys, and data boundaries.'}
                 {activeSidebarCategory === 'shortcuts' && 'Global hotkeys and quick action triggers across PIHU OS.'}
                 {activeSidebarCategory === 'people' && 'Define contacts, email addresses, and phone numbers for AI messaging via Gmail and WhatsApp.'}
-                {activeSidebarCategory === 'about' && 'System version, Tauri v2 core architectures, and credits.'}
+                {activeSidebarCategory === 'about' && 'Learn about PIHU OS and the tools that make it your personal AI desktop companion.'}
               </p>
             </div>
 
@@ -956,7 +1126,7 @@ export const SettingsWindow: React.FC = () => {
             {/* ══════ SECTION 1: GENERAL (PIHU OS Core Profile) ══════ */}
             {activeSidebarCategory === 'general' && (
               <div className="space-y-6">
-                
+
                 {/* OS Identity & Salutation */}
                 <div className="p-5 rounded-3xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-4">
                   <div className="flex items-center justify-between">
@@ -999,43 +1169,264 @@ export const SettingsWindow: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Local AI Architecture Stack */}
-                <div className="p-5 rounded-3xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-3">
-                  <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                    <Cpu className="w-4 h-4 text-neutral-400" /> PIHU OS Local AI Engines
-                  </h4>
+                {/* Real AI Engine Diagnosis & Architecture Stack */}
+                <div className="p-5 rounded-3xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                      <Cpu className="w-4 h-4 text-neutral-400" /> PIHU OS Local AI Engines & Live Diagnosis
+                    </h4>
+                    <button
+                      onClick={() => diagnostics.runDiagnosis()}
+                      disabled={diagnostics.isDiagnosing}
+                      className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-neutral-200 text-xs font-medium flex items-center gap-1.5 transition disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${diagnostics.isDiagnosing ? 'animate-spin text-neutral-400' : 'text-neutral-400'}`} />
+                      {diagnostics.isDiagnosing ? 'Diagnosing...' : 'Run Diagnosis'}
+                    </button>
+                  </div>
+
+                  {/* Diagnosis Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                    {/* STT Status Card */}
                     <div className="p-3.5 rounded-2xl bg-black/[0.12] backdrop-blur-lg border border-white/5 flex items-center justify-between">
-                      <div>
+                      <div className="pr-2">
                         <span className="text-[10px] text-neutral-500 font-semibold block">STT Engine</span>
-                        <span className="text-xs font-bold text-neutral-200">Whisper.cpp GGML Base</span>
+                        <span className="text-xs font-bold text-neutral-200 block truncate">
+                          {diagnostics.stt.activeEngine === 'whisper' ? 'Whisper.cpp GGML Base' : 'Gemini Live Cloud STT'}
+                        </span>
+                        <span className="text-[10px] text-neutral-400 block">
+                          {diagnostics.stt.whisper.online 
+                            ? `ws://5001 (${diagnostics.stt.whisper.latencyMs ?? 0}ms)` 
+                            : diagnostics.stt.geminiLive.online 
+                            ? `Fallback: Gemini Flash (${diagnostics.stt.geminiLive.latencyMs ?? 0}ms)` 
+                            : 'No STT engine reachable'}
+                        </span>
                       </div>
-                      <span className="text-[10px] font-mono text-emerald-400 px-2 py-0.5 rounded-md bg-emerald-500/10">Local C++</span>
+                      <div className="flex flex-col items-end gap-1">
+                        {diagnostics.stt.whisper.online ? (
+                          <span className="text-[10px] font-mono text-emerald-400 px-2 py-0.5 rounded-md bg-emerald-500/10 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Local C++
+                          </span>
+                        ) : diagnostics.stt.geminiLive.online ? (
+                          <span className="text-[10px] font-mono text-amber-400 px-2 py-0.5 rounded-md bg-amber-500/10 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" /> Cloud Fallback
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-mono text-rose-400 px-2 py-0.5 rounded-md bg-rose-500/10">
+                            Offline
+                          </span>
+                        )}
+                      </div>
                     </div>
 
+                    {/* TTS Status Card */}
                     <div className="p-3.5 rounded-2xl bg-black/[0.12] backdrop-blur-lg border border-white/5 flex items-center justify-between">
-                      <div>
+                      <div className="pr-2">
                         <span className="text-[10px] text-neutral-500 font-semibold block">TTS Engine</span>
-                        <span className="text-xs font-bold text-neutral-200">Kokoro Neural Synthesizer</span>
+                        <span className="text-xs font-bold text-neutral-200 block truncate">
+                          {diagnostics.tts.activeEngine === 'kokoro' 
+                            ? 'Kokoro Neural Synthesizer' 
+                            : diagnostics.tts.activeEngine === 'sarvam' 
+                            ? 'Sarvam AI (Aarti hi-IN)' 
+                            : diagnostics.tts.activeEngine === 'elevenlabs' 
+                            ? 'ElevenLabs Multilingual' 
+                            : 'macOS Native Speech'}
+                        </span>
+                        <span className="text-[10px] text-neutral-400 block">
+                          {diagnostics.tts.kokoro.online 
+                            ? `Port 48126 (${diagnostics.tts.kokoro.latencyMs ?? 0}ms)` 
+                            : diagnostics.tts.sarvam.online 
+                            ? `Sarvam Aarti (${diagnostics.tts.sarvam.latencyMs ?? 0}ms)` 
+                            : diagnostics.tts.elevenLabs.online 
+                            ? 'ElevenLabs Multilingual' 
+                            : 'macOS Native Voice'}
+                        </span>
                       </div>
-                      <span className="text-[10px] font-mono text-emerald-400 px-2 py-0.5 rounded-md bg-emerald-500/10">Port 48126</span>
+                      <div className="flex flex-col items-end gap-1">
+                        {diagnostics.tts.kokoro.online ? (
+                          <span className="text-[10px] font-mono text-emerald-400 px-2 py-0.5 rounded-md bg-emerald-500/10 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Port 48126
+                          </span>
+                        ) : diagnostics.tts.sarvam.online ? (
+                          <span className="text-[10px] font-mono text-amber-400 px-2 py-0.5 rounded-md bg-amber-500/10 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" /> Fallback: Sarvam AI
+                          </span>
+                        ) : diagnostics.tts.elevenLabs.online ? (
+                          <span className="text-[10px] font-mono text-amber-400 px-2 py-0.5 rounded-md bg-amber-500/10">
+                            Fallback: ElevenLabs
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-mono text-blue-400 px-2 py-0.5 rounded-md bg-blue-500/10">
+                            Native Speech
+                          </span>
+                        )}
+                      </div>
                     </div>
 
+                    {/* WakeWord Listener */}
                     <div className="p-3.5 rounded-2xl bg-black/[0.12] backdrop-blur-lg border border-white/5 flex items-center justify-between">
                       <div>
                         <span className="text-[10px] text-neutral-500 font-semibold block">WakeWord Listener</span>
                         <span className="text-xs font-bold text-neutral-200">OpenWakeWord + Silero VAD</span>
+                        <span className="text-[10px] text-neutral-400 block">pyaudio stream 16kHz</span>
                       </div>
-                      <span className="text-[10px] font-mono text-emerald-400 px-2 py-0.5 rounded-md bg-emerald-500/10">4 Models</span>
+                      <span className="text-[10px] font-mono text-emerald-400 px-2 py-0.5 rounded-md bg-emerald-500/10">
+                        {diagnostics.wakeWord.modelsCount} Models Ready
+                      </span>
                     </div>
 
+                    {/* Web Project Port Allocator */}
                     <div className="p-3.5 rounded-2xl bg-black/[0.12] backdrop-blur-lg border border-white/5 flex items-center justify-between">
                       <div>
                         <span className="text-[10px] text-neutral-500 font-semibold block">Web Project Port Allocator</span>
                         <span className="text-xs font-bold text-neutral-200">Port 5180+ Auto-Scanned</span>
+                        <span className="text-[10px] text-neutral-400 block">Vite / Next.js Scaffolding</span>
                       </div>
                       <span className="text-[10px] font-mono text-neutral-400 px-2 py-0.5 rounded-md bg-neutral-500/10">Reserved 5173</span>
                     </div>
+                  </div>
+
+                  {/* Fallback & Diagnosis Alert Banner */}
+                  {(diagnostics.stt.isFallback || diagnostics.tts.isFallback || diagnostics.stt.error || diagnostics.tts.error) && (
+                    <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200 space-y-1">
+                      <div className="font-semibold flex items-center gap-1.5 text-amber-300">
+                        <Sparkles className="w-3.5 h-3.5" /> Engine Diagnosis & Automatic Fallback Active
+                      </div>
+                      {diagnostics.stt.error && (
+                        <p className="text-[11px] text-amber-200/90 leading-relaxed">
+                          • <strong className="text-amber-100">STT:</strong> {diagnostics.stt.error}
+                        </p>
+                      )}
+                      {diagnostics.tts.error && (
+                        <p className="text-[11px] text-amber-200/90 leading-relaxed">
+                          • <strong className="text-amber-100">TTS:</strong> {diagnostics.tts.error}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Engine Selection Controls */}
+                  <div className="pt-2 border-t border-white/5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-neutral-300 mb-1.5">STT Engine Preference</label>
+                      <select
+                        value={sttEnginePreference}
+                        onChange={(e) => {
+                          setSttEnginePreference(e.target.value as any);
+                          setTimeout(() => diagnostics.runDiagnosis(), 100);
+                        }}
+                        className="w-full px-3 py-2 rounded-xl bg-black/[0.12] border border-white/10 text-xs text-white focus:outline-none focus:border-neutral-500"
+                      >
+                        <option value="auto">Auto Fallback (Whisper → Sarvam → Gemini Live)</option>
+                        <option value="whisper">Local Whisper.cpp Only (ws://5001)</option>
+                        <option value="sarvam">Sarvam AI Cloud STT (Hindi/Hinglish)</option>
+                        <option value="gemini_live">Gemini Live STT API (Cloud Only)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-neutral-300 mb-1.5">TTS Engine Preference</label>
+                      <select
+                        value={ttsEnginePreference}
+                        onChange={(e) => {
+                          setTtsEnginePreference(e.target.value as any);
+                          setTimeout(() => diagnostics.runDiagnosis(), 100);
+                        }}
+                        className="w-full px-3 py-2 rounded-xl bg-black/[0.12] border border-white/10 text-xs text-white focus:outline-none focus:border-neutral-500"
+                      >
+                        <option value="auto">Auto Fallback (Kokoro → Sarvam AI → ElevenLabs → Native)</option>
+                        <option value="kokoro">Local Kokoro Neural Synthesizer (Port 48126)</option>
+                        <option value="sarvam">Sarvam AI (Aarti - Hindi/Hinglish - hi-IN)</option>
+                        <option value="elevenlabs">ElevenLabs Multilingual (Cloud)</option>
+                        <option value="native">macOS Native Speech (Web Speech API)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Sarvam AI Configuration Section */}
+                  <div className="pt-3 border-t border-white/5 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-white flex items-center gap-1.5">
+                        <Key className="w-3.5 h-3.5 text-neutral-400" /> Sarvam AI Cloud TTS Setup
+                      </span>
+                      <span className="text-[10px] text-neutral-400 font-mono">
+                        Speaker: <strong className="text-neutral-200">aarti_hi_customer</strong> (hi-IN)
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <input
+                          type={showSarvamKey ? 'text' : 'password'}
+                          value={sarvamKeyInput}
+                          onChange={(e) => setSarvamKeyInput(e.target.value)}
+                          placeholder="Paste your SARVAM_API_KEY..."
+                          className="w-full px-3.5 py-2 pr-16 rounded-xl bg-black/[0.12] border border-white/10 text-xs text-white placeholder-neutral-500 font-mono focus:outline-none focus:border-neutral-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowSarvamKey(!showSarvamKey)}
+                          className="absolute right-2.5 top-2.5 text-[10px] text-neutral-400 hover:text-white"
+                        >
+                          {showSarvamKey ? 'Hide' : 'Show'}
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSarvamApiKey(sarvamKeyInput);
+                          diagnostics.runDiagnosis();
+                        }}
+                        className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold text-white transition"
+                      >
+                        Save Key
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isTestingSarvam || !sarvamKeyInput}
+                        onClick={async () => {
+                          setIsTestingSarvam(true);
+                          setSarvamTestStatus('Synthesizing speech with Aarti...');
+                          try {
+                            const res = await fetch('https://api.sarvam.ai/text-to-speech', {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                'api-subscription-key': sarvamKeyInput.trim(),
+                              },
+                              body: JSON.stringify({
+                                text: 'नमस्ते! मैं पीहू हूँ। सर्वम एआई वॉइस इंजन सक्रिय है।',
+                                language_code: 'hi-IN',
+                                speaker: 'aarti_hi_customer',
+                                model: 'bulbul:v4-flash',
+                              }),
+                            });
+                            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                            const data = await res.json();
+                            if (data.audios?.[0]) {
+                              const audio = new Audio(`data:audio/wav;base64,${data.audios[0]}`);
+                              await audio.play();
+                              setSarvamTestStatus('Playing Aarti sample audio!');
+                            }
+                          } catch (e: any) {
+                            setSarvamTestStatus(`Error: ${e.message}`);
+                          } finally {
+                            setIsTestingSarvam(false);
+                            setTimeout(() => setSarvamTestStatus(null), 4000);
+                          }
+                        }}
+                        className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-semibold text-white transition disabled:opacity-50 flex items-center gap-1.5"
+                      >
+                        <Volume2 className="w-3.5 h-3.5 text-neutral-300" />
+                        {isTestingSarvam ? 'Testing...' : 'Test Voice'}
+                      </button>
+                    </div>
+
+                    {sarvamTestStatus && (
+                      <p className="text-[11px] text-neutral-400 italic">{sarvamTestStatus}</p>
+                    )}
                   </div>
                 </div>
 
@@ -1128,6 +1519,35 @@ export const SettingsWindow: React.FC = () => {
                   </div>
                 </div>
 
+              </div>
+            )}
+
+            {/* ══════ ADVANCED SETTINGS ══════ */}
+            {activeSidebarCategory === 'advanced' && (
+              <div className="space-y-6">
+                <section className="p-5 rounded-3xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-5">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-neutral-200"><Code className="w-5 h-5" /></div>
+                      <div>
+                        <h3 className="text-xs font-bold text-white uppercase tracking-wider">Developer Settings</h3>
+                        <p className="text-[11px] text-neutral-400 mt-1 max-w-lg">Reveal service credentials and redirect configuration for local integrations.</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={developerMode}
+                      aria-label="Developer’s Mode"
+                      onClick={() => setDeveloperMode(!developerMode)}
+                      className={`w-12 h-6 shrink-0 flex items-center rounded-full p-1 transition ${developerMode ? 'bg-white/25' : 'bg-neutral-700'}`}
+                    >
+                      <span className={`bg-white w-4 h-4 rounded-full shadow-md transform transition ${developerMode ? 'translate-x-6' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+                  {!developerMode && <p className="text-xs text-neutral-400 border-t border-white/10 pt-4">Turn on Developer’s Mode to edit Spotify app credentials. Your Spotify account connection stays available below.</p>}
+                </section>
+                <SpotifyDeveloperSettings enabled={developerMode} />
               </div>
             )}
 
@@ -1296,40 +1716,8 @@ export const SettingsWindow: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Google Workspace OAuth Client Credentials */}
-                    <div className="p-5 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="text-xs font-bold text-white flex items-center gap-2">
-                            <FolderGit2 className="w-4 h-4 text-neutral-400" /> Google OAuth Credentials
-                          </h4>
-                          <p className="text-[11px] text-neutral-400 mt-0.5">Desktop Application OAuth Client for Workspace automation</p>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-[11px] font-semibold text-neutral-300 mb-1">Client ID</label>
-                          <input
-                            type="text"
-                            placeholder="Google OAuth Client ID"
-                            value={googleClientId}
-                            onChange={(e) => setGoogleWorkspaceConfig(e.target.value, googleClientSecret, true)}
-                            className="w-full px-3.5 py-2 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-500 transition font-mono"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-[11px] font-semibold text-neutral-300 mb-1">Client Secret</label>
-                          <input
-                            type="password"
-                            placeholder="Google OAuth Client Secret"
-                            value={googleClientSecret}
-                            onChange={(e) => setGoogleWorkspaceConfig(googleClientId, e.target.value, true)}
-                            className="w-full px-3.5 py-2 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-500 transition font-mono"
-                          />
-                        </div>
-                      </div>
+                    <div className="rounded-2xl border border-white/5 bg-white/[0.045] p-4 text-xs text-neutral-300">
+                      Google sign-in is securely handled by pihu.nfks.co.in. Your Google client secret stays on the PIHU server.
                     </div>
 
                     {/* Connected Google Accounts List */}
@@ -1339,25 +1727,34 @@ export const SettingsWindow: React.FC = () => {
                           Connected Google Accounts ({connectedGoogleAccounts.length})
                         </h3>
                         <button
+                          type="button"
+                          disabled={googleOAuthStarting}
                           onClick={async () => {
-                            const cId = googleClientId.trim();
-                            const cSecret = googleClientSecret.trim();
-                            if (!cId || !cSecret) {
-                              alert('Please enter your Google OAuth Client ID and Client Secret above first!');
-                              return;
-                            }
-                            const { invoke } = await import('@tauri-apps/api/core');
+                            setGoogleOAuthStarting(true);
+                            setGoogleOAuthError('');
+                            setGoogleOAuthMessage('Preparing secure Google sign-in…');
                             try {
-                              await invoke('google_oauth_start', { clientId: cId, clientSecret: cSecret });
+                              const { invoke } = await import('@tauri-apps/api/core');
+                              const result = await invoke<{ provider?: string }>('google_oauth_start');
+                              setGoogleOAuthMessage(result.provider === 'local'
+                                ? 'PIHU hosted sign-in is unavailable. Using the Google OAuth client configured on this device; complete authorization in your browser.'
+                                : 'PIHU sign-in opened. Complete Google authorization in your browser to link the account.');
                             } catch (error) {
-                              alert(`Google sign-in could not start: ${String(error)}`);
+                              setGoogleOAuthMessage('');
+                              setGoogleOAuthError(String(error));
+                            } finally {
+                              setGoogleOAuthStarting(false);
                             }
                           }}
-                          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10   hover: hover: text-white text-xs font-semibold shadow-lg shadow-neutral-500/20 transition"
+                          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold shadow-lg shadow-neutral-500/20 transition disabled:cursor-wait disabled:opacity-60"
                         >
-                          <Plus className="w-3.5 h-3.5" /> Link Another Account
+                          {googleOAuthStarting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                          {googleOAuthStarting ? 'Preparing…' : 'Link Another Account'}
                         </button>
                       </div>
+
+                      {googleOAuthMessage && <p role="status" className="text-xs text-emerald-300">{googleOAuthMessage}</p>}
+                      {googleOAuthError && <p role="alert" className="rounded-xl border border-rose-400/20 bg-rose-400/10 px-3 py-2 text-xs text-rose-200">Google sign-in could not start: {googleOAuthError}</p>}
 
                       <div className="space-y-2.5">
                         {connectedGoogleAccounts.map((account, idx) => (
@@ -1430,12 +1827,14 @@ export const SettingsWindow: React.FC = () => {
                         <div className="flex items-center gap-2">
                           <button
                             onClick={async () => {
-                              if (confirm('Clear all local WhatsApp sessions, chats cache and database?')) {
+                              if (confirm('Clear local WhatsApp chats and message history? This will not unlink your device.')) {
                                 try {
-                                  await fetch(`${WHATSAPP_API_URL}/clear`, { method: 'POST' });
-                                } catch (e) {}
-                                setWaStatus(prev => ({ ...prev, connected: false, logged_in: false, reachable: false }));
-                                setWaQrCode('');
+                                  const response = await fetch(`${WHATSAPP_API_URL}/clear`, { method: 'POST' });
+                                  if (!response.ok) throw new Error(await response.text());
+                                  setWaError('');
+                                } catch (e) {
+                                  setWaError(e instanceof Error ? e.message : 'Could not clear WhatsApp data.');
+                                }
                               }
                             }}
                             title="Clear local WhatsApp session & message database"
@@ -1445,18 +1844,35 @@ export const SettingsWindow: React.FC = () => {
                             Clear Data
                           </button>
 
-                          {waStatus.has_session || waStatus.logged_in ? (
+                          {waHasSession ? (
                             <button
+                              disabled={waUnlinking}
                               onClick={async () => {
+                                waStatusRevisionRef.current += 1;
+                                waUnlinkingRef.current = true;
+                                setWaUnlinking(true);
+                                setWaError('');
                                 try {
-                                  await fetch(`${WHATSAPP_API_URL}/logout`, { method: 'POST' });
-                                  setWaStatus(prev => ({ ...prev, connected: false, logged_in: false, reachable: false }));
-                                  setWaQrCode('');
-                                } catch (e) {}
+                                  const response = await fetch(`${WHATSAPP_API_URL}/logout`, { method: 'POST', signal: AbortSignal.timeout(15000) });
+                                  const result = await response.json().catch(() => ({}));
+                                  if (!response.ok || result.success !== true) throw new Error(result.error || 'The WhatsApp bridge could not unlink this device.');
+                                  if (result.has_session !== false || result.logged_in !== false) {
+                                    throw new Error('The bridge did not confirm that its saved WhatsApp session was removed. Restart the WhatsApp bridge and try unlinking again.');
+                                  }
+                                  setWaStatus({ connected: false, logged_in: false, has_session: false, reachable: true, jid: '', auth_state: 'waiting' });
+                                  setWaAuthPageOpened(false);
+                                  if (result.remote_unlinked === false) setWaError('The local PIHU session was removed. To unlink PIHU from WhatsApp completely, remove it from WhatsApp → Linked Devices.');
+                                } catch (e) {
+                                  setWaError(e instanceof Error ? e.message : 'Could not unlink the WhatsApp device.');
+                                } finally {
+                                  // Ignore any status response that started before logout; the bridge is the source of truth.
+                                  waUnlinkingRef.current = false;
+                                  setWaUnlinking(false);
+                                }
                               }}
-                              className="px-3.5 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-xs font-semibold text-red-400 transition"
+                              className="px-3.5 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 disabled:opacity-50 text-xs font-semibold text-red-400 transition"
                             >
-                              Unlink Device
+                              {waUnlinking ? 'Unlinking…' : 'Unlink Device'}
                             </button>
                           ) : (
                             <button
@@ -1465,7 +1881,7 @@ export const SettingsWindow: React.FC = () => {
                               className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10 from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:opacity-50 text-white text-xs font-semibold shadow-lg shadow-emerald-500/20 transition"
                             >
                               <QrCode className="w-3.5 h-3.5" />
-                              {waLoading ? 'Starting Bridge...' : (waQrCode ? 'Refresh QR Code' : 'Scan WhatsApp QR')}
+                              {waLoading ? (waAuthPageOpened ? 'Opening QR page…' : 'Starting WhatsApp…') : (waAuthPageOpened ? 'Open QR Pairing Page' : 'Pair WhatsApp')}
                             </button>
                           )}
                           {waError && <p role="alert" className="mt-2 text-xs text-neutral-300">{waError}</p>}
@@ -1473,7 +1889,7 @@ export const SettingsWindow: React.FC = () => {
                       </div>
 
                       {/* If Authenticated: Display Device Details */}
-                      {waStatus.has_session || waStatus.logged_in ? (
+                      {waHasSession ? (
                         <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
@@ -1487,64 +1903,18 @@ export const SettingsWindow: React.FC = () => {
                           </span>
                         </div>
                       ) : (
-                        /* If Not Authenticated: Display QR Pairing Code and Steps */
-                        <div className="p-4 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 space-y-4">
-                          <div className="flex flex-col md:flex-row items-center gap-5">
-                            <div className="flex flex-col items-center gap-2">
-                              <div className="w-40 h-40 rounded-2xl bg-white p-2.5 flex items-center justify-center shadow-xl border border-white/20 shrink-0 overflow-hidden">
-                                {waQrCode ? (
-                                  <img
-                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=2&data=${encodeURIComponent(waQrCode)}`}
-                                    alt="WhatsApp Pairing QR Code"
-                                    className="w-full h-full object-contain rounded-lg"
-                                  />
-                                ) : (
-                                  <div className="text-center p-2">
-                                    <QrCode className="w-12 h-12 text-neutral-400 mx-auto mb-1 animate-pulse" />
-                                    <span className="text-[10px] text-neutral-600 font-semibold block">
-                                      {waLoading ? 'Generating QR...' : 'Click "Scan WhatsApp QR"'}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                              {waQrCode && (
-                                <button
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(waQrCode);
-                                    setWaCopiedQr(true);
-                                    setTimeout(() => setWaCopiedQr(false), 2000);
-                                  }}
-                                  className="flex items-center gap-1 text-[10px] text-neutral-400 hover:text-white transition"
-                                >
-                                  {waCopiedQr ? (
-                                    <>
-                                      <Check className="w-3 h-3 text-emerald-400" />
-                                      <span className="text-emerald-400">QR Code String Copied</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Copy className="w-3 h-3" />
-                                      <span>Copy QR Payload</span>
-                                    </>
-                                  )}
-                                </button>
-                              )}
-                            </div>
-
-                            <div className="flex-1 space-y-2 text-xs">
-                              <h5 className="font-bold text-white uppercase tracking-wider text-[11px]">How to Pair Your Phone:</h5>
-                              <ol className="space-y-1.5 text-neutral-300 text-[11px] list-decimal list-inside font-medium">
-                                <li>Open <strong>WhatsApp</strong> on your mobile phone</li>
-                                <li>Tap <strong>Settings</strong> &gt; <strong>Linked Devices</strong> &gt; <strong>Link a Device</strong></li>
-                                <li>Point your phone camera at the QR code on the left</li>
-                                <li>Device will register as <strong>PIHU (Desktop)</strong></li>
+                        <div className="p-4 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10">
+                          <div className="flex items-start gap-3">
+                            <Shield className="w-5 h-5 mt-0.5 text-emerald-400 shrink-0" />
+                            <div className="space-y-2 text-xs">
+                              <h5 className="font-bold text-white">Secure WhatsApp pairing</h5>
+          <p className="text-neutral-400">{waAuthPageOpened ? 'The local PIHU auth page is open in your browser. Scan its live QR code with WhatsApp.' : 'PIHU opens a local auth page with the live QR code. The QR is never displayed in Settings.'}</p>
+                              <ol className="space-y-1 text-neutral-300 text-[11px] list-decimal list-inside font-medium">
+                                <li>Open WhatsApp on your phone</li>
+                                <li>Go to Settings → Linked Devices → Link a Device</li>
+                                <li>Scan the QR on the PIHU auth page</li>
                               </ol>
-                              <div className="pt-2 flex items-center gap-3">
-                                <span className="text-[10px] text-neutral-500 font-mono">CLI Command:</span>
-                                <code className="px-2 py-0.5 rounded bg-black/60 text-[10px] font-mono text-neutral-400 border border-white/5">
-                                  pihu mcp whatsapp auth
-                                </code>
-                              </div>
+                              <div className="pt-1 text-[10px] text-neutral-500">Pairing page: http://127.0.0.1:8080/mcp/whatsapp/auth</div>
                             </div>
                           </div>
                         </div>
@@ -1680,25 +2050,206 @@ export const SettingsWindow: React.FC = () => {
             {/* ══════ SECTION 5: VOICE & SPEECH ══════ */}
             {activeSidebarCategory === 'voice' && (
               <div className="space-y-6">
-                <div>
-                  <label className="block text-xs font-semibold text-neutral-300 mb-1.5">ElevenLabs API Key (High-Fidelity Cloud Voice)</label>
-                  <input
-                    type="password"
-                    placeholder="sk_..."
-                    value={elevenLabsApiKey}
-                    onChange={(e) => setElevenLabsConfig(e.target.value, elevenLabsVoiceId)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-500 transition"
-                  />
+
+                {/* ── Sarvam AI Cloud STT & TTS ── */}
+                <div className="p-5 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-white flex items-center gap-2">
+                      <Mic className="w-3.5 h-3.5 text-neutral-400" />
+                      Sarvam AI — Cloud STT & TTS
+                    </h4>
+                    <span className="text-[10px] text-neutral-400 font-mono">
+                      Speaker: <strong className="text-neutral-200">{sarvamSpeaker}</strong> ({sarvamLanguageCode})
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-neutral-300 mb-1">API Subscription Key</label>
+                      <div className="flex items-center gap-2">
+                        <div className="relative flex-1">
+                          <input
+                            type={showSarvamKey ? 'text' : 'password'}
+                            value={sarvamKeyInput}
+                            onChange={(e) => setSarvamKeyInput(e.target.value)}
+                            placeholder="Paste your SARVAM_API_KEY..."
+                            className="w-full px-3.5 py-2.5 pr-16 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white placeholder-neutral-500 font-mono focus:outline-none focus:border-neutral-500 transition"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowSarvamKey(!showSarvamKey)}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-neutral-400 hover:text-white transition"
+                          >
+                            {showSarvamKey ? 'Hide' : 'Show'}
+                          </button>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSarvamApiKey(sarvamKeyInput);
+                            diagnostics.runDiagnosis();
+                          }}
+                          className="px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold text-white transition"
+                        >
+                          Save Key
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={isTestingSarvam || !sarvamKeyInput}
+                          onClick={async () => {
+                            setIsTestingSarvam(true);
+                            setSarvamTestStatus('Synthesizing speech with Aarti...');
+                            try {
+                              const res = await fetch('https://api.sarvam.ai/text-to-speech', {
+                                method: 'POST',
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                  'api-subscription-key': sarvamKeyInput.trim(),
+                                },
+                                body: JSON.stringify({
+                                  text: 'नमस्ते! मैं पीहू हूँ। सर्वम एआई वॉइस इंजन सक्रिय है।',
+                                  language_code: sarvamLanguageCode,
+                                  speaker: sarvamSpeaker,
+                                  model: 'bulbul:v4-flash',
+                                }),
+                              });
+                              if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                              const data = await res.json();
+                              if (data.audios?.[0]) {
+                                const audio = new Audio(`data:audio/wav;base64,${data.audios[0]}`);
+                                await audio.play();
+                                setSarvamTestStatus('✓ Playing Aarti sample audio!');
+                              }
+                            } catch (e: any) {
+                              setSarvamTestStatus(`✗ Error: ${e.message}`);
+                            } finally {
+                              setIsTestingSarvam(false);
+                              setTimeout(() => setSarvamTestStatus(null), 4000);
+                            }
+                          }}
+                          className="px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-semibold text-white transition disabled:opacity-50 flex items-center gap-1.5"
+                        >
+                          <Volume2 className="w-3.5 h-3.5 text-neutral-300" />
+                          {isTestingSarvam ? 'Testing...' : 'Test Voice'}
+                        </button>
+                      </div>
+                      {sarvamTestStatus && (
+                        <p className="text-[11px] text-neutral-400 italic mt-1.5">{sarvamTestStatus}</p>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-neutral-300 mb-1">Speaker Voice</label>
+                        <select
+                          value={sarvamSpeaker}
+                          onChange={(e) => setSarvamSpeaker(e.target.value)}
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white focus:outline-none focus:border-neutral-500 transition appearance-none"
+                        >
+                          <option value="aarti_hi_customer">Aarti (Hindi Customer)</option>
+                          <option value="arvind">Arvind</option>
+                          <option value="amol">Amol</option>
+                          <option value="meera">Meera</option>
+                          <option value="amartya">Amartya</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-neutral-300 mb-1">Language Code</label>
+                        <select
+                          value={sarvamLanguageCode}
+                          onChange={(e) => setSarvamLanguageCode(e.target.value)}
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white focus:outline-none focus:border-neutral-500 transition appearance-none"
+                        >
+                          <option value="hi-IN">Hindi (hi-IN)</option>
+                          <option value="en-IN">English India (en-IN)</option>
+                          <option value="bn-IN">Bengali (bn-IN)</option>
+                          <option value="ta-IN">Tamil (ta-IN)</option>
+                          <option value="te-IN">Telugu (te-IN)</option>
+                          <option value="kn-IN">Kannada (kn-IN)</option>
+                          <option value="ml-IN">Malayalam (ml-IN)</option>
+                          <option value="mr-IN">Marathi (mr-IN)</option>
+                          <option value="gu-IN">Gujarati (gu-IN)</option>
+                          <option value="od-IN">Odia (od-IN)</option>
+                          <option value="pa-IN">Punjabi (pa-IN)</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-neutral-300 mb-1.5">Voice Model ID</label>
-                  <input
-                    type="text"
-                    value={elevenLabsVoiceId}
-                    onChange={(e) => setElevenLabsConfig(elevenLabsApiKey, e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-500 transition font-mono"
-                  />
+                {/* ── ElevenLabs Cloud TTS ── */}
+                <div className="p-5 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-4">
+                  <h4 className="text-xs font-bold text-white flex items-center gap-2">
+                    <Volume2 className="w-3.5 h-3.5 text-neutral-400" />
+                    ElevenLabs — High-Fidelity Cloud TTS
+                  </h4>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-neutral-300 mb-1">API Key</label>
+                      <input
+                        type="password"
+                        placeholder="sk_..."
+                        value={elevenLabsApiKey}
+                        onChange={(e) => setElevenLabsConfig(e.target.value, elevenLabsVoiceId)}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white placeholder-neutral-500 font-mono focus:outline-none focus:border-neutral-500 transition"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-neutral-300 mb-1">Voice Model ID</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          placeholder="MmQVkVZnQ0dUbfWzcW6f"
+                          value={elevenLabsVoiceId}
+                          onChange={(e) => setElevenLabsConfig(elevenLabsApiKey, e.target.value)}
+                          className="flex-1 px-3.5 py-2.5 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white placeholder-neutral-500 font-mono focus:outline-none focus:border-neutral-500 transition"
+                        />
+                        <button
+                          type="button"
+                          disabled={isTestingElevenLabs || !elevenLabsApiKey}
+                          onClick={async () => {
+                            setIsTestingElevenLabs(true);
+                            setElevenLabsTestStatus('Generating speech with ElevenLabs...');
+                            try {
+                              const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${elevenLabsVoiceId.trim() || 'MmQVkVZnQ0dUbfWzcW6f'}`, {
+                                method: 'POST',
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                  'xi-api-key': elevenLabsApiKey.trim(),
+                                },
+                                body: JSON.stringify({
+                                  text: 'Hello! I am PIHU, your personal AI assistant. ElevenLabs voice engine is now active.',
+                                  model_id: 'eleven_multilingual_v2',
+                                  voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+                                }),
+                              });
+                              if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                              const blob = await res.blob();
+                              const url = URL.createObjectURL(blob);
+                              const audio = new Audio(url);
+                              audio.onended = () => URL.revokeObjectURL(url);
+                              await audio.play();
+                              setElevenLabsTestStatus('✓ Playing ElevenLabs sample audio!');
+                            } catch (e: any) {
+                              setElevenLabsTestStatus(`✗ Error: ${e.message}`);
+                            } finally {
+                              setIsTestingElevenLabs(false);
+                              setTimeout(() => setElevenLabsTestStatus(null), 5000);
+                            }
+                          }}
+                          className="px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-semibold text-white transition disabled:opacity-50 flex items-center gap-1.5"
+                        >
+                          <Volume2 className="w-3.5 h-3.5 text-neutral-300" />
+                          {isTestingElevenLabs ? 'Testing...' : 'Test Voice'}
+                        </button>
+                      </div>
+                      {elevenLabsTestStatus && (
+                        <p className="text-[11px] text-neutral-400 italic mt-1.5">{elevenLabsTestStatus}</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Speed Slider */}
@@ -1723,6 +2274,7 @@ export const SettingsWindow: React.FC = () => {
                   <h4 className="text-xs font-bold text-neutral-200">Default TTS Fallback Strategy:</h4>
                   <ol className="space-y-2 text-xs text-neutral-400 list-decimal list-inside">
                     <li><strong className="text-neutral-400">Kokoro Neural TTS</strong> (Local On-Device AI — Port 48126)</li>
+                    <li><strong className="text-neutral-400">Sarvam AI</strong> (Cloud Hindi/Hinglish TTS — Aarti)</li>
                     <li><strong className="text-neutral-400">ElevenLabs API</strong> (Cloud High-Fidelity Backup)</li>
                     <li><strong className="text-neutral-300">Native OS SpeechSynthesis</strong> (Offline Fallback)</li>
                   </ol>
@@ -1752,7 +2304,7 @@ export const SettingsWindow: React.FC = () => {
                   />
                   <button
                     type="submit"
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/10   hover: hover: text-white text-xs font-semibold shadow-lg shadow-neutral-500/20 transition"
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold shadow-lg shadow-neutral-500/20 transition"
                   >
                     <Plus className="w-4 h-4" /> Add Key
                   </button>
@@ -1839,6 +2391,248 @@ export const SettingsWindow: React.FC = () => {
                       );
                     })
                   )}
+                </div>
+
+                {/* ── STT / TTS Engine Preference ── */}
+                <div className="pt-4 border-t border-white/5 space-y-4">
+                  <h3 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider">Engine Preferences</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-neutral-300 mb-1.5">STT Engine Preference</label>
+                      <select
+                        value={sttEnginePreference}
+                        onChange={(e) => {
+                          setSttEnginePreference(e.target.value as any);
+                          setTimeout(() => diagnostics.runDiagnosis(), 100);
+                        }}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white focus:outline-none focus:border-neutral-500 transition appearance-none"
+                      >
+                        <option value="auto">Auto Fallback (Whisper → Sarvam → Gemini Live)</option>
+                        <option value="whisper">Local Whisper.cpp Only (ws://5001)</option>
+                        <option value="sarvam">Sarvam AI Cloud STT (Hindi/Hinglish)</option>
+                        <option value="gemini_live">Gemini Live STT API (Cloud Only)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-neutral-300 mb-1.5">TTS Engine Preference</label>
+                      <select
+                        value={ttsEnginePreference}
+                        onChange={(e) => {
+                          setTtsEnginePreference(e.target.value as any);
+                          setTimeout(() => diagnostics.runDiagnosis(), 100);
+                        }}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white focus:outline-none focus:border-neutral-500 transition appearance-none"
+                      >
+                        <option value="auto">Auto Fallback (Kokoro → Sarvam AI → ElevenLabs → Native)</option>
+                        <option value="kokoro">Local Kokoro Neural Synthesizer (Port 48126)</option>
+                        <option value="sarvam">Sarvam AI (Aarti - Hindi/Hinglish - hi-IN)</option>
+                        <option value="elevenlabs">ElevenLabs Multilingual (Cloud)</option>
+                        <option value="native">macOS Native Speech (Web Speech API)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── Sarvam AI Cloud Configuration ── */}
+                <div className="p-5 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-white flex items-center gap-2">
+                      <Mic className="w-3.5 h-3.5 text-neutral-400" />
+                      Sarvam AI — Cloud STT & TTS
+                    </h4>
+                    <span className="text-[10px] text-neutral-400 font-mono">
+                      Speaker: <strong className="text-neutral-200">{sarvamSpeaker}</strong> ({sarvamLanguageCode})
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-neutral-300 mb-1">API Subscription Key</label>
+                      <div className="flex items-center gap-2">
+                        <div className="relative flex-1">
+                          <input
+                            type={showSarvamKey ? 'text' : 'password'}
+                            value={sarvamKeyInput}
+                            onChange={(e) => setSarvamKeyInput(e.target.value)}
+                            placeholder="Paste your SARVAM_API_KEY..."
+                            className="w-full px-3.5 py-2.5 pr-16 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white placeholder-neutral-500 font-mono focus:outline-none focus:border-neutral-500 transition"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowSarvamKey(!showSarvamKey)}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-neutral-400 hover:text-white transition"
+                          >
+                            {showSarvamKey ? 'Hide' : 'Show'}
+                          </button>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSarvamApiKey(sarvamKeyInput);
+                            diagnostics.runDiagnosis();
+                          }}
+                          className="px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold text-white transition"
+                        >
+                          Save Key
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={isTestingSarvam || !sarvamKeyInput}
+                          onClick={async () => {
+                            setIsTestingSarvam(true);
+                            setSarvamTestStatus('Synthesizing speech with Aarti...');
+                            try {
+                              const res = await fetch('https://api.sarvam.ai/text-to-speech', {
+                                method: 'POST',
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                  'api-subscription-key': sarvamKeyInput.trim(),
+                                },
+                                body: JSON.stringify({
+                                  text: 'नमस्ते! मैं पीहू हूँ। सर्वम एआई वॉइस इंजन सक्रिय है।',
+                                  language_code: sarvamLanguageCode,
+                                  speaker: sarvamSpeaker,
+                                  model: 'bulbul:v4-flash',
+                                }),
+                              });
+                              if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                              const data = await res.json();
+                              if (data.audios?.[0]) {
+                                const audio = new Audio(`data:audio/wav;base64,${data.audios[0]}`);
+                                await audio.play();
+                                setSarvamTestStatus('✓ Playing Aarti sample audio!');
+                              }
+                            } catch (e: any) {
+                              setSarvamTestStatus(`✗ Error: ${e.message}`);
+                            } finally {
+                              setIsTestingSarvam(false);
+                              setTimeout(() => setSarvamTestStatus(null), 4000);
+                            }
+                          }}
+                          className="px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-semibold text-white transition disabled:opacity-50 flex items-center gap-1.5"
+                        >
+                          <Volume2 className="w-3.5 h-3.5 text-neutral-300" />
+                          {isTestingSarvam ? 'Testing...' : 'Test Voice'}
+                        </button>
+                      </div>
+                      {sarvamTestStatus && (
+                        <p className="text-[11px] text-neutral-400 italic mt-1.5">{sarvamTestStatus}</p>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-neutral-300 mb-1">Speaker Voice</label>
+                        <select
+                          value={sarvamSpeaker}
+                          onChange={(e) => setSarvamSpeaker(e.target.value)}
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white focus:outline-none focus:border-neutral-500 transition appearance-none"
+                        >
+                          <option value="aarti_hi_customer">Aarti (Hindi Customer)</option>
+                          <option value="arvind">Arvind</option>
+                          <option value="amol">Amol</option>
+                          <option value="meera">Meera</option>
+                          <option value="amartya">Amartya</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-neutral-300 mb-1">Language Code</label>
+                        <select
+                          value={sarvamLanguageCode}
+                          onChange={(e) => setSarvamLanguageCode(e.target.value)}
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white focus:outline-none focus:border-neutral-500 transition appearance-none"
+                        >
+                          <option value="hi-IN">Hindi (hi-IN)</option>
+                          <option value="en-IN">English India (en-IN)</option>
+                          <option value="bn-IN">Bengali (bn-IN)</option>
+                          <option value="ta-IN">Tamil (ta-IN)</option>
+                          <option value="te-IN">Telugu (te-IN)</option>
+                          <option value="kn-IN">Kannada (kn-IN)</option>
+                          <option value="ml-IN">Malayalam (ml-IN)</option>
+                          <option value="mr-IN">Marathi (mr-IN)</option>
+                          <option value="gu-IN">Gujarati (gu-IN)</option>
+                          <option value="od-IN">Odia (od-IN)</option>
+                          <option value="pa-IN">Punjabi (pa-IN)</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── ElevenLabs Cloud Configuration ── */}
+                <div className="p-5 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-4">
+                  <h4 className="text-xs font-bold text-white flex items-center gap-2">
+                    <Volume2 className="w-3.5 h-3.5 text-neutral-400" />
+                    ElevenLabs — High-Fidelity Cloud TTS
+                  </h4>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-neutral-300 mb-1">API Key</label>
+                      <input
+                        type="password"
+                        placeholder="sk_..."
+                        value={elevenLabsApiKey}
+                        onChange={(e) => setElevenLabsConfig(e.target.value, elevenLabsVoiceId)}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white placeholder-neutral-500 font-mono focus:outline-none focus:border-neutral-500 transition"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-neutral-300 mb-1">Voice Model ID</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          placeholder="MmQVkVZnQ0dUbfWzcW6f"
+                          value={elevenLabsVoiceId}
+                          onChange={(e) => setElevenLabsConfig(elevenLabsApiKey, e.target.value)}
+                          className="flex-1 px-3.5 py-2.5 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white placeholder-neutral-500 font-mono focus:outline-none focus:border-neutral-500 transition"
+                        />
+                        <button
+                          type="button"
+                          disabled={isTestingElevenLabs || !elevenLabsApiKey}
+                          onClick={async () => {
+                            setIsTestingElevenLabs(true);
+                            setElevenLabsTestStatus('Generating speech with ElevenLabs...');
+                            try {
+                              const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${elevenLabsVoiceId.trim() || 'MmQVkVZnQ0dUbfWzcW6f'}`, {
+                                method: 'POST',
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                  'xi-api-key': elevenLabsApiKey.trim(),
+                                },
+                                body: JSON.stringify({
+                                  text: 'Hello! I am PIHU, your personal AI assistant. ElevenLabs voice engine is now active.',
+                                  model_id: 'eleven_multilingual_v2',
+                                  voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+                                }),
+                              });
+                              if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                              const blob = await res.blob();
+                              const url = URL.createObjectURL(blob);
+                              const audio = new Audio(url);
+                              audio.onended = () => URL.revokeObjectURL(url);
+                              await audio.play();
+                              setElevenLabsTestStatus('✓ Playing ElevenLabs sample audio!');
+                            } catch (e: any) {
+                              setElevenLabsTestStatus(`✗ Error: ${e.message}`);
+                            } finally {
+                              setIsTestingElevenLabs(false);
+                              setTimeout(() => setElevenLabsTestStatus(null), 5000);
+                            }
+                          }}
+                          className="px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-semibold text-white transition disabled:opacity-50 flex items-center gap-1.5"
+                        >
+                          <Volume2 className="w-3.5 h-3.5 text-neutral-300" />
+                          {isTestingElevenLabs ? 'Testing...' : 'Test Voice'}
+                        </button>
+                      </div>
+                      {elevenLabsTestStatus && (
+                        <p className="text-[11px] text-neutral-400 italic mt-1.5">{elevenLabsTestStatus}</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -1947,28 +2741,7 @@ export const SettingsWindow: React.FC = () => {
 
             {/* ══════ SECTION 9: SHORTCUTS ══════ */}
             {activeSidebarCategory === 'shortcuts' && (
-              <div className="space-y-3">
-                <h3 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-2">Global Keyboard Shortcuts</h3>
-                {[
-                  { keys: ['⌘', 'Space'], action: 'Activate PIHU Voice Assistant' },
-                  { keys: ['⌘', ','], action: 'Open PIHU Settings Window' },
-                  { keys: ['⌘', 'K'], action: 'Open Action Palette / Command Bar' },
-                  { keys: ['⌘', 'T'], action: 'Toggle Task Window' },
-                  { keys: ['⌘', 'M'], action: 'Toggle YouTube Music Player' },
-                  { keys: ['Esc'], action: 'Dismiss active voice overlay' },
-                ].map((sc, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-3.5 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5">
-                    <span className="text-xs text-neutral-300 font-medium">{sc.action}</span>
-                    <div className="flex items-center gap-1.5">
-                      {sc.keys.map((k, i) => (
-                        <kbd key={i} className="px-2.5 py-1 rounded-lg bg-white/10 border border-white/15 text-xs font-mono font-bold text-neutral-300">
-                          {k}
-                        </kbd>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <ShortcutSettings />
             )}
 
 
@@ -2267,19 +3040,39 @@ export const SettingsWindow: React.FC = () => {
 
             {/* ══════ SECTION 11: ABOUT PIHU ══════ */}
             {activeSidebarCategory === 'about' && (
-              <div className="p-8 rounded-3xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-4 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-white/10    flex items-center justify-center text-white mx-auto shadow-2xl shadow-neutral-500/30">
-                  <Sparkles className="w-8 h-8" />
+              <div className="p-8 rounded-3xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-6">
+                <div className="flex flex-col items-center gap-3 text-center">
+                  <img src={pihuLogo} alt="PIHU logo" className="w-20 h-20 object-contain" />
+                  <div>
+                    <h3 className="text-xl font-bold text-white">PIHU OS <span className="text-neutral-300">v{appVersion}</span></h3>
+                    <p className="text-sm text-neutral-400 mt-1">Your personal AI desktop companion</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-lg font-bold text-white">PIHU OS v1.0.0</h3>
-                  <p className="text-xs text-neutral-400 mt-1">
-                    Created with ❤️ by <strong>Mayank Jha</strong>
-                  </p>
+                <p className="text-sm text-neutral-300 leading-relaxed max-w-3xl mx-auto text-center">
+                  PIHU brings voice-powered assistance, desktop companions, and connected tools together in one workspace. Talk naturally, work across your projects, and connect services such as Google Workspace and Spotify through MCP integrations.
+                </p>
+                <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/[0.12]">
+                  <table className="w-full text-left text-sm">
+                    <caption className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-300 border-b border-white/10">Build information</caption>
+                    <tbody className="divide-y divide-white/[0.07]">
+                      {[
+                        ['Product', 'PIHU OS'],
+                        ['Version', appVersion],
+                        ['Build number', __PIHU_BUILD_INFO__.number],
+                        ['Build name', __PIHU_BUILD_INFO__.name],
+                        ['Build date', new Date(__PIHU_BUILD_INFO__.date).toLocaleString()],
+                        ['Branch', __PIHU_BUILD_INFO__.branch],
+                        ['Commit', __PIHU_BUILD_INFO__.commit],
+                      ].map(([label, value]) => (
+                        <tr key={label}>
+                          <th scope="row" className="w-1/3 px-4 py-3 font-medium text-neutral-400">{label}</th>
+                          <td className="px-4 py-3 text-neutral-200 font-mono text-xs break-all">{value}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                <div className="p-4 rounded-2xl bg-black/[0.12] backdrop-blur-lg border border-white/5 text-[11px] font-mono text-neutral-300 max-w-md mx-auto">
-                  Tauri v2 • React 19 • Python 3.10 • Rust Core • MCP Suite
-                </div>
+                <p className="text-xs text-neutral-500 text-center">Created by Mayank Jha</p>
               </div>
             )}
 
@@ -2290,7 +3083,7 @@ export const SettingsWindow: React.FC = () => {
         </div>
 
       </GlassCard>
-
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };

@@ -53,10 +53,20 @@ pub fn start_wakeword_engine(app: AppHandle) {
     let python_cmd = crate::get_python_cmd();
     println!("Wakeword Engine using python binary: {}", python_cmd);
 
+    let resource_dir = match app.path().resource_dir() {
+        Ok(path) => path,
+        Err(error) => { eprintln!("Could not locate app resources for wake word: {error}"); return; }
+    };
+    let home = std::env::var("HOME").unwrap_or_default();
+    let models_dir = std::path::PathBuf::from(home).join(".pihu-os/models");
+
     // Spawn the Python process with unbuffered stdout (-u)
     let mut child = match Command::new(&python_cmd)
         .arg("-u")
-        .arg("python/wakeword.py")
+        .arg(resource_dir.join("python/wakeword.py"))
+        .current_dir(&resource_dir)
+        .env("PIHU_RESOURCE_DIR", &resource_dir)
+        .env("PIHU_MODELS_DIR", &models_dir)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

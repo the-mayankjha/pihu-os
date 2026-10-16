@@ -7,6 +7,9 @@ from openwakeword.model import Model
 # Resolve absolute paths to the custom ONNX models with fallback discovery
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 candidate_dirs = [
+    os.path.join(os.environ.get('PIHU_RESOURCE_DIR', ''), '_up_', 'models', 'wakeWord'),
+    os.path.join(os.environ.get('PIHU_MODELS_DIR', ''), 'wakeWord'),
+    os.path.expanduser('~/.pihu-os/models/wakeWord'),
     os.path.abspath(os.path.join(BASE_DIR, '../../models/wakeWord')),
     os.path.abspath(os.path.join(BASE_DIR, '../models/wakeWord')),
     os.path.abspath('models/wakeWord'),

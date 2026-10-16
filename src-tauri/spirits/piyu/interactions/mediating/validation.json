@@ -1,0 +1,37 @@
+{
+  "ok": true,
+  "frames": 4,
+  "cell": [
+    192,
+    208
+  ],
+  "subject": "mayank",
+  "action": "mediating",
+  "sourceBounds": [
+    [
+      35,
+      57,
+      404,
+      828
+    ],
+    [
+      426,
+      56,
+      834,
+      826
+    ],
+    [
+      841,
+      62,
+      1355,
+      828
+    ],
+    [
+      1368,
+      57,
+      1739,
+      826
+    ]
+  ],
+  "method": "connected pose extraction, shared baseline and bundled despill"
+}
