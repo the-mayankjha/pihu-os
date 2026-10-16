@@ -62,6 +62,11 @@ interface VoiceState {
   activeVoiceName: string | null;
   lastTTSError: string | null;
 
+  // Integrated Coding Capability State
+  activeCodingPlan: any | null;
+  activeCodingReport: any | null;
+  activeFileChange: any | null;
+
   setIsActive: (active: boolean) => void;
   setIsListening: (listening: boolean) => void;
   setTranscription: (text: string) => void;
@@ -78,6 +83,10 @@ interface VoiceState {
   setActiveVoiceEngine: (engine: string) => void;
   setActiveVoiceName: (name: string | null) => void;
   setLastTTSError: (err: string | null) => void;
+  setActiveCodingPlan: (plan: any | null) => void;
+  setActiveCodingReport: (report: any | null) => void;
+  setActiveFileChange: (change: any | null) => void;
+  clearCodingState: () => void;
   reset: () => void;
 }
 
@@ -99,6 +108,9 @@ export const useVoiceStore = create<VoiceState>((set) => ({
   activeVoiceEngine: 'Awaiting Engine...',
   activeVoiceName: null,
   lastTTSError: null,
+  activeCodingPlan: null,
+  activeCodingReport: null,
+  activeFileChange: null,
 
   setIsActive: (active) => set({ isActive: active }),
   setIsListening: (listening) => set({ isListening: listening }),
@@ -125,6 +137,10 @@ export const useVoiceStore = create<VoiceState>((set) => ({
   setActiveVoiceEngine: (engine) => set({ activeVoiceEngine: engine }),
   setActiveVoiceName: (name) => set({ activeVoiceName: name }),
   setLastTTSError: (err) => set({ lastTTSError: err }),
+  setActiveCodingPlan: (plan) => set({ activeCodingPlan: plan }),
+  setActiveCodingReport: (report) => set({ activeCodingReport: report }),
+  setActiveFileChange: (change) => set({ activeFileChange: change }),
+  clearCodingState: () => set({ activeCodingPlan: null, activeCodingReport: null, activeFileChange: null }),
 
   reset: () => set({
     isActive: false,
@@ -135,6 +151,9 @@ export const useVoiceStore = create<VoiceState>((set) => ({
     pendingProjectAction: null,
     pendingEmailAction: null,
     pendingWhatsAppAction: null,
+    activeCodingPlan: null,
+    activeCodingReport: null,
+    activeFileChange: null,
     activeVoiceEngine: 'Awaiting Engine...',
     activeVoiceName: null,
     lastTTSError: null

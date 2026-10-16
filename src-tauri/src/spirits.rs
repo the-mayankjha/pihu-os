@@ -14,6 +14,9 @@ tauri_nspanel::tauri_panel! {
     panel!(VoicePanel {
         config: { can_become_key_window: true, can_become_main_window: false }
     })
+    panel!(CommandPalettePanel {
+        config: { can_become_key_window: true, can_become_main_window: false }
+    })
 }
 
 #[cfg(target_os = "macos")]
@@ -30,6 +33,9 @@ pub(crate) fn configure_overlay(window: &tauri::WebviewWindow) -> Result<(), Str
         Err(_) if window.label() == "voice-overlay" => window
             .to_panel::<VoicePanel>()
             .map_err(|e| format!("Could not create Voice panel: {e}"))?,
+        Err(_) if window.label() == "command-palette" => window
+            .to_panel::<CommandPalettePanel>()
+            .map_err(|e| format!("Could not create Command Palette panel: {e}"))?,
         Err(_) => window
             .to_panel::<SpiritPanel>()
             .map_err(|e| format!("Could not create Spirit panel: {e}"))?,
@@ -71,7 +77,7 @@ fn release_overlay(_window: &tauri::WebviewWindow) {}
 
 pub fn release_all(app: &tauri::AppHandle) {
     for (label, window) in app.webview_windows() {
-        if label.starts_with("spirit-") || label == "voice-overlay" {
+        if label.starts_with("spirit-") || label == "voice-overlay" || label == "command-palette" {
             release_overlay(&window);
         }
     }
@@ -254,6 +260,66 @@ pub async fn sync_voice_overlay(app: tauri::AppHandle, visible: bool) -> Result<
             }
             configure_overlay(&window)?;
             window.show().map_err(|e| e.to_string())?;
+            Ok(())
+        })();
+        let _ = sender.send(result);
+    }).map_err(|e| e.to_string())?;
+    receiver.recv().map_err(|e| e.to_string())?
+}
+
+/// Show the command palette in a native floating panel so it can be used above other apps.
+#[tauri::command]
+pub async fn sync_command_palette(app: tauri::AppHandle, visible: bool) -> Result<(), String> {
+    let (sender, receiver) = std::sync::mpsc::channel();
+    let handle = app.clone();
+    app.run_on_main_thread(move || {
+        let result = (|| -> Result<(), String> {
+            let monitor = handle.primary_monitor().map_err(|e| e.to_string())?;
+            let (x, y, width, height) = monitor.map(|monitor| {
+                let scale = monitor.scale_factor();
+                let origin = monitor.position();
+                (
+                    origin.x as f64 / scale,
+                    origin.y as f64 / scale,
+                    monitor.size().width as f64 / scale,
+                    monitor.size().height as f64 / scale,
+                )
+            }).unwrap_or((0.0, 0.0, 1440.0, 900.0));
+            if let Some(window) = handle.get_webview_window("command-palette") {
+                if visible {
+                    window.set_size(tauri::LogicalSize::new(width, height)).map_err(|e| e.to_string())?;
+                    window.set_position(tauri::LogicalPosition::new(x, y)).map_err(|e| e.to_string())?;
+                    configure_overlay(&window)?;
+                    window.show().map_err(|e| e.to_string())?;
+                    window.set_focus().map_err(|e| e.to_string())?;
+                } else {
+                    window.hide().map_err(|e| e.to_string())?;
+                }
+                return Ok(());
+            }
+            if !visible { return Ok(()); }
+            let window = WebviewWindowBuilder::new(
+                &handle,
+                "command-palette",
+                WebviewUrl::App("index.html?commandPalette=1".into()),
+            )
+            .title("PIHU Command Palette")
+            .inner_size(width, height)
+            .transparent(true)
+            .decorations(false)
+            .shadow(false)
+            .resizable(false)
+            .always_on_top(true)
+            .visible_on_all_workspaces(true)
+            .skip_taskbar(true)
+            .focused(true)
+            .visible(false)
+            .build()
+            .map_err(|e| e.to_string())?;
+            window.set_position(tauri::LogicalPosition::new(x, y)).map_err(|e| e.to_string())?;
+            configure_overlay(&window)?;
+            window.show().map_err(|e| e.to_string())?;
+            window.set_focus().map_err(|e| e.to_string())?;
             Ok(())
         })();
         let _ = sender.send(result);

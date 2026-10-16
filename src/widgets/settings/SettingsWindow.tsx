@@ -5,8 +5,11 @@ import { ensureWhatsAppBridge, WHATSAPP_API_URL } from '../../core/services/what
 import { GlassCard } from '../../shared/components/GlassCard/GlassCard';
 import React, { useState, useEffect, useRef } from 'react';
 import { listen } from '@tauri-apps/api/event';
+import { isTauri } from '@tauri-apps/api/core';
 import { getVersion } from '@tauri-apps/api/app';
-import { useSettingsStore } from '../../stores/settingsStore';
+import { DEFAULT_KEYBINDINGS, useSettingsStore } from '../../stores/settingsStore';
+import type { KeybindingAction } from '../../stores/settingsStore';
+import { acceleratorFromKeyboardEvent, formatAccelerator } from '../../core/shortcuts';
 import { SpiritsSettings } from '../../features/spirits/SpiritsSettings';
 import { useLayoutStore } from '../../core/layout/LayoutStore';
 import { useDiagnosticsStore } from '../../core/voice/diagnosis/EngineDiagnostics';
@@ -65,6 +68,83 @@ interface McpServerDef {
   transport: string;
   tools: McpToolDef[];
 }
+
+const SHORTCUT_ROWS: { action: KeybindingAction; label: string; scope: 'Global' | 'In PIHU' }[] = [
+  { action: 'voice', label: 'Activate PIHU Voice Assistant', scope: 'Global' },
+  { action: 'settings', label: 'Open PIHU Settings Window', scope: 'In PIHU' },
+  { action: 'commandPalette', label: 'Open Command Palette', scope: 'In PIHU' },
+  { action: 'globalCommandPalette', label: 'Open Command Palette from any app', scope: 'Global' },
+  { action: 'tasks', label: 'Toggle Task Window', scope: 'In PIHU' },
+  { action: 'music', label: 'Toggle YouTube Music Player', scope: 'In PIHU' },
+  { action: 'dismissOverlay', label: 'Dismiss active voice overlay', scope: 'In PIHU' },
+];
+
+const ShortcutSettings = () => {
+  const keybindings = useSettingsStore(state => state.keybindings);
+  const setKeybinding = useSettingsStore(state => state.setKeybinding);
+  const setKeybindings = useSettingsStore(state => state.setKeybindings);
+  const [recording, setRecording] = useState<KeybindingAction | null>(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!recording) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      const accelerator = acceleratorFromKeyboardEvent(event);
+      if (!accelerator) return;
+      event.preventDefault();
+      event.stopPropagation();
+
+      const conflict = SHORTCUT_ROWS.find(row => row.action !== recording && keybindings[row.action] === accelerator);
+      if (conflict) {
+        setError(`That key is already assigned to “${conflict.label}”.`);
+        setRecording(null);
+        return;
+      }
+
+      setError('');
+      setKeybinding(recording, accelerator);
+      setRecording(null);
+    };
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  }, [keybindings, recording, setKeybinding]);
+
+  useEffect(() => {
+    const onShortcutError = (event: Event) => {
+      const detail = (event as CustomEvent<string>).detail;
+      setError(detail || 'PIHU could not register that global shortcut. Choose another combination.');
+    };
+    window.addEventListener('pihu-shortcut-error', onShortcutError);
+    return () => window.removeEventListener('pihu-shortcut-error', onShortcutError);
+  }, []);
+
+  return (
+    <div className="space-y-3">
+      <div className="mb-4 flex items-end justify-between gap-4">
+        <div>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-300">Keyboard Shortcuts</h3>
+          <p className="mt-1 text-[11px] text-neutral-500">Select a shortcut, then press your preferred key combination.</p>
+        </div>
+        <button type="button" onClick={() => { setError(''); setKeybindings({ ...DEFAULT_KEYBINDINGS }); }} className="rounded-lg border border-white/10 px-3 py-1.5 text-[11px] text-neutral-300 hover:bg-white/5">Restore defaults</button>
+      </div>
+
+      {SHORTCUT_ROWS.map(row => (
+        <div key={row.action} className="flex items-center justify-between gap-4 rounded-2xl border border-white/5 bg-white/[0.045] p-3.5 backdrop-blur-md">
+          <div className="min-w-0">
+            <span className="block text-xs font-medium text-neutral-200">{row.label}</span>
+            <span className="mt-1 block text-[10px] text-neutral-500">{row.scope === 'Global' ? 'Works while PIHU is in the background' : 'Works while PIHU is focused'}</span>
+          </div>
+          <button type="button" onClick={() => { setError(''); setRecording(row.action); }} className={`flex shrink-0 items-center gap-1.5 rounded-xl border px-2.5 py-2 transition-colors ${recording === row.action ? 'border-emerald-400/50 bg-emerald-400/10 text-emerald-200' : 'border-white/10 bg-white/[0.04] text-neutral-200 hover:bg-white/10'}`} aria-label={`Change shortcut for ${row.label}`}>
+            {recording === row.action ? <span className="px-2 text-[11px]">Press keys…</span> : formatAccelerator(keybindings[row.action]).map((key, index) => <kbd key={`${key}-${index}`} className="min-w-7 rounded-md border border-white/10 bg-white/10 px-2 py-1 text-center text-[11px] font-mono font-bold">{key}</kbd>)}
+          </button>
+        </div>
+      ))}
+
+      {error && <p role="alert" className="rounded-xl border border-rose-400/20 bg-rose-400/5 px-3 py-2 text-xs text-rose-200">{error}</p>}
+      {!isTauri() && <p className="text-[10px] text-neutral-500">Global shortcuts activate only in the installed desktop app.</p>}
+    </div>
+  );
+};
 
 export const SettingsWindow: React.FC = () => {
   const {
@@ -2661,28 +2741,7 @@ export const SettingsWindow: React.FC = () => {
 
             {/* ══════ SECTION 9: SHORTCUTS ══════ */}
             {activeSidebarCategory === 'shortcuts' && (
-              <div className="space-y-3">
-                <h3 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-2">Global Keyboard Shortcuts</h3>
-                {[
-                  { keys: ['⌘', 'Space'], action: 'Activate PIHU Voice Assistant' },
-                  { keys: ['⌘', ','], action: 'Open PIHU Settings Window' },
-                  { keys: ['⌘', 'K'], action: 'Open Action Palette / Command Bar' },
-                  { keys: ['⌘', 'T'], action: 'Toggle Task Window' },
-                  { keys: ['⌘', 'M'], action: 'Toggle YouTube Music Player' },
-                  { keys: ['Esc'], action: 'Dismiss active voice overlay' },
-                ].map((sc, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-3.5 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5">
-                    <span className="text-xs text-neutral-300 font-medium">{sc.action}</span>
-                    <div className="flex items-center gap-1.5">
-                      {sc.keys.map((k, i) => (
-                        <kbd key={i} className="px-2.5 py-1 rounded-lg bg-white/10 border border-white/15 text-xs font-mono font-bold text-neutral-300">
-                          {k}
-                        </kbd>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <ShortcutSettings />
             )}
 
 

@@ -2,8 +2,10 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { emitTo } from '@tauri-apps/api/event';
 import { VoiceManager } from './VoiceManager';
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence, useDragControls } from 'framer-motion';
+import { motion, useDragControls } from 'framer-motion';
 import { useVoiceStore } from '../../stores/voiceStore';
+import { useSettingsStore } from '../../stores/settingsStore';
+import { matchesAccelerator } from '../shortcuts';
 import { useOrbStore } from '../orb/OrbStore';
 import { OrbState } from '../../shared/components/Orb/states';
 import { ThinkingOrb } from '../../shared/components/ThinkingOrb';
@@ -16,6 +18,7 @@ import { IdeCodeBlock } from './IdeCodeBlock';
 import { executePendingProjectAction } from './intent/tools/projectTools';
 import { EmailPreviewCard } from '../../shared/components/Email/EmailPreviewCard';
 import { WhatsAppConfirmationCard } from '../../shared/components/WhatsApp/WhatsAppConfirmationCard';
+import { CodingActivityCard } from '../capabilities/coding/ui/CodingActivityCard';
 
 export const VoiceOverlay: React.FC = () => {
   const {
@@ -28,8 +31,12 @@ export const VoiceOverlay: React.FC = () => {
     pendingProjectAction,
     pendingEmailAction,
     pendingWhatsAppAction,
+    activeCodingPlan,
+    activeCodingReport,
+    activeFileChange,
     setPendingProjectAction
   } = useVoiceStore();
+  const dismissShortcut = useSettingsStore(state => state.keybindings.dismissOverlay);
   const orbState = useOrbStore(state => state.currentState);
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedFileIndex, setSelectedFileIndex] = useState(0);
@@ -40,7 +47,7 @@ export const VoiceOverlay: React.FC = () => {
   useEffect(() => {
     if (!isActive) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape' || event.repeat) return;
+      if (!matchesAccelerator(event, dismissShortcut) || event.repeat) return;
       event.preventDefault();
       event.stopImmediatePropagation();
       if (new URLSearchParams(window.location.search).has('voiceOverlay')) void emitTo('main', 'voice-overlay-escape');
@@ -48,14 +55,30 @@ export const VoiceOverlay: React.FC = () => {
     };
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
-  }, [isActive]);
+  }, [dismissShortcut, isActive]);
 
-  // Auto-expand when code blocks, staged project actions, staged emails, or WhatsApp confirmations are present
+  // Auto-expand when code blocks, staged project actions, staged emails, WhatsApp confirmations, or coding plans/diffs are present
   useEffect(() => {
-    if (pendingProjectAction || pendingEmailAction || pendingWhatsAppAction || (response && response.includes('```'))) {
+    if (
+      pendingProjectAction ||
+      pendingEmailAction ||
+      pendingWhatsAppAction ||
+      activeCodingPlan ||
+      activeCodingReport ||
+      activeFileChange ||
+      (response && response.includes('```'))
+    ) {
       setIsExpanded(true);
     }
-  }, [pendingProjectAction, pendingEmailAction, pendingWhatsAppAction, response]);
+  }, [
+    pendingProjectAction,
+    pendingEmailAction,
+    pendingWhatsAppAction,
+    activeCodingPlan,
+    activeCodingReport,
+    activeFileChange,
+    response
+  ]);
 
   // Keep collapsed while listening to avoid covering screen
   useEffect(() => {
@@ -112,26 +135,18 @@ export const VoiceOverlay: React.FC = () => {
   };
 
   return (
-    <AnimatePresence>
+    <>
       {isActive && (
-        <motion.div
-          initial={{ opacity: 0, y: -40, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -40, scale: 0.95 }}
-          transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-          className="fixed top-5 inset-x-0 z-50 px-4 flex flex-col items-center pointer-events-none"
-        >
+        <div className="fixed top-5 inset-x-0 z-50 px-4 flex flex-col items-center pointer-events-none">
           {/* Main Dynamic Island Capsule */}
           <motion.div
-            layout
             drag
             dragControls={dragControls}
             dragListener={false}
             dragMomentum={false}
             onDragStart={() => { wasDragged.current = true; }}
             data-testid="voice-overlay"
-            style={{ backdropFilter: 'blur(24px) saturate(115%)', WebkitBackdropFilter: 'blur(24px) saturate(115%)' }}
-            transition={{ duration: 0.3, type: "spring", bounce: 0.15 }}
+            style={{ backdropFilter: 'blur(24px) saturate(115%)', WebkitBackdropFilter: 'blur(24px) saturate(115%)', minWidth: 0, maxWidth: '94vw' }}
             className={`bg-white/[0.065] backdrop-blur-[24px] border border-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_12px_40px_rgba(0,0,0,0.25)] text-white relative overflow-hidden pointer-events-auto ${
               isExpanded ? 'w-[760px] max-w-[94vw] rounded-3xl p-5' : 'w-auto min-w-[320px] max-w-[640px] rounded-full px-4 py-2.5'
             }`}
@@ -184,21 +199,14 @@ export const VoiceOverlay: React.FC = () => {
               {/* Expand Toggle */}
               {(response || processingStatus || pendingProjectAction || pendingEmailAction || (transcription && transcription.length > 25)) && (
                 <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center text-white/60 hover:text-white transition-colors">
-                  <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`w-4 h-4 ${isExpanded ? 'rotate-180' : ''}`} />
                 </div>
               )}
             </div>
 
             {/* Expanded Content View */}
-            <AnimatePresence>
-              {isExpanded && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.25 }}
-                  className="overflow-hidden relative pt-4 mt-3 border-t border-white/10"
-                >
+            {isExpanded && (
+                <div className="relative pt-4 mt-3 border-t border-white/10">
                   {/* Full User Request */}
                   {transcription && (
                     <div className="mb-3 text-xs text-neutral-400 font-mono flex items-center gap-2">
@@ -304,6 +312,13 @@ export const VoiceOverlay: React.FC = () => {
                     </div>
                   )}
 
+                  {/* Native Coding Capability Activity Card (Plan, Diff, Verification) */}
+                  <CodingActivityCard
+                    plan={activeCodingPlan}
+                    fileChange={activeFileChange}
+                    report={activeCodingReport}
+                  />
+
                   {/* Processing Status Banner when details requested */}
                   {processingStatus && !response && (
                     <div className="py-2.5 px-4 bg-white/[0.045] backdrop-blur-xl border border-neutral-500/20 rounded-2xl text-xs text-neutral-200 flex items-center gap-3">
@@ -314,7 +329,7 @@ export const VoiceOverlay: React.FC = () => {
 
                   {/* Full Response Markdown with IDE Code Block Component */}
                   {response && (
-                    <div className="text-white/90 text-sm font-normal leading-relaxed max-h-[55vh] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/20">
+                    <div className="voice-response-scrollbar text-white/90 text-sm font-normal leading-relaxed max-h-[55vh] overflow-y-auto pr-3">
                       <ReactMarkdown
                         remarkPlugins={[remarkMath]}
                         rehypePlugins={[rehypeKatex]}
@@ -351,14 +366,13 @@ export const VoiceOverlay: React.FC = () => {
                       </ReactMarkdown>
                     </div>
                   )}
-                </motion.div>
-              )}
-            </AnimatePresence>
+                </div>
+            )}
 
           </motion.div>
-        </motion.div>
+        </div>
       )}
-    </AnimatePresence>
+    </>
   );
 };
 

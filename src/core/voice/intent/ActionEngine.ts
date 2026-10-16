@@ -23,6 +23,9 @@ import { parseUIIntent } from '../../automation/uiIntent';
 import { normalizeCommand } from '../../automation/normalizeCommand';
 import { parseAppIntent } from '../../automation/appIntent';
 import { invoke } from '@tauri-apps/api/core';
+import { capabilityRegistry } from '../../capabilities/capabilityRegistry';
+import '../../capabilities/coding';
+import { workspaceManager } from '../../workspace/WorkspaceManager';
 
 export class ActionEngine {
   private llm: LLMManager;
@@ -217,6 +220,39 @@ export class ActionEngine {
     if (uiIntent) {
       const result = await executeTool('macos_control_ui', uiIntent);
       return result.success ? result.data.message : `UI action failed: ${result.error}`;
+    }
+
+    // ─── Workspace Lifecycle: List / Remembered Projects ───
+    if (/\b(?:list\s+(?:all\s+)?projects|my\s+projects|show\s+(?:all\s+)?projects|what\s+projects\s+do\s+(?:you|we)\s+have|known\s+projects)\b/i.test(lower)) {
+      const history = workspaceManager.listProjects();
+      if (history.length === 0) return "You don't have any remembered projects yet, Sir Mayank. Tell me to create one!";
+      const projectList = history.slice(0, 6).map(p => `• **${p.name}** at \`${p.dir}\` (${p.category || 'project'})`).join('\n');
+      return `Sir Mayank, here are your remembered projects:\n\n${projectList}\n\nSay *"open project <name>"* or *"work on project <name>"* to switch anytime!`;
+    }
+
+    // ─── Workspace Lifecycle: Open / Switch Old Project ───
+    const openProjectMatch = lower.match(/\b(?:open|switch\s+to|load|work\s+on)\s+project\s+([a-zA-Z0-9_\-\.\/]+)/i);
+    if (openProjectMatch) {
+      const query = openProjectMatch[1].trim();
+      const opened = await workspaceManager.openProject(query);
+      if (opened) {
+        return `Sir Mayank, I have loaded project **${opened.name}** at \`${opened.dir}\` into your workspace. It is now active and ready for coding!`;
+      }
+      return `Could not find project "${query}" in remembered history or disk. Say "list projects" to see available projects.`;
+    }
+
+    // ─── Workspace Lifecycle: Create / Make New Project ───
+    const createProjectMatch = lower.match(/\b(?:create|make|start|scaffold)\s+(?:a\s+)?(?:new\s+)?(?:(react|vite|python|rust|node)\s+)?project\s+(?:called|named\s+)?([a-zA-Z0-9_\-]+)(?:\s+(?:at|in)\s+([~/a-zA-Z0-9_\-\.]+))?/i);
+    if (createProjectMatch) {
+      const template = (createProjectMatch[1] || 'react').toLowerCase() as any;
+      const name = createProjectMatch[2].trim();
+      const customLocation = createProjectMatch[3]?.trim();
+      const created = await workspaceManager.createProject({
+        name,
+        template,
+        customDir: customLocation
+      });
+      return `Sir Mayank, I have created your new ${template.toUpperCase()} project **${created.name}** at \`${created.dir}\`! It is initialized with Git, modern boilerplate, and is now your active workspace.`;
     }
 
     // ─── 0. Contextual Project Actions ("then open it", "run it", "preview it") ───
@@ -716,6 +752,45 @@ export class ActionEngine {
         return pendingProjectConfirmation;
       }
 
+      // Step 2.5: PIHU Native Capability Resolution (Coding Capability, etc.)
+      const matchedCapability = await capabilityRegistry.resolve({ prompt: cleanText });
+      if (matchedCapability && matchedCapability.match.confidence >= 0.75) {
+        console.log(`[ActionEngine] 🎯 Delegating to Capability: ${matchedCapability.capability.manifest.name}`);
+        onMode?.('executing');
+        useVoiceStore.getState().setProcessingStatus("Executing Coding Capability...");
+
+        try {
+          const capResult = await matchedCapability.capability.execute({
+            taskId: `cap_${Date.now()}`,
+            prompt: cleanText,
+            onProgress: (event) => {
+              if (event.type === 'status') {
+                useVoiceStore.getState().setProcessingStatus(event.message);
+              } else if (event.type === 'coding.plan.created') {
+                useVoiceStore.getState().setActiveCodingPlan(event.data);
+              } else if (event.type === 'coding.file.changed') {
+                useVoiceStore.getState().setActiveFileChange(event.data);
+              } else if (event.type === 'coding.completed') {
+                useVoiceStore.getState().setActiveCodingReport(event.data);
+              }
+            }
+          });
+
+          useVoiceStore.getState().setProcessingStatus(null);
+          const responseText = capResult.summary;
+          this.conversationHistory.push({ role: 'user', parts: [{ text: cleanText }] });
+          this.conversationHistory.push({ role: 'model', parts: [{ text: responseText }] });
+          return responseText;
+        } catch (capError: any) {
+          console.error(`[ActionEngine] ❌ Capability "${matchedCapability.capability.manifest.name}" failed:`, capError);
+          useVoiceStore.getState().setProcessingStatus(null);
+          onError();
+          const diag = LLMManager.classifyError(capError);
+          console.error(`[ActionEngine] Diagnostic — Severity: ${diag.severity}, Technical: ${diag.technical}`);
+          return `Sir, the ${matchedCapability.capability.manifest.name} capability encountered an issue. ${diag.cause} ${diag.suggestion}`;
+        }
+      }
+
       onMode?.('thinking');
       useVoiceStore.getState().setProcessingStatus("Thinking...");
 
@@ -760,14 +835,27 @@ export class ActionEngine {
       return response;
 
     } catch (error: any) {
-      console.error('[ActionEngine] Error processing intent:', error);
+      console.error('[ActionEngine] ❌ Error processing intent:', error);
       onError();
       useVoiceStore.getState().setProcessingStatus(null);
-      const errMsg = error?.message || String(error);
-      if (errMsg.includes('timed out')) {
-        return `Sir, request process karne mein zyada samay lag gaya. Kripya punah koshish karein.`;
+
+      // ── Structured Error Diagnostics ──
+      const diag = LLMManager.classifyError(error);
+      console.error(`[ActionEngine] 🩺 Diagnostic — Severity: ${diag.severity} | Cause: ${diag.cause} | Technical: ${diag.technical}`);
+
+      // Build a clear, spoken-friendly error response
+      if (diag.severity === 'config') {
+        // Configuration errors need explicit user action
+        return `Sir Mayank, there is a configuration issue. ${diag.cause} ${diag.suggestion}`;
       }
-      return `Sir, request process karne mein dikkat aayi: ${errMsg.slice(0, 120)}`;
+
+      if (diag.severity === 'transient') {
+        // Temporary issues — reassure the user
+        return `Sir, I ran into a temporary issue. ${diag.cause} ${diag.suggestion}`;
+      }
+
+      // Fatal / unknown errors — give as much detail as possible
+      return `Sir, something went wrong while processing your request. ${diag.cause} ${diag.suggestion}`;
     }
   }
 

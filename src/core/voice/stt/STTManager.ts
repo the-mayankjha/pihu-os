@@ -186,39 +186,59 @@ export class STTManager {
     this.accumulatedSessionFrames = [];
     const generation = ++this.sessionGeneration;
 
-    // Try ensuring WS, but DO NOT block recording if WS is offline!
+    // Request the microphone before awaiting the local STT WebSocket. In WKWebView,
+    // waiting on another async operation first can lose the user-activation window
+    // required to show the macOS microphone permission prompt.
+    if (!navigator.mediaDevices?.getUserMedia) {
+      const error = new Error('Microphone capture is unavailable in this app window.');
+      this.onError?.(error.message);
+      throw error;
+    }
+    const microphone = navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      }
+    });
+    microphone.catch(() => {});
+
+    // Connect to local Whisper at the same time as the permission request.
+    // Recording startup must not wait for the STT server to become available.
     const settings = useSettingsStore.getState();
     const pref = settings.sttEnginePreference;
+    let connectionReady: Promise<void> = Promise.resolve();
     if (pref !== 'gemini_live') {
-      try {
-        await this.ensureConnected();
+      connectionReady = this.ensureConnected().then(() => {
         this.ws?.send(JSON.stringify({ type: 'reset' }));
-      } catch (e) {
+      }).catch(e => {
         console.warn('[SPEECH ENGINE - STT] Local Whisper offline. Capturing audio for Gemini Cloud STT.');
-      }
+      });
     }
 
-    if (generation !== this.sessionGeneration) return;
+    if (generation !== this.sessionGeneration) {
+      microphone.then(stream => stream.getTracks().forEach(track => track.stop())).catch(() => {});
+      return;
+    }
 
     try {
       const context = new (window.AudioContext || (window as any).webkitAudioContext)();
       this.audioContext = context;
       console.log('[SPEECH ENGINE - STT] 🎤 Requesting microphone access with AEC...');
-      const microphone = navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        }
-      });
       microphone.then(stream => {
         if (generation !== this.sessionGeneration) stream.getTracks().forEach(track => track.stop());
       }).catch(() => {});
-      const stream = await Promise.race([
-        microphone,
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Microphone permission timed out')), 15000)),
+      const [stream] = await Promise.all([
+        Promise.race([
+          microphone,
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Microphone permission timed out')), 15000)),
+        ]),
+        connectionReady,
       ]);
-      if (generation !== this.sessionGeneration) return;
+      if (generation !== this.sessionGeneration) {
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
       this.mediaStream = stream;
       console.log('[SPEECH ENGINE - STT] ✅ Microphone access granted!');
 

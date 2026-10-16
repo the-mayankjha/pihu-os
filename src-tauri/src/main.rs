@@ -12,6 +12,7 @@ mod browser_mcp;
 mod vtop_credentials;
 mod spirits;
 mod mcp_market;
+mod shortcuts;
 use tauri::Manager;
 
 pub fn get_python_cmd() -> String {
@@ -91,11 +92,22 @@ fn run_first_launch_setup() {
 }
 
 fn main() {
-    let builder = tauri::Builder::default().plugin(tauri_plugin_deep_link::init());
+    let builder = tauri::Builder::default()
+        .plugin(tauri_plugin_deep_link::init())
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(|app, shortcut, event| {
+                    if event.state == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                        shortcuts::dispatch(app, shortcut);
+                    }
+                })
+                .build(),
+        );
     #[cfg(target_os = "macos")]
     let builder = builder.plugin(tauri_nspanel::init());
     builder
         .manage(browser_mcp::BrowserMcpState::default())
+        .manage(shortcuts::DynamicShortcutState::default())
         .manage(wakeword::WakewordState {
             stdin: std::sync::Mutex::new(None),
         })
@@ -108,6 +120,9 @@ fn main() {
             spirits::sync_spirits,
             spirits::refresh_spirit_windows,
             spirits::sync_voice_overlay,
+            spirits::sync_command_palette,
+            shortcuts::set_global_shortcut,
+            shortcuts::clear_global_shortcut,
             mcp_market::mcp_install_package,
             mcp_market::mcp_list_installed,
             mcp_market::mcp_list_tools,

@@ -1,6 +1,19 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+export const DEFAULT_KEYBINDINGS = {
+  voice: 'CommandOrControl+Shift+Space',
+  settings: 'CommandOrControl+Comma',
+  commandPalette: 'CommandOrControl+K',
+  globalCommandPalette: 'CommandOrControl+Shift+K',
+  tasks: 'CommandOrControl+T',
+  music: 'CommandOrControl+M',
+  dismissOverlay: 'Escape',
+} as const;
+
+export type KeybindingAction = keyof typeof DEFAULT_KEYBINDINGS;
+export type Keybindings = Record<KeybindingAction, string>;
+
 export interface GoogleAccount {
   email: string;
   name: string;
@@ -20,6 +33,9 @@ export interface PihuContact {
 }
 
 export interface SettingsState {
+  keybindings: Keybindings;
+  setKeybinding: (action: KeybindingAction, accelerator: string) => void;
+  setKeybindings: (keybindings: Keybindings) => void;
   messageVoiceAlerts: boolean;
   setMessageVoiceAlerts: (enabled: boolean) => void;
   // PIHU Token Protocol (Gemini Keys)
@@ -95,6 +111,11 @@ export interface SettingsState {
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set, get) => ({
+      keybindings: { ...DEFAULT_KEYBINDINGS },
+      setKeybinding: (action, accelerator) => set(state => ({
+        keybindings: { ...state.keybindings, [action]: accelerator },
+      })),
+      setKeybindings: (keybindings) => set({ keybindings }),
       messageVoiceAlerts: true,
       setMessageVoiceAlerts: (messageVoiceAlerts) => set({ messageVoiceAlerts }),
       geminiApiKeys: [],

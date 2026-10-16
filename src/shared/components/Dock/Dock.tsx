@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Settings } from 'lucide-react';
 import { useSettingsStore } from '../../../stores/settingsStore';
 import { motion } from 'framer-motion';
@@ -12,17 +12,6 @@ import taskIcon from '../../../assets/task.png';
 export const Dock: React.FC = () => {
   const { toggleWidgetDrawer, isWidgetDrawerOpen, toggleWidget, widgets } = useLayoutStore();
   const { dockVisible, dockPosition, dockMagnification } = useSettingsStore();
-  useEffect(() => {
-    const openSettings = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key === ',') {
-        event.preventDefault();
-        if (!useLayoutStore.getState().widgets['settings-window']?.isOpen)
-          useLayoutStore.getState().toggleWidget('settings-window');
-      }
-    };
-    window.addEventListener('keydown', openSettings);
-    return () => window.removeEventListener('keydown', openSettings);
-  }, []);
   const { isPlaying } = useMusicStore();
 
   const isYTMusicOpen = widgets['ytmusic-plugin']?.isOpen || false;

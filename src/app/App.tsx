@@ -49,6 +49,8 @@ import { SettingsWindow } from '../widgets/settings/SettingsWindow';
 import { MarketplaceWindow } from '../widgets/marketplace/MarketplaceWindow';
 import { CodeOutputWindow } from '../widgets/codeOutput/CodeOutputWindow';
 import { CommandPalette } from '../shared/components/CommandPalette/CommandPalette';
+import { NativeCommandPaletteHost } from '../core/voice/NativeCommandPalette';
+import { GlobalShortcutHost } from '../core/voice/GlobalShortcutHost';
 
 export default function App() {
   const { widgets } = useLayoutStore();
@@ -126,6 +128,8 @@ export default function App() {
       <Dock />
       <WidgetDrawer />
       <NativeVoiceOverlayHost />
+      <NativeCommandPaletteHost />
+      <GlobalShortcutHost />
       <CommandPalette />
       <SpiritsHost />
     </div>

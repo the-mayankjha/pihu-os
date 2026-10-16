@@ -28,6 +28,7 @@ export class VoiceManager {
   private safetyTimer: ReturnType<typeof setTimeout> | null = null;
   private lastVadTimestamp: number = 0;  // Dedup guard for VAD events
   private hasGreeted: boolean = false;
+  private startupGreetingPending = false;
   private speechInterrupted = false;
   private interruptionListener = new STTManager();
   private interruptionPending = false;
@@ -133,10 +134,11 @@ export class VoiceManager {
       const greeting = greetingOptions[Math.floor(Math.random() * greetingOptions.length)];
 
       console.log(`[VOICE MANAGER] 🌅 Startup greeting: "${greeting}"`);
-      useVoiceStore.getState().setIsActive(true);
       useVoiceStore.getState().setResponse(greeting);
+      this.startupGreetingPending = true;
       await this.ttsManager.speak(greeting);
     } catch (err) {
+      this.startupGreetingPending = false;
       console.warn('[VOICE MANAGER] Startup greeting error:', err);
     } finally {
       this.resetToIdle();
@@ -230,8 +232,22 @@ export class VoiceManager {
           await this.startListening(true);
         }
 
-      } catch (error) {
+      } catch (error: any) {
         console.error('[VOICE MANAGER] ❌ Error in transcription handler:', error);
+        const { LLMManager } = await import('../llm/LLMManager');
+        const diag = LLMManager.classifyError(error);
+        console.error(`[VOICE MANAGER] 🩺 Diagnostic — Severity: ${diag.severity} | Technical: ${diag.technical}`);
+        
+        // Speak a clear error to the user instead of silently failing
+        const spokenError = diag.severity === 'config'
+          ? `Sir Mayank, there is a configuration issue. ${diag.cause}`
+          : `Sir, I ran into a temporary issue. ${diag.cause}`;
+        
+        useVoiceStore.getState().setResponse(spokenError);
+        try {
+          this.clearSafetyTimer();
+          await this.ttsManager.speak(spokenError);
+        } catch { /* TTS failure during error reporting — ignore */ }
         this.resetToIdle();
       }
     };
@@ -296,11 +312,20 @@ export class VoiceManager {
     this.sttManager.onError = (error) => {
       console.error('[VOICE MANAGER] ❌ STT Error:', error);
       this.resetToIdle();
+      const message = /NotAllowedError|permission|denied/i.test(error)
+        ? 'Microphone access is blocked. Allow PIHU OS to use the microphone in macOS System Settings → Privacy & Security → Microphone, then try again.'
+        : `Speech recognition could not start: ${error}`;
+      useVoiceStore.getState().setIsActive(true);
+      useVoiceStore.getState().setResponse(message);
     };
 
     // ── TTS Started callback ───────────────────────────────────────────────
     this.ttsManager.onSpeechStarted = () => {
       this.setOrbState(OrbState.SPEAKING);
+      if (this.startupGreetingPending) {
+        this.startupGreetingPending = false;
+        useVoiceStore.getState().setIsActive(true);
+      }
       if (!this.interruptionPending && !this.interruptionsSuppressedForSpeech) void this.monitorInterruptions();
     };
   }
@@ -313,12 +338,18 @@ export class VoiceManager {
     // Stop any active STT session before starting new one
     this.sttManager.stopListening();
 
-    // Capture external focus before the voice overlay activates PIHU.
-    if (navigator.platform.toUpperCase().includes('MAC')) {
-      try { rememberTarget(await invoke<string>('macos_frontmost_app')); }
-      catch (error) { console.debug('[VOICE MANAGER] Could not capture target app:', error); }
-    }
-    this.setOrbState(OrbState.WAKE);
+    // Start capturing the current app before the voice overlay is shown, but
+    // don't wait on the native call before switching the UI into Listening.
+    const frontmostApp = navigator.platform.toUpperCase().includes('MAC')
+      ? invoke<string>('macos_frontmost_app').catch(error => {
+          console.debug('[VOICE MANAGER] Could not capture target app:', error);
+          return null;
+        })
+      : Promise.resolve(null);
+    void frontmostApp.then(previousApp => {
+      if (previousApp) rememberTarget(previousApp);
+    });
+    this.setOrbState(OrbState.LISTENING);
     if (!isFollowUp) useVoiceStore.getState().reset();
     else {
       useVoiceStore.getState().setTranscription('');
@@ -326,8 +357,8 @@ export class VoiceManager {
     }
     useVoiceStore.getState().setIsActive(true);
 
-    // Follow-up speech can begin within 10 seconds without another wake word.
-    this.sttManager.idleTimeoutMs = isFollowUp ? 10000 : 6000;
+    // Follow-up speech can begin within five seconds without another wake word.
+    this.sttManager.idleTimeoutMs = isFollowUp ? 5000 : 6000;
 
     // Tell Python to pause its mic capture stream
     try {
@@ -336,13 +367,12 @@ export class VoiceManager {
       console.error('[VOICE MANAGER] Failed to pause Python wake word stream:', e);
     }
 
-    this.setOrbState(OrbState.LISTENING);
     useVoiceStore.getState().setIsListening(true);
     try {
       await this.sttManager.startListening();
     } catch (error) {
       console.error('[VOICE MANAGER] STT startup failed:', error);
-      this.resetToIdle();
+      this.sttManager.onError?.(error instanceof Error ? error.message : String(error));
     }
   }
 
@@ -350,6 +380,66 @@ export class VoiceManager {
     this.sttManager.stopListening();
     if (!this.isProcessing) {
       this.resetToIdle();
+    }
+  }
+
+  /**
+   * Processes typed text input (e.g. from redesigned Command Palette)
+   * using the exact same ActionEngine, Orb states, VoiceOverlay, and TTS speech.
+   */
+  public async processTextInput(text: string): Promise<string> {
+    const trimmed = text.trim();
+    if (!trimmed) return '';
+
+    console.log(`[VOICE MANAGER] 💬 Processing command palette text: "${trimmed}"`);
+    this.speechInterrupted = false;
+    this.isProcessing = true;
+    this.cancelInterruptionMonitor();
+
+    // 1. Activate VoiceOverlay and show the transcription
+    useVoiceStore.getState().setIsActive(true);
+    useVoiceStore.getState().setIsListening(false);
+    useVoiceStore.getState().setTranscription(trimmed);
+    useVoiceStore.getState().setResponse('');
+    useVoiceStore.getState().setProcessingStatus('Thinking...');
+
+    this.setOrbState(OrbState.THINKING);
+
+    try {
+      // 2. Process through unified ActionEngine
+      const response = await this.actionEngine.processIntent(trimmed, mode => {
+        this.setOrbState(mode === 'thinking' ? OrbState.THINKING : OrbState.EXECUTING);
+      });
+
+      console.log(`[VOICE MANAGER] Response to command: "${response}"`);
+      useVoiceStore.getState().setResponse(response);
+      useVoiceStore.getState().setProcessingStatus(null);
+
+      // 3. Speak conversational response through TTS
+      this.clearSafetyTimer();
+      this.speechInterrupted = false;
+      const speechCompleted = await this.speakConversational(response);
+      this.isProcessing = false;
+      if (speechCompleted && !this.speechInterrupted) {
+        await this.startListening(true);
+      }
+      return response;
+    } catch (err: any) {
+      console.error('[VOICE MANAGER] Error processing command:', err);
+      const { LLMManager } = await import('../llm/LLMManager');
+      const diag = LLMManager.classifyError(err);
+      console.error(`[VOICE MANAGER] 🩺 Diagnostic — Severity: ${diag.severity} | Technical: ${diag.technical}`);
+      
+      const errMsg = diag.severity === 'config'
+        ? `Configuration issue: ${diag.cause} ${diag.suggestion}`
+        : diag.severity === 'transient'
+        ? `Temporary issue: ${diag.cause} ${diag.suggestion}`
+        : `Error: ${diag.cause} ${diag.suggestion}`;
+      
+      useVoiceStore.getState().setResponse(errMsg);
+      useVoiceStore.getState().setProcessingStatus(null);
+      this.resetToIdle();
+      return errMsg;
     }
   }
 

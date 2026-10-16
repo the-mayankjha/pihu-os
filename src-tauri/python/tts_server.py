@@ -63,7 +63,7 @@ def is_hindi_or_hinglish(text: str) -> bool:
         'batao', 'bataiye', 'bol', 'sun', 'sunao', 'main', 'mai', 'maine', 'mera',
         'meri', 'mere', 'tum', 'aap', 'ap', 'aapka', 'aapki', 'aapke', 'tera', 'teri', 'tere',
         'hum', 'ham', 'yeh', 'ye', 'woh', 'vo', 'abhi', 'badme', 'kya', 'kyun', 'kaise',
-        'kaha', 'kidhar', 'kaun', 'hai', 'hain', 'ho', 'hoon', 'hu', 'tha', 'thi', 'the',
+        'kaha', 'kidhar', 'kaun', 'hai', 'hain', 'ho', 'hoon', 'hu', 'tha', 'thi',
         'diya', 'diye', 'gaya', 'gayi', 'bhejo', 'bhej', 'bhejna', 'bhejti', 'bhejta',
         'badhiya', 'shukriya', 'dost', 'yaar', 'yar', 'lekin', 'magar', 'koi', 'kuch', 'sab',
         'samajh', 'matlab', 'aaya', 'aayi', 'aaye', 'chahte', 'chahti', 'namaste', 'zaroor',
@@ -121,6 +121,43 @@ def synthesize_speech(text: str, requested_voice: str = 'auto', speed: float = 1
                 chunks.append(audio)
             return np.concatenate(chunks) if chunks else None
         cleaned = re.sub(name_pattern, 'Pee hoo', cleaned, flags=re.IGNORECASE)
+
+    # Keep English tokens (including ambiguous words such as "the") out of
+    # the Hindi phoneme pipeline in mixed Hinglish responses. The normalizer
+    # classifies each word and returns Devanagari for recognized Roman Hindi.
+    if is_indic and normalizer is not None and pipeline_hi is not None and pipeline_en is not None:
+        segments = normalizer.normalize(cleaned)
+        if segments:
+            try:
+                mixed_audio = []
+                for segment in segments:
+                    segment_text = segment['text'].strip()
+                    if not segment_text:
+                        continue
+                    is_hindi_segment = segment['language'] == 'hi'
+                    target_pipeline = pipeline_hi if is_hindi_segment else pipeline_en
+                    actual_voice = (
+                        requested_voice
+                        if is_hindi_segment and requested_voice.startswith(('hf_', 'hm_'))
+                        else requested_voice
+                        if not is_hindi_segment and requested_voice.startswith(('af_', 'am_', 'bf_', 'bm_'))
+                        else 'hf_alpha' if is_hindi_segment else 'af_bella'
+                    )
+                    generator = target_pipeline(
+                        segment_text,
+                        voice=actual_voice,
+                        speed=speed,
+                        split_pattern=r'\n+',
+                    )
+                    mixed_audio.extend(
+                        np.asarray(audio, dtype=np.float32)
+                        for _, _, audio in generator
+                    )
+                    mixed_audio.append(np.zeros(int(SAMPLE_RATE * 0.045), dtype=np.float32))
+                if mixed_audio:
+                    return np.concatenate(mixed_audio)
+            except Exception as e:
+                print(f"[TTS Server] Mixed-language synthesis failed, using fallback: {e}", flush=True)
 
     if is_indic and pipeline_hi is not None:
         speech_text = normalizer.to_hindi_segment(cleaned) if normalizer else cleaned
