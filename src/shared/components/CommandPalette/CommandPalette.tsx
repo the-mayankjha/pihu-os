@@ -16,17 +16,17 @@ export const CommandPalette: React.FC<{ nativeWindow?: boolean }> = ({ nativeWin
   // The main app host handles its shortcut; the standalone native palette
   // window needs a listener because it runs in a separate webview.
   useEffect(() => {
-    if (!nativeWindow) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (matchesAccelerator(e, commandPaletteShortcut)) {
-        e.preventDefault();
-        setIsCommandPaletteOpen(!isCommandPaletteOpen);
-      }
-
-      // Close on Escape
       if (e.key === 'Escape' && isCommandPaletteOpen) {
         e.preventDefault();
+        e.stopPropagation();
         setIsCommandPaletteOpen(false);
+        return;
+      }
+
+      if (nativeWindow && matchesAccelerator(e, commandPaletteShortcut)) {
+        e.preventDefault();
+        setIsCommandPaletteOpen(!isCommandPaletteOpen);
       }
     };
 
