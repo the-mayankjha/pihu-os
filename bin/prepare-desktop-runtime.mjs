@@ -40,17 +40,22 @@ if (existsSync(cacheRoot) && existsSync(resolve(cacheRoot, 'refs/main'))) {
 const goArch = { x64: 'amd64', arm64: 'arm64', ia32: '386' }[arch()];
 const goOs = { darwin: 'darwin', win32: 'windows', linux: 'linux' }[platform()];
 if (!goArch || !goOs) throw new Error(`WhatsApp bridge build is unsupported on ${platform()} ${arch()}.`);
-const goCache = resolve(tmpdir(), 'pihu-os-go-build-cache');
-mkdirSync(goCache, { recursive: true });
-console.log(`Building the WhatsApp bridge for ${goOs}/${goArch}...`);
-const goExecutable = process.env.GOROOT
-  ? resolve(process.env.GOROOT, 'bin', platform() === 'win32' ? 'go.exe' : 'go')
-  : 'go';
-const result = spawnSync(goExecutable, ['build', '-trimpath', '-ldflags=-s -w', '-o', bridgeOutput, '.'], {
-  cwd: bridgeSource,
-  stdio: 'inherit',
-  env: { ...process.env, GOCACHE: goCache, GOOS: goOs, GOARCH: goArch },
-});
-if (result.error) throw result.error;
-if (result.status !== 0) process.exit(result.status ?? 1);
-console.log(`Bundled WhatsApp bridge: ${bridgeOutput}`);
+if (process.env.PIHU_BRIDGE_PREBUILT === '1') {
+  if (!existsSync(bridgeOutput)) throw new Error(`Prebuilt WhatsApp bridge is missing: ${bridgeOutput}`);
+  console.log(`Using prebuilt WhatsApp bridge: ${bridgeOutput}`);
+} else {
+  const goCache = resolve(tmpdir(), 'pihu-os-go-build-cache');
+  mkdirSync(goCache, { recursive: true });
+  console.log(`Building the WhatsApp bridge for ${goOs}/${goArch}...`);
+  const goExecutable = process.env.GOROOT
+    ? resolve(process.env.GOROOT, 'bin', platform() === 'win32' ? 'go.exe' : 'go')
+    : 'go';
+  const result = spawnSync(goExecutable, ['build', '-trimpath', '-ldflags=-s -w', '-o', bridgeOutput, '.'], {
+    cwd: bridgeSource,
+    stdio: 'inherit',
+    env: { ...process.env, GOCACHE: goCache, GOOS: goOs, GOARCH: goArch },
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) process.exit(result.status ?? 1);
+  console.log(`Bundled WhatsApp bridge: ${bridgeOutput}`);
+}

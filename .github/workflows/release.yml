@@ -79,6 +79,11 @@ jobs:
       - name: Install JavaScript dependencies
         run: npm ci
 
+      - name: Build WhatsApp bridge runtime
+        run: node bin/build-whatsapp-bridge.mjs
+        env:
+          PIHU_TARGET: ${{ matrix.target }}
+
       - name: Build and upload release assets
         uses: tauri-apps/tauri-action@action-v1.0.0
         env:
@@ -91,6 +96,7 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          PIHU_BRIDGE_PREBUILT: '1'
         with:
           tagName: v__VERSION__
           releaseName: Pihu OS v__VERSION__
