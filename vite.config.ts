@@ -21,7 +21,7 @@ export default defineConfig(({ command }) => {
   const buildDate = process.env.PIHU_BUILD_DATE || new Date().toISOString()
   const buildInfo = {
     number: process.env.PIHU_BUILD_NUMBER || process.env.GITHUB_RUN_NUMBER || buildDate.replace(/\D/g, '').slice(0, 14),
-    name: process.env.PIHU_BUILD_NAME || process.env.GITHUB_WORKFLOW || (process.env.CI ? 'Continuous Integration' : command === 'build' ? 'Release' : 'Local Development'),
+    name: process.env.PIHU_BUILD_NAME || packageJson.pihuBuildName || process.env.GITHUB_WORKFLOW || (process.env.CI ? 'Continuous Integration' : command === 'build' ? 'Release' : 'Local Development'),
     date: buildDate,
     branch: process.env.PIHU_BUILD_BRANCH || process.env.GITHUB_REF_NAME || gitValue(['branch', '--show-current'], 'unknown'),
     commit: (process.env.PIHU_BUILD_COMMIT || process.env.GITHUB_SHA || gitValue(['rev-parse', '--short', 'HEAD'], 'unknown')).slice(0, 12),

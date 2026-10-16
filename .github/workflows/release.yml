@@ -30,13 +30,17 @@ jobs:
           submodules: false
 
       - name: Initialize the bundled MCP source submodule
-        run: git submodule update --init src-tauri/pihu_mcps
+        run: git -c submodule.recurse=false submodule update --init --no-recursive src-tauri/pihu_mcps
 
       - name: Verify release tag matches app version
         shell: bash
         run: |
-          VERSION="$(node -p \"require('./package.json').version\")"
+          VERSION=$(node -p 'require("./package.json").version')
           test "$GITHUB_REF_NAME" = "v$VERSION"
+
+      - name: Set release build name
+        shell: bash
+        run: echo "PIHU_BUILD_NAME=$(node -p 'require("./package.json").pihuBuildName || "Release"')" >> "$GITHUB_ENV"
 
       - uses: actions/setup-node@v4
         with:
@@ -79,7 +83,6 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          PIHU_BUILD_NAME: Release
         with:
           tagName: v__VERSION__
           releaseName: Pihu OS v__VERSION__

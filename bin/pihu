@@ -11,7 +11,9 @@
  *   ./bin/pihu dev       # Force tauri dev mode
  *   ./bin/pihu build     # Build release binary (npm run tauri build)
  *   ./bin/pihu build -m oasis # Build with the About-screen build name "oasis"
- *   ./bin/pihu -v -m oasis # Print current version and a build name
+ *   ./bin/pihu -v 1.2.6 -m oasis # Set version and default build name
+ *   ./bin/pihu build -m oasis # Build with an About-screen build name
+ *   ./bin/pihu release [1.2.6|--patch|--minor|--major] -m oasis # Commit, tag, and publish a GitHub release
  *   ./bin/pihu setup     # Run full environment setup (python setup.py)
  *   ./bin/pihu mcp       # Start pihu-project-mcp server
  */
@@ -27,7 +29,7 @@ const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '..');
 const HOME = process.env.HOME || '/Users/mayankjha';
 const packageInfo = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, 'package.json'), 'utf8'));
-const APP_VERSION = packageInfo.version || '0.0.0';
+let APP_VERSION = packageInfo.version || '0.0.0';
 
 // ─── Color helpers ──────────────────────────────────
 const C = {
@@ -175,6 +177,9 @@ const args = process.argv.slice(2);
 const subcommand = args[0] || 'auto';
 const nameIndex = args.findIndex((arg) => arg === '-m' || arg === '--name');
 const buildName = nameIndex >= 0 ? args[nameIndex + 1] : '';
+const commandValues = args.slice(1).filter((arg, index, values) =>
+  arg !== '-m' && arg !== '--name' && values[index - 1] !== '-m' && values[index - 1] !== '--name'
+);
 if ((nameIndex >= 0 && !buildName) || (buildName && buildName.startsWith('-'))) {
   console.error(`${C.red}Error:${C.reset} -m/--name requires a build name`);
   process.exit(2);
@@ -190,14 +195,58 @@ switch (subcommand) {
   case '--version':
   case 'version':
   case 'bump': {
-    const bumpType = args.slice(1).find((arg, index, rest) =>
-      arg !== '-m' && arg !== '--name' && rest[index - 1] !== '-m' && rest[index - 1] !== '--name'
-    ) || '';
+    const bumpType = commandValues[0] || '';
     try {
-      bumpVersion(bumpType);
-      if (buildName) console.log(`${C.cyan}Build name:${C.reset} ${buildName}`);
+      APP_VERSION = bumpVersion(bumpType);
+      packageInfo.version = APP_VERSION;
+      if (buildName) {
+        packageInfo.pihuBuildName = buildName;
+        fs.writeFileSync(path.join(ROOT_DIR, 'package.json'), `${JSON.stringify(packageInfo, null, 2)}\n`);
+        console.log(`${C.cyan}Default build name:${C.reset} ${buildName}`);
+      }
     } catch (err) {
       console.error(`${C.red}Error:${C.reset} ${err.message}`);
+      process.exit(1);
+    }
+    break;
+  }
+
+  case 'release': {
+    try {
+      const branch = execSync('git branch --show-current', { cwd: ROOT_DIR, encoding: 'utf8' }).trim();
+      if (branch !== 'main') throw new Error(`Releases must be created from main (current branch: ${branch || 'detached HEAD'}).`);
+      const dirty = execSync('git status --porcelain', { cwd: ROOT_DIR, encoding: 'utf8' }).trim();
+      if (dirty) throw new Error('Commit or stash all existing changes before starting a release.');
+
+      const requestedVersion = commandValues[0] || '--patch';
+      APP_VERSION = bumpVersion(requestedVersion);
+      packageInfo.version = APP_VERSION;
+      if (buildName) {
+        packageInfo.pihuBuildName = buildName;
+        fs.writeFileSync(path.join(ROOT_DIR, 'package.json'), `${JSON.stringify(packageInfo, null, 2)}\n`);
+      }
+      const tag = `v${APP_VERSION}`;
+      const existingTag = execSync(`git tag --list ${tag}`, { cwd: ROOT_DIR, encoding: 'utf8' }).trim();
+      if (existingTag) throw new Error(`Tag ${tag} already exists. Choose a new version.`);
+
+      const versionFiles = [
+        'package.json', 'package-lock.json', 'src-tauri/tauri.conf.json',
+        'src-tauri/Cargo.toml', 'src-tauri/Cargo.lock', 'src-tauri/pihu-first-launch.sh',
+      ];
+      const git = (gitArgs) => {
+        const result = spawnSync('git', gitArgs, { cwd: ROOT_DIR, stdio: 'inherit' });
+        if (result.error) throw result.error;
+        if (result.status !== 0) throw new Error(`git ${gitArgs[0]} failed.`);
+      };
+      git(['add', ...versionFiles]);
+      git(['commit', '-m', `Release ${tag}${buildName ? ` (${buildName})` : ''}`]);
+      git(['tag', '-a', tag, '-m', `Pihu OS ${tag}`]);
+      git(['push', 'origin', 'main']);
+      git(['push', 'origin', tag]);
+      ok(`Pushed ${tag}. GitHub Actions is building the macOS, Windows, and Linux release.`);
+      if (buildName) ok(`Release build name: ${buildName}`);
+    } catch (err) {
+      console.error(`${C.red}Release failed:${C.reset} ${err.message}`);
       process.exit(1);
     }
     break;
