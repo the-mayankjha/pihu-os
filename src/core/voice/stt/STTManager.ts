@@ -211,7 +211,7 @@ export class STTManager {
     if (pref !== 'gemini_live') {
       connectionReady = this.ensureConnected().then(() => {
         this.ws?.send(JSON.stringify({ type: 'reset' }));
-      }).catch(e => {
+      }).catch(() => {
         console.warn('[SPEECH ENGINE - STT] Local Whisper offline. Capturing audio for Gemini Cloud STT.');
       });
     }

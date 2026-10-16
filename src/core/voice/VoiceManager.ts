@@ -360,6 +360,14 @@ export class VoiceManager {
     // Follow-up speech can begin within five seconds without another wake word.
     this.sttManager.idleTimeoutMs = isFollowUp ? 5000 : 6000;
 
+    // Begin the WebView mic request before awaiting the Tauri IPC call. WKWebView
+    // can lose the microphone permission/user-activation context across an await.
+    // STTManager calls getUserMedia synchronously before its first await; then
+    // pause the Python wake-word stream while the permission request resolves.
+    const sttStartup = this.sttManager.startListening();
+    // Attach a rejection observer immediately while the native IPC request is in flight.
+    void sttStartup.catch(() => {});
+
     // Tell Python to pause its mic capture stream
     try {
       await invoke('trigger_listening');
@@ -369,7 +377,7 @@ export class VoiceManager {
 
     useVoiceStore.getState().setIsListening(true);
     try {
-      await this.sttManager.startListening();
+      await sttStartup;
     } catch (error) {
       console.error('[VOICE MANAGER] STT startup failed:', error);
       this.sttManager.onError?.(error instanceof Error ? error.message : String(error));

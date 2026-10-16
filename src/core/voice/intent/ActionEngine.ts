@@ -1,5 +1,5 @@
 import { parseSpotifyIntent } from '../../services/spotifyIntent';
-import { callSpotifyTool } from '../../services/spotify';
+import { callSpotifyTool, spotifyAction } from '../../services/spotify';
 import { parseSpiritCommand } from '../../../features/spirits/voiceControl';
 import { controlSpirit } from './tools/spiritTools';
 import { messageNotifications } from '../../services/messageNotifications';
@@ -30,18 +30,43 @@ import { workspaceManager } from '../../workspace/WorkspaceManager';
 export class ActionEngine {
   private llm: LLMManager;
   private conversationHistory: GeminiContent[] = [];
+  private runningApplicationsCache: { fetchedAt: number; names: string[] } = { fetchedAt: 0, names: [] };
+  private runningServersCache: { fetchedAt: number; servers: Array<{ port: number; process: string; pid: string; address: string; consequence: string }> } = { fetchedAt: 0, servers: [] };
 
   constructor() {
     this.llm = LLMManager.getInstance();
   }
 
-  private getDynamicContext(): string {
+  private async getDynamicContext(): Promise<string> {
     const layoutState = useLayoutStore.getState();
     const musicState = useMusicStore.getState();
     const voiceState = useVoiceStore.getState();
     const settingsState = useSettingsStore.getState();
     const memplaceState = useMemplaceStore.getState();
     const systemStats = getGlobalSystemStats();
+
+    if (Date.now() - this.runningApplicationsCache.fetchedAt > 10_000) {
+      const [applicationsResult, serversResult] = await Promise.allSettled([
+        invoke<Array<{ name: string }>>('macos_running_applications'),
+        defaultExecuteTool('system_get_running_servers', {}),
+      ]);
+      if (applicationsResult.status === 'fulfilled') {
+        this.runningApplicationsCache = {
+          fetchedAt: Date.now(),
+          names: applicationsResult.value.map(app => app.name),
+        };
+      } else {
+        console.debug('[ActionEngine] Running application discovery unavailable:', applicationsResult.reason);
+      }
+      if (serversResult.status === 'fulfilled' && serversResult.value.success) {
+        this.runningServersCache = {
+          fetchedAt: Date.now(),
+          servers: serversResult.value.data?.servers || [],
+        };
+      } else if (serversResult.status === 'rejected') {
+        console.debug('[ActionEngine] Running server discovery unavailable:', serversResult.reason);
+      }
+    }
 
     // Map open widgets/apps
     const openApps = Object.entries(layoutState.widgets)
@@ -99,6 +124,8 @@ export class ActionEngine {
       system_performance: sysInfo,
       open_apps: openApps.length > 0 ? openApps : ["None"],
       focused_app: openApps.length > 0 ? openApps[openApps.length - 1] : "None",
+      running_desktop_applications: this.runningApplicationsCache.names,
+      running_development_servers: this.runningServersCache.servers,
       currently_playing_music: musicState.isPlaying 
         ? `${musicState.trackInfo.title} by ${musicState.trackInfo.artist}` 
         : "Nothing playing",
@@ -692,16 +719,44 @@ export class ActionEngine {
         return "";
       }
 
-      const spotifyIntent = parseSpotifyIntent(cleanText);
+      let spotifyIntent = parseSpotifyIntent(cleanText);
+      let spotifyConnected = false;
+      if (!spotifyIntent && /\b(?:play|search|pause|stop|resume|next|previous|skip|what(?:'s| is) playing|playlists?|feel(?:ing)?|mood)\b/i.test(cleanText)) {
+        try {
+          const spotifyStatus = await spotifyAction<{ connected?: boolean }>({ action: 'status' });
+          spotifyConnected = !!spotifyStatus.connected;
+          if (spotifyConnected) spotifyIntent = parseSpotifyIntent(cleanText, true);
+        } catch { /* Spotify is not available; let the regular intent router handle this. */ }
+      }
+      const spotifyPlaylistRequest = /\bplaylists?\b/i.test(cleanText) &&
+        (spotifyConnected || /\bspotify\b/i.test(cleanText));
+      if (spotifyIntent || spotifyPlaylistRequest) {
+        const opened = await executeTool('system_open_application', { app_name: 'Spotify' });
+        if (!opened.success) return `Could not open Spotify: ${opened.error || 'application launch failed'}`;
+      }
       if (spotifyIntent) {
         onMode('executing');
         try {
           if ('name' in spotifyIntent) return (await callSpotifyTool(spotifyIntent.name, spotifyIntent.args)).message;
-          const found = await callSpotifyTool('searchSpotify', { query: spotifyIntent.query, type: 'track', limit: spotifyIntent.play ? 1 : 5 });
+          const searchQuery = spotifyIntent.mood
+            ? spotifyIntent.query
+            : spotifyIntent.artist
+              ? `track:${spotifyIntent.query} artist:${spotifyIntent.artist}`
+              : `track:${spotifyIntent.query}`;
+          const found = await callSpotifyTool('searchSpotify', { query: searchQuery, type: 'track', limit: 5 });
           if (!spotifyIntent.play) return found.message;
-          const id = found.message.match(/ID:\s*([a-zA-Z0-9]{22})/)?.[1];
-          if (!id) return 'No matching Spotify track was found.';
-          return (await callSpotifyTool('playMusic', { type: 'track', id })).message;
+          const ids = [...new Set([...found.message.matchAll(/ID:\s*([a-zA-Z0-9]{22})/g)].map(match => match[1]))];
+          if (!ids.length) return 'No matching Spotify tracks were found.';
+          const started = await callSpotifyTool('playMusic', { type: 'track', id: ids[0] });
+          if (spotifyIntent.mood && ids.length > 1) {
+            try {
+              for (const id of ids.slice(1)) await callSpotifyTool('addToQueue', { type: 'track', id });
+              return `${started.message} I queued ${ids.length - 1} more ${spotifyIntent.mood} mood tracks.`;
+            } catch (queueError) {
+              return `${started.message} I could not queue the remaining mood tracks: ${String(queueError)}`;
+            }
+          }
+          return started.message;
         } catch (error) { return `Spotify: ${String(error)}`; }
       }
       const spiritCommand = parseSpiritCommand(cleanText);
@@ -794,7 +849,7 @@ export class ActionEngine {
       onMode?.('thinking');
       useVoiceStore.getState().setProcessingStatus("Thinking...");
 
-      const fullSystemInstruction = PIHU_CORE_IDENTITY + this.getDynamicContext();
+      const fullSystemInstruction = PIHU_CORE_IDENTITY + await this.getDynamicContext();
 
       // Keep last 10 turns of conversation history in memory for continuous conversation context
       const historyToPass = this.conversationHistory.slice(-10);

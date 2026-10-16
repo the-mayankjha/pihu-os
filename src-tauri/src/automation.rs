@@ -29,6 +29,13 @@ pub struct AutomationResult {
     message: String,
 }
 
+#[derive(Serialize, Clone)]
+pub struct RunningApplication {
+    pub name: String,
+    pub bundle_id: String,
+    pub pid: u32,
+}
+
 fn validate(
     action: &str,
     window: u32,
@@ -275,4 +282,51 @@ pub async fn macos_frontmost_app() -> Result<String, String> {
         if name.is_empty() { return Err("No foreground application found".into()); }
         Ok(name)
     }).await.map_err(|e| e.to_string())?
+}
+
+/// List regular GUI applications currently registered with macOS LaunchServices.
+/// NSWorkspace provides this without asking System Events for Accessibility access.
+#[tauri::command]
+pub async fn macos_running_applications() -> Result<Vec<RunningApplication>, String> {
+    if !cfg!(target_os = "macos") {
+        return Err("Running application discovery currently requires macOS".into());
+    }
+    tauri::async_runtime::spawn_blocking(|| {
+        let script = r#"use framework "AppKit"
+set runningApps to current application's NSWorkspace's sharedWorkspace()'s runningApplications()
+set outputLines to {}
+repeat with runningApp in runningApps
+  if (runningApp's activationPolicy() as integer) is 0 then
+    set appName to runningApp's localizedName()
+    if appName is not missing value then
+      set bundleId to runningApp's bundleIdentifier()
+      if bundleId is missing value then set bundleId to ""
+      set processId to runningApp's processIdentifier() as text
+      set end of outputLines to (appName as text) & tab & (bundleId as text) & tab & processId
+    end if
+  end if
+end repeat
+set AppleScript's text item delimiters to linefeed
+return outputLines as text"#;
+        let output = Command::new("/usr/bin/osascript")
+            .args(["-e", script])
+            .output()
+            .map_err(|error| format!("Could not inspect running applications: {error}"))?;
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+        }
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let mut apps = stdout.lines().filter_map(|line| {
+            let mut fields = line.splitn(3, '\t');
+            let name = fields.next()?.trim();
+            let bundle_id = fields.next()?.trim();
+            let pid = fields.next()?.trim().parse::<u32>().ok()?;
+            if name.is_empty() { return None; }
+            Some(RunningApplication { name: name.to_string(), bundle_id: bundle_id.to_string(), pid })
+        }).collect::<Vec<_>>();
+        apps.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+        apps.dedup_by_key(|app| app.pid);
+        Ok(apps)
+    }).await.map_err(|error| error.to_string())?
 }

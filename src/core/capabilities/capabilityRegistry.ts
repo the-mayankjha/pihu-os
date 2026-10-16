@@ -1,4 +1,4 @@
-import type { PihuCapability, CapabilityMatch, CapabilityExecutionContext, CapabilityResult } from './types';
+import type { PihuCapability, CapabilityMatch } from './types';
 
 export class CapabilityRegistry {
   private static instance: CapabilityRegistry;

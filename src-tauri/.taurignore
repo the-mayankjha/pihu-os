@@ -1,0 +1,4 @@
+# Embedded MCP repositories are data/source dependencies, not Tauri app sources.
+# Ignore their Git metadata so index.lock and other Git housekeeping do not
+# trigger an unnecessary Rust rebuild during `tauri dev`.
+**/.git/
