@@ -80,7 +80,22 @@ jobs:
         run: npm ci
 
       - name: Build WhatsApp bridge runtime
-        run: node bin/build-whatsapp-bridge.mjs
+        shell: bash
+        run: |
+          case "$RUNNER_OS" in
+            macOS) GOOS=darwin; GOARCH=arm64 ;;
+            Windows) GOOS=windows; GOARCH=amd64 ;;
+            Linux) GOOS=linux; GOARCH=amd64 ;;
+          esac
+          case "$PIHU_TARGET" in
+            aarch64-apple-darwin) GOOS=darwin; GOARCH=arm64 ;;
+            x86_64-apple-darwin) GOOS=darwin; GOARCH=amd64 ;;
+          esac
+          OUTPUT=src-tauri/runtime/whatsapp-bridge/bridge
+          if [ "$GOOS" = windows ]; then OUTPUT="$OUTPUT.exe"; fi
+          mkdir -p src-tauri/runtime/whatsapp-bridge
+          cd src-tauri/pihu_mcps/mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge
+          GOOS="$GOOS" GOARCH="$GOARCH" go build -trimpath -ldflags='-s -w' -o "$GITHUB_WORKSPACE/$OUTPUT" .
         env:
           PIHU_TARGET: ${{ matrix.target }}
 
