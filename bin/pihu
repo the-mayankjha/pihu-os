@@ -10,6 +10,8 @@
  *   ./bin/pihu           # Auto-detect: compiled binary → tauri dev
  *   ./bin/pihu dev       # Force tauri dev mode
  *   ./bin/pihu build     # Build release binary (npm run tauri build)
+ *   ./bin/pihu build -m oasis # Build with the About-screen build name "oasis"
+ *   ./bin/pihu -v -m oasis # Print current version and a build name
  *   ./bin/pihu setup     # Run full environment setup (python setup.py)
  *   ./bin/pihu mcp       # Start pihu-project-mcp server
  */
@@ -24,6 +26,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '..');
 const HOME = process.env.HOME || '/Users/mayankjha';
+const packageInfo = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, 'package.json'), 'utf8'));
+const APP_VERSION = packageInfo.version || '0.0.0';
 
 // ─── Color helpers ──────────────────────────────────
 const C = {
@@ -126,7 +130,7 @@ function writePihuConfig() {
   // Write a master config JSON
   const configPath = path.join(configDir, 'config.json');
   const config = {
-    version: '1.2.2',
+    version: APP_VERSION,
     created_at: new Date().toISOString(),
     google_oauth: {
       client_id: process.env.GOOGLE_CLIENT_ID,
@@ -158,7 +162,7 @@ function printBanner(mode) {
   console.log(`
 ${C.magenta}${C.bold}  ╭─────────────────────────────────────────────╮
   │                                             │
-  │        🟣  P I H U   O S  v1.2.2  🟣       │
+  │        🟣  P I H U   O S  v${APP_VERSION}  🟣       │
   │           Your AI Desktop Companion         │
   │                                             │
   ╰─────────────────────────────────────────────╯${C.reset}
@@ -167,9 +171,18 @@ ${C.magenta}${C.bold}  ╭──────────────────
 }
 
 // ─── Main ─────────────────────────────────────────────
-const subcommand = process.argv[2] || 'auto';
+const args = process.argv.slice(2);
+const subcommand = args[0] || 'auto';
+const nameIndex = args.findIndex((arg) => arg === '-m' || arg === '--name');
+const buildName = nameIndex >= 0 ? args[nameIndex + 1] : '';
+if ((nameIndex >= 0 && !buildName) || (buildName && buildName.startsWith('-'))) {
+  console.error(`${C.red}Error:${C.reset} -m/--name requires a build name`);
+  process.exit(2);
+}
 
 loadEnvFile();
+// An explicit command-line build name takes precedence over .env.
+if (buildName) process.env.PIHU_BUILD_NAME = buildName;
 ensureDefaults();
 
 switch (subcommand) {
@@ -177,9 +190,12 @@ switch (subcommand) {
   case '--version':
   case 'version':
   case 'bump': {
-    const bumpType = process.argv[3] || '';
+    const bumpType = args.slice(1).find((arg, index, rest) =>
+      arg !== '-m' && arg !== '--name' && rest[index - 1] !== '-m' && rest[index - 1] !== '--name'
+    ) || '';
     try {
       bumpVersion(bumpType);
+      if (buildName) console.log(`${C.cyan}Build name:${C.reset} ${buildName}`);
     } catch (err) {
       console.error(`${C.red}Error:${C.reset} ${err.message}`);
       process.exit(1);

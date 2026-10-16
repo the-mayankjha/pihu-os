@@ -56,6 +56,31 @@ export const systemTools: ActionTool[] = [
 
   {
     declaration: {
+      name: 'system_get_running_applications',
+      description: 'Lists user-facing desktop applications currently running on macOS, with their bundle IDs and PIDs. Use when the user asks which apps are open/running, such as Brave, Chrome, ChatGPT, Kitty, or other desktop apps. For local development servers and listening ports, also use system_get_running_servers.',
+    },
+    execute: async (): Promise<ToolResult> => {
+      try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        const applications = await invoke<Array<{ name: string; bundle_id: string; pid: number }>>('macos_running_applications');
+        return {
+          success: true,
+          data: {
+            total_applications: applications.length,
+            applications,
+            summary: applications.length
+              ? `Found ${applications.length} running desktop application(s).`
+              : 'No running desktop applications were reported.',
+          },
+        };
+      } catch (e: any) {
+        return { success: false, error: `Failed to list running applications: ${e?.message || String(e)}` };
+      }
+    },
+  },
+
+  {
+    declaration: {
       name: 'system_get_running_servers',
       description: 'Lists all active TCP listening servers on the host machine, identifying their ports, PIDs, process names, bound projects, and system consequences (CPU/RAM load, port conflicts, security exposure, orphaned processes). Use when user asks "what servers are running?", "check running ports", "server impact".',
     },
@@ -76,7 +101,8 @@ export const systemTools: ActionTool[] = [
             const parts = line.trim().split(/\s+/);
             const procName = parts[0] || 'unknown';
             const pid = parts[1] || '0';
-            const addr = parts[8] || parts[3] || '';
+            // lsof emits variable-width columns; the endpoint follows the TCP label.
+            const addr = line.match(/\bTCP\s+(\S+)/)?.[1] || '';
             const portMatch = addr.match(/:(\d+)$/);
             if (portMatch) {
               const port = parseInt(portMatch[1], 10);

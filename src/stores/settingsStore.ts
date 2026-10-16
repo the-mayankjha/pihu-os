@@ -67,6 +67,7 @@ export interface SettingsState {
   dockVisible: boolean;
   soundEffects: boolean;
   focusModeActive: boolean;
+  quietDesktopMode: boolean;
   ttsSpeed: number;
   activeSidebarCategory: string;
 
@@ -97,6 +98,7 @@ export interface SettingsState {
   setDockVisible: (visible: boolean) => void;
   setSoundEffects: (enabled: boolean) => void;
   setFocusMode: (enabled: boolean) => void;
+  setQuietDesktopMode: (enabled: boolean) => void;
   setTtsSpeed: (speed: number) => void;
   setActiveSidebarCategory: (cat: string) => void;
 
@@ -140,6 +142,7 @@ export const useSettingsStore = create<SettingsState>()(
       dockVisible: true,
       soundEffects: true,
       focusModeActive: false,
+      quietDesktopMode: false,
       ttsSpeed: 1.0,
       activeSidebarCategory: 'general',
       contacts: [],
@@ -151,6 +154,7 @@ export const useSettingsStore = create<SettingsState>()(
       setDockVisible: (dockVisible) => set({ dockVisible }),
       setSoundEffects: (soundEffects) => set({ soundEffects }),
       setFocusMode: (focusModeActive) => set({ focusModeActive }),
+      setQuietDesktopMode: (quietDesktopMode) => set({ quietDesktopMode }),
       setTtsSpeed: (ttsSpeed) => set({ ttsSpeed }),
       setActiveSidebarCategory: (activeSidebarCategory) => set({ activeSidebarCategory }),
       setDeveloperMode: (developerMode) => set({ developerMode }),

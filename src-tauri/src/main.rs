@@ -94,6 +94,8 @@ fn run_first_launch_setup() {
 fn main() {
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_deep_link::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(|app, shortcut, event| {
@@ -136,6 +138,7 @@ fn main() {
             system_monitor::write_contacts,
             automation::macos_app_action,
             automation::macos_ui_action,
+            automation::macos_running_applications,
             google_oauth::google_oauth_start,
             spotify_mcp::spotify_mcp_action,
             browser_mcp::browser_mcp_action,

@@ -1,6 +1,13 @@
 import { z } from 'zod';
 import { defineTool } from './tool.js';
 import { handleSpotifyRequest, spotifyFetch } from './utils.js';
+async function controlPlayback(action, deviceId) {
+    const activeDeviceId = await ensureActiveDevice(deviceId);
+    await spotifyFetch(`me/player/${action === 'pause' ? 'pause' : action}`, {
+        method: action === 'pause' ? 'PUT' : 'POST',
+        query: { device_id: activeDeviceId },
+    });
+}
 /**
  * Ensures there is an active Spotify device before attempting playback.
  * If no device is currently active, transfers playback to the first available
@@ -8,8 +15,14 @@ import { handleSpotifyRequest, spotifyFetch } from './utils.js';
  * Returns the device_id to use, or empty string if none found.
  */
 async function ensureActiveDevice(preferredDeviceId) {
-    const data = await spotifyFetch('me/player/devices');
-    const devices = data?.devices ?? [];
+    let devices = [];
+    for (let attempt = 0; attempt < 10; attempt++) {
+        const data = await spotifyFetch('me/player/devices');
+        devices = data?.devices ?? [];
+        if (devices.length > 0)
+            break;
+        await new Promise((resolve) => setTimeout(resolve, 500));
+    }
     if (devices.length === 0) {
         throw new Error('No Spotify devices found. Open Spotify on any device first.');
     }
@@ -140,9 +153,7 @@ const pausePlayback = defineTool({
     },
     handler: async (args, _extra) => {
         const { deviceId } = args;
-        await handleSpotifyRequest(async (spotifyApi) => {
-            await spotifyApi.player.pausePlayback(deviceId || '');
-        });
+        await controlPlayback('pause', deviceId);
         return {
             content: [
                 {
@@ -164,9 +175,7 @@ const skipToNext = defineTool({
     },
     handler: async (args, _extra) => {
         const { deviceId } = args;
-        await handleSpotifyRequest(async (spotifyApi) => {
-            await spotifyApi.player.skipToNext(deviceId || '');
-        });
+        await controlPlayback('next', deviceId);
         return {
             content: [
                 {
@@ -188,9 +197,7 @@ const skipToPrevious = defineTool({
     },
     handler: async (args, _extra) => {
         const { deviceId } = args;
-        await handleSpotifyRequest(async (spotifyApi) => {
-            await spotifyApi.player.skipToPrevious(deviceId || '');
-        });
+        await controlPlayback('previous', deviceId);
         return {
             content: [
                 {
@@ -368,9 +375,17 @@ const addToQueue = defineTool({
                 ],
             };
         }
-        await handleSpotifyRequest(async (spotifyApi) => {
-            await spotifyApi.player.addItemToPlaybackQueue(spotifyUri, deviceId || '');
-        });
+        try {
+            const activeDeviceId = await ensureActiveDevice(deviceId);
+            await spotifyFetch('me/player/queue', {
+                method: 'POST',
+                query: { uri: spotifyUri, device_id: activeDeviceId },
+            });
+        }
+        catch (error) {
+            const msg = error instanceof Error ? error.message : String(error);
+            return { content: [{ type: 'text', text: `Error adding item to queue: ${msg}`, isError: true }] };
+        }
         return {
             content: [
                 {

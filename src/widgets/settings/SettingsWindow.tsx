@@ -7,6 +7,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { isTauri } from '@tauri-apps/api/core';
 import { getVersion } from '@tauri-apps/api/app';
+import { check } from '@tauri-apps/plugin-updater';
+import { relaunch } from '@tauri-apps/plugin-process';
 import { DEFAULT_KEYBINDINGS, useSettingsStore } from '../../stores/settingsStore';
 import type { KeybindingAction } from '../../stores/settingsStore';
 import { acceleratorFromKeyboardEvent, formatAccelerator } from '../../core/shortcuts';
@@ -147,6 +149,8 @@ const ShortcutSettings = () => {
 };
 
 export const SettingsWindow: React.FC = () => {
+  const quietDesktopMode = useSettingsStore(state => state.quietDesktopMode);
+  const setQuietDesktopMode = useSettingsStore(state => state.setQuietDesktopMode);
   const {
     geminiApiKeys,
     activeKeyIndex,
@@ -208,6 +212,38 @@ export const SettingsWindow: React.FC = () => {
   const [googleOAuthMessage, setGoogleOAuthMessage] = useState('');
   const [googleOAuthError, setGoogleOAuthError] = useState('');
   const [appVersion, setAppVersion] = useState('Loading…');
+  const [updateBusy, setUpdateBusy] = useState(false);
+  const [updateMessage, setUpdateMessage] = useState('');
+
+  const handleCheckForUpdates = async () => {
+    if (!isTauri()) {
+      setUpdateMessage('Update checks are available in the installed desktop app.');
+      return;
+    }
+
+    setUpdateBusy(true);
+    setUpdateMessage('Checking for updates…');
+    try {
+      const update = await check();
+      if (!update) {
+        setUpdateMessage(`PIHU OS is up to date (v${appVersion}).`);
+        return;
+      }
+
+      setUpdateMessage(`Downloading PIHU OS ${update.version}…`);
+      await update.downloadAndInstall((event) => {
+        if (event.event === 'Progress') {
+          setUpdateMessage(`Downloading PIHU OS ${update.version}…`);
+        }
+      });
+      setUpdateMessage('Update installed. Restarting PIHU OS…');
+      await relaunch();
+    } catch (error) {
+      setUpdateMessage(`Update failed: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setUpdateBusy(false);
+    }
+  };
 
   useEffect(() => {
     // Run diagnostics immediately on opening settings
@@ -977,6 +1013,14 @@ export const SettingsWindow: React.FC = () => {
     { id: 'about', label: 'About PIHU', icon: Info },
   ];
 
+  const quietModeAccentClass = {
+    pink: 'bg-pink-500 focus-visible:ring-pink-300/70',
+    purple: 'bg-purple-500 focus-visible:ring-purple-300/70',
+    cyan: 'bg-cyan-500 focus-visible:ring-cyan-300/70',
+    emerald: 'bg-emerald-500 focus-visible:ring-emerald-300/70',
+    amber: 'bg-amber-500 focus-visible:ring-amber-300/70',
+  }[themeAccent];
+
   return (
     <motion.div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 backdrop-blur-md p-4 sm:p-6 select-none"
@@ -1126,6 +1170,23 @@ export const SettingsWindow: React.FC = () => {
             {/* ══════ SECTION 1: GENERAL (PIHU OS Core Profile) ══════ */}
             {activeSidebarCategory === 'general' && (
               <div className="space-y-6">
+
+                <div className="flex items-center justify-between gap-4 rounded-3xl border border-white/5 bg-white/[0.045] p-5">
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-white">Quiet Desktop Mode</h4>
+                    <p className="mt-1 text-[11px] text-neutral-400">Hide PIHU’s desktop widgets and dock while you work in other apps. Use your voice shortcut and ask PIHU to open Settings to turn this off.</p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={quietDesktopMode}
+                    onClick={() => setQuietDesktopMode(!quietDesktopMode)}
+                    className={`inline-flex h-7 w-12 shrink-0 items-center rounded-full border border-white/10 p-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${quietDesktopMode ? quietModeAccentClass : 'bg-white/15 focus-visible:ring-white/50'}`}
+                    aria-label="Quiet Desktop Mode"
+                  >
+                    <span className={`h-5 w-5 rounded-full bg-white shadow-md transition-transform duration-200 ${quietDesktopMode ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </button>
+                </div>
 
                 {/* OS Identity & Salutation */}
                 <div className="p-5 rounded-3xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-4">
@@ -3061,8 +3122,10 @@ export const SettingsWindow: React.FC = () => {
                         ['Build number', __PIHU_BUILD_INFO__.number],
                         ['Build name', __PIHU_BUILD_INFO__.name],
                         ['Build date', new Date(__PIHU_BUILD_INFO__.date).toLocaleString()],
-                        ['Branch', __PIHU_BUILD_INFO__.branch],
-                        ['Commit', __PIHU_BUILD_INFO__.commit],
+                        ...(developerMode ? [
+                          ['Branch', __PIHU_BUILD_INFO__.branch],
+                          ['Commit', __PIHU_BUILD_INFO__.commit],
+                        ] : []),
                       ].map(([label, value]) => (
                         <tr key={label}>
                           <th scope="row" className="w-1/3 px-4 py-3 font-medium text-neutral-400">{label}</th>
@@ -3071,6 +3134,18 @@ export const SettingsWindow: React.FC = () => {
                       ))}
                     </tbody>
                   </table>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void handleCheckForUpdates()}
+                    disabled={updateBusy}
+                    className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-medium text-neutral-100 transition hover:bg-white/10 disabled:cursor-wait disabled:opacity-60"
+                  >
+                    <RefreshCw size={15} className={updateBusy ? 'animate-spin' : ''} />
+                    {updateBusy ? 'Updating…' : 'Check for updates'}
+                  </button>
+                  {updateMessage && <p role="status" className="max-w-2xl text-center text-xs text-neutral-400">{updateMessage}</p>}
                 </div>
                 <p className="text-xs text-neutral-500 text-center">Created by Mayank Jha</p>
               </div>

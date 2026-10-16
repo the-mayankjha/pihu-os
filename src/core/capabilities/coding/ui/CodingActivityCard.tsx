@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   FileCode, Terminal, CheckCircle2, AlertCircle, 
-  Layers, ChevronDown, ChevronUp, Cpu, Sparkles 
+  ChevronDown, ChevronUp, Sparkles
 } from 'lucide-react';
 import { IdeCodeBlock } from '../../../voice/IdeCodeBlock';
 import { useLayoutStore } from '../../../layout/LayoutStore';

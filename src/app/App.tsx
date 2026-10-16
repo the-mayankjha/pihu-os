@@ -51,9 +51,11 @@ import { CodeOutputWindow } from '../widgets/codeOutput/CodeOutputWindow';
 import { CommandPalette } from '../shared/components/CommandPalette/CommandPalette';
 import { NativeCommandPaletteHost } from '../core/voice/NativeCommandPalette';
 import { GlobalShortcutHost } from '../core/voice/GlobalShortcutHost';
+import { useSettingsStore } from '../stores/settingsStore';
 
 export default function App() {
   const { widgets } = useLayoutStore();
+  const quietDesktopMode = useSettingsStore(state => state.quietDesktopMode);
 
   useEffect(() => {
     // Initialize VoiceManager so it can listen to Tauri events
@@ -68,9 +70,10 @@ export default function App() {
   }, []);
 
   return (
-    <div className="relative h-screen w-full overflow-hidden bg-black/40">
+    <div className={`relative h-screen w-full overflow-hidden ${quietDesktopMode ? 'bg-transparent' : 'bg-black/40'}`}>
       <GlobalMusicProvider />
       
+      {!quietDesktopMode && <>
       {(!widgets['clock-widget'] || widgets['clock-widget'].isOpen) && <ClockWidget />}
       {(!widgets['orb-widget'] || widgets['orb-widget'].isOpen) && <OrbWidget />}
       
@@ -119,7 +122,6 @@ export default function App() {
         />
       )}
 
-      {(widgets['settings-window']?.isOpen) && <SettingsWindow />}
       {(widgets['marketplace-window']?.isOpen) && <MarketplaceWindow />}
       <CodeOutputWindow />
 
@@ -127,6 +129,8 @@ export default function App() {
 
       <Dock />
       <WidgetDrawer />
+      </>}
+      {(widgets['settings-window']?.isOpen) && <SettingsWindow />}
       <NativeVoiceOverlayHost />
       <NativeCommandPaletteHost />
       <GlobalShortcutHost />

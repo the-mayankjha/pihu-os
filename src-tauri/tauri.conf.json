@@ -1,10 +1,10 @@
 {
   "productName": "Pihu OS",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "identifier": "com.mayankjha.pihuos",
   "build": {
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "node bin/prepare-macos-runtime.mjs && python3 src-tauri/prepare-mcp-runtime.py && npm run browser:prepare && npm ci --prefix bin/spotify-runtime --omit=dev && npm run build",
+    "beforeBuildCommand": "node bin/prepare-desktop-build.mjs",
     "devUrl": "http://127.0.0.1:5173",
     "frontendDist": "../dist"
   },
@@ -35,16 +35,18 @@
           "pihu"
         ]
       }
+    },
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEY3RjI3ODNFODFBNUM4MzYKUldRMnlLV0JQbmp5OTROQzVka1J6Q3YzZkE4cjkzN3FNd0M1eFlhcy90Q3kySUJpeU9nOWFhOEEK",
+      "endpoints": [
+        "https://github.com/the-mayankjha/pihu-os/releases/latest/download/latest.json"
+      ]
     }
   },
   "bundle": {
     "active": true,
-    "targets": [
-      "dmg",
-      "app",
-      "nsis",
-      "msi"
-    ],
+    "targets": "all",
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -72,7 +74,7 @@
       "../bin/pihu-project-mcp.js",
       "../bin/browser-runtime/",
       "../bin/spotify-runtime/",
-      "runtime/whatsapp-bridge/bridge",
+      "runtime/whatsapp-bridge/*",
       "runtime/tts/hub/",
       "pihu-first-launch.sh"
     ],

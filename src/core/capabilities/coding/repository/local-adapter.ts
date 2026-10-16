@@ -11,7 +11,9 @@ export class LocalRepositoryAdapter implements RepositoryAdapter {
   }
 
   public async open(input: RepositoryInput): Promise<RepositoryContext> {
-    const workingDir = input.path || process.cwd();
+    // This runs in the WebView, where Node's process.cwd() is unavailable.
+    // Ask the Tauri shell for its working directory when no path was supplied.
+    const workingDir = input.path || (await invoke<string>('execute_shell_command', { command: 'pwd' })).trim();
     const name = workingDir.split('/').filter(Boolean).pop() || 'local_project';
 
     let isGit = false;

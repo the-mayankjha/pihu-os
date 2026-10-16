@@ -8,8 +8,15 @@ export const WHATSAPP_AUTH_URL = 'http://127.0.0.1:8080/mcp/whatsapp/auth';
 const quoteShell = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
 
 export async function whatsappStartCommand(): Promise<string> {
+  const isWindows = /Windows/i.test(navigator.userAgent);
+  const bridgeExecutable = isWindows ? 'bridge.exe' : 'bridge';
   let packagedBridge = '';
-  try { packagedBridge = `${(await resourceDir()).replace(/\/+$/, '')}/runtime/whatsapp-bridge/bridge`; } catch { /* Use development paths outside Tauri. */ }
+  try { packagedBridge = `${(await resourceDir()).replace(/\/+$/, '')}/runtime/whatsapp-bridge/${bridgeExecutable}`; } catch { /* Use development paths outside Tauri. */ }
+  if (isWindows) {
+    const windowsPath = packagedBridge.replaceAll('/', '\\').replaceAll('"', '""');
+    if (!windowsPath) return 'echo Bundled WhatsApp bridge was not found. Run PIHU setup. 1>&2 & exit /b 1';
+    return `if exist "${windowsPath}" (start "" /B "${windowsPath}" > "%TEMP%\\pihu_whatsapp_bridge.log" 2>&1) else (echo Bundled WhatsApp bridge was not found. Run PIHU setup. 1>&2 & exit /b 1)`;
+  }
   return `
 if [ -x ${quoteShell(packagedBridge)} ]; then
   nohup ${quoteShell(packagedBridge)} </dev/null >/tmp/pihu_whatsapp_bridge.log 2>&1 &
@@ -63,6 +70,9 @@ async function bridgeState(): Promise<'offline' | 'stale' | 'ready'> {
 // bridge and the route probe has proved it is an older build. This replaces
 // the stale listener with the current source while retaining ~/.pihu/whatsapp.
 async function whatsappRecoverCommand(): Promise<string> {
+  if (/Windows/i.test(navigator.userAgent)) {
+    return `taskkill /F /IM bridge.exe >NUL 2>&1 & ${await whatsappStartCommand()}`;
+  }
   return `
 PIDS="$(lsof -tiTCP:8080 -sTCP:LISTEN 2>/dev/null || true)"
 if [ -n "$PIDS" ]; then
