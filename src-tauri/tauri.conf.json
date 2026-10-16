@@ -69,7 +69,6 @@
       "python/requirements.txt",
       "python/automations/macos/pihu-macos-automation-v2/",
       "../models/wakeWord/*",
-      "../models/stt/*.bin",
       "../bin/pihu-project-mcp.js",
       "../bin/browser-runtime/",
       "../bin/spotify-runtime/",
