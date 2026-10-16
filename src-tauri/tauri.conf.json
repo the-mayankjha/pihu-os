@@ -66,7 +66,6 @@
       "python/wakeword.py",
       "python/ytmusic_server.py",
       "python/language/",
-      "python/pihu_speech/",
       "python/requirements.txt",
       "python/automations/macos/pihu-macos-automation-v2/",
       "../models/wakeWord/*",
