@@ -5,6 +5,7 @@ export interface Spirit {
   custom?: boolean;
   version?: string;
   author?: string;
+  deprecated?: boolean;
 }
 
 export const CELL_WIDTH = 192;

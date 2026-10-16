@@ -15,7 +15,7 @@ const packageKey = (id: string, path: string) => `${id}::${path}`;
 const storedAssetUrls = new Map<string, string>();
 
 export const bundledSpirits: Spirit[] = Object.entries(metadata).map(([, spirit]) => ({
-  id: 'pihu', name: spirit.name, description: spirit.description, version: '1.0.0', author: 'Mayank Jha (PIHU)',
+  id: 'pihu', name: spirit.name, description: spirit.description, version: '1.0.0', author: 'Mayank Jha (PIHU)', deprecated: spirit.deprecated ?? false,
 }));
 
 export function bundledSheet(id: string) {

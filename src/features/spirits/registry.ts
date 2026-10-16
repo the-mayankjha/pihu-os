@@ -19,6 +19,7 @@ export interface RegistrySpirit {
   description: string;
   author: string;
   version: string;
+  deprecated: boolean;
   manifest: Record<string, unknown>;
   sprite_sheet: string;
   preview_url: string;
@@ -102,6 +103,7 @@ export async function loadSpiritRegistry(): Promise<RegistrySpirit[]> {
       description: String(packageInfo.description ?? item.description ?? ''),
       author: String(packageInfo.author ?? item.author ?? 'Unknown author'),
       version: String(packageInfo.version ?? item.version ?? ''),
+      deprecated: packageInfo.deprecated === true || item.deprecated === true || manifest.deprecated === true,
       manifest,
       sprite_sheet: String(spriteSheet ?? ''),
       preview_url: String(details.preview_url ?? packageInfo.preview_url ?? ''),
