@@ -46,6 +46,10 @@ export function SpiritMarket({ onImport, importLabel = 'Import Spirit', importDi
 
   async function install(entry: RegistrySpirit) {
     setError('');
+    if (entry.deprecated) {
+      setError(`${entry.name} is deprecated and cannot be added to Pihu.`);
+      return;
+    }
     const current = customSpirits.find(spirit => spirit.id === entry.id) ?? bundledSpirits.find(spirit => spirit.id === entry.id);
       const updateAvailable = Boolean(current?.version && current.version !== entry.version);
     if (atLimit && !activeIds.includes(entry.id) && !updateAvailable) {
@@ -58,12 +62,12 @@ export function SpiritMarket({ onImport, importLabel = 'Import Spirit', importDi
         if (updateAvailable) {
           const assets = await downloadSpirit(entry);
           await saveSpiritPackage(entry.id, assets);
-          importSpirit({ id: entry.id, name: entry.name, description: entry.description, version: entry.version, author: entry.author, custom: true });
+          importSpirit({ id: entry.id, name: entry.name, description: entry.description, version: entry.version, author: entry.author, deprecated: entry.deprecated, custom: true });
         } else add(entry.id);
       } else {
         const assets = await downloadSpirit(entry);
         await saveSpiritPackage(entry.id, assets);
-        importSpirit({ id: entry.id, name: entry.name, description: entry.description, version: entry.version, author: entry.author, custom: true });
+        importSpirit({ id: entry.id, name: entry.name, description: entry.description, version: entry.version, author: entry.author, deprecated: entry.deprecated, custom: true });
       }
       setEnabled(true);
       if (isTauri()) await invoke('refresh_spirit_windows');
@@ -107,6 +111,7 @@ export function SpiritMarket({ onImport, importLabel = 'Import Spirit', importDi
       const updateAvailable = Boolean(entry && spirit?.version && spirit.version !== entry.version);
       const active = activeIds.includes(id);
       const localOnly = !entry;
+      const deprecated = Boolean(entry?.deprecated || spirit?.deprecated);
       return <article key={id} className="relative flex min-h-56 flex-col rounded-2xl border border-transparent bg-transparent p-4 transition hover:border-white/5 hover:bg-white/[0.025]">
         {entry && <button type="button" aria-label={`Open ${name} Spirit details`} onClick={() => void openDetails(entry)} className="absolute inset-0 z-0 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-300" />}
         <div className="pointer-events-none relative z-10 flex min-h-32 items-start gap-4">
@@ -114,7 +119,7 @@ export function SpiritMarket({ onImport, importLabel = 'Import Spirit', importDi
             {installed ? <SpiritSprite id={id} version={spirit?.version} size={76} /> : <SpiritMarketPreview name={name} src={entry!.preview_url} />}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2"><h5 className="truncate text-base font-semibold text-white">{name}</h5>{active && <span className="rounded-full bg-emerald-400/10 px-2 py-0.5 text-[10px] text-emerald-200">On desktop</span>}</div>
+            <div className="flex flex-wrap items-center gap-2"><h5 className="truncate text-base font-semibold text-white">{name}</h5>{deprecated && <span className="rounded-full bg-amber-400/10 px-2 py-0.5 text-[10px] text-amber-200">Deprecated</span>}{active && <span className="rounded-full bg-emerald-400/10 px-2 py-0.5 text-[10px] text-emerald-200">On desktop</span>}</div>
             <p className="mt-1 line-clamp-3 text-xs leading-5 text-neutral-400">{description}</p>
             <p className="mt-2 text-[11px] text-neutral-300">{spirit?.author ?? entry?.author ?? 'Imported on this computer'}</p>
             <div className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[10px]">
@@ -127,12 +132,13 @@ export function SpiritMarket({ onImport, importLabel = 'Import Spirit', importDi
         </div>
         <div className="relative z-20 mt-4 flex gap-2">
         <button type="button" onClick={() => {
-          if (updateAvailable && entry) void install(entry);
+          if (deprecated && active) remove(id);
+          else if (updateAvailable && entry) void install(entry);
           else if (active) remove(id);
           else if (installed) { if (atLimit) setError('Remove a Spirit from the desktop before adding another.'); else { add(id); setEnabled(true); } }
           else if (entry) void install(entry);
-        }} disabled={busyId !== null || (atLimit && !active && !updateAvailable) || (localOnly && !installed)} className="inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-white/[0.09] px-3 py-2.5 text-xs font-medium text-neutral-200 transition hover:bg-white/[0.14] disabled:opacity-40">
-          {busyId === id ? <InstallProgress update={updateAvailable} /> : <>{installed && active && !updateAvailable ? <Trash2 size={14} /> : <Download size={14} />}{updateAvailable ? 'Update Spirit' : active ? 'Remove from desktop' : installed ? 'Add Spirit' : 'Install Spirit'}</>}
+        }} disabled={busyId !== null || (deprecated && !active) || (atLimit && !active && !updateAvailable) || (localOnly && !installed)} className="inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-white/[0.09] px-3 py-2.5 text-xs font-medium text-neutral-200 transition hover:bg-white/[0.14] disabled:opacity-40">
+          {busyId === id ? <InstallProgress update={updateAvailable} /> : <>{installed && active && (!updateAvailable || deprecated) ? <Trash2 size={14} /> : <Download size={14} />}{deprecated && !active ? 'Deprecated' : deprecated && active ? 'Remove from desktop' : updateAvailable ? 'Update Spirit' : active ? 'Remove from desktop' : installed ? 'Add Spirit' : 'Install Spirit'}</>}
         </button>
         {removable && <button type="button" aria-label={`Delete ${name} Spirit`} title={`Delete ${name} from this computer`} disabled={busyId !== null} onClick={async () => {
           if (!window.confirm(`Delete ${name} and its downloaded artwork from this computer?`)) return;

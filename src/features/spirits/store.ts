@@ -45,7 +45,11 @@ export const useSpiritsStore = create<SpiritsState>()(persist((set) => ({
   error: null,
   setEnabled: enabled => set({ enabled }),
   setSize: size => set({ size: safeSpiritSize(size) }),
-  add: id => set(s => ({ activeIds: normalizeActiveIds([...s.activeIds, id]) })),
+  add: id => set(s => {
+    const spirit = [...bundledSpirits, ...s.customSpirits].find(item => item.id === id);
+    if (spirit?.deprecated) return s;
+    return { activeIds: normalizeActiveIds([...s.activeIds, id]) };
+  }),
   remove: id => set(s => ({ activeIds: s.activeIds.filter(active => linkedStoryPair.includes(id as typeof linkedStoryPair[number])
     ? !linkedStoryPair.includes(active as typeof linkedStoryPair[number]) : active !== id) })),
   uninstall: id => set(s => ({
@@ -53,12 +57,15 @@ export const useSpiritsStore = create<SpiritsState>()(persist((set) => ({
       ? !linkedStoryPair.includes(active as typeof linkedStoryPair[number]) : active !== id)),
     customSpirits: s.customSpirits.filter(spirit => spirit.id !== id),
   })),
-  importSpirit: spirit => set(s => ({
-    customSpirits: s.customSpirits.some(item => item.id === spirit.id)
-      ? s.customSpirits.map(item => item.id === spirit.id ? { ...item, ...spirit } : item)
-      : [...s.customSpirits, spirit],
-    activeIds: s.activeIds.includes(spirit.id) ? s.activeIds : [...s.activeIds, spirit.id],
-  })),
+  importSpirit: spirit => set(s => {
+    const normalized = { ...spirit, deprecated: spirit.deprecated ?? false };
+    return {
+      customSpirits: s.customSpirits.some(item => item.id === normalized.id)
+        ? s.customSpirits.map(item => item.id === normalized.id ? { ...item, ...normalized } : item)
+        : [...s.customSpirits, normalized],
+      activeIds: normalized.deprecated || s.activeIds.includes(normalized.id) ? s.activeIds : [...s.activeIds, normalized.id],
+    };
+  }),
   setError: error => set({ error }),
 }), {
   name: 'pihu-spirits',

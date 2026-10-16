@@ -1,6 +1,7 @@
 {
   "id": "pet_6ac800da7b64819184d6fbd8f513aff4",
   "name": "Pihu",
+  "deprecated": false,
   "is_custom": true,
   "is_active": true,
   "atlas_sha256": "880000a9bbe650d60b44c05985dd436b4841b083a828f35ec7317d1ca7d670ed",
