@@ -114,3 +114,15 @@ the owned service stops. Descriptors contain no credentials.
 Stdio MCPs require no TCP port. Provider-registered OAuth callback ports must
 remain compatible with account configuration; they cannot be reassigned without
 updating the registered redirect URI. Spotify retains its registered callback.
+
+## Development runtime
+
+`npm run tauri dev` prepares a project-owned Python 3.11 environment through
+`bin/prepare-dev-runtime.mjs` before starting Vite. Run `npm run runtime:dev`
+to repair it explicitly. The environment is ignored under .pihu-setup/dev-python.
+The shared Node runtime is prepared separately from optional MCP packages.
+Development no longer prefers the legacy ~/.pihu-os Python environment.
+
+Engine Diagnostics uses the selected interpreter and actual development model
+locations. Release builds continue to require their bundled runtime and inventory.
+The live panel belongs to Engine Diagnostics; General contains profile settings.

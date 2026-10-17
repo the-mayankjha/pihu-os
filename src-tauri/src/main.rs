@@ -24,26 +24,12 @@ pub fn get_python_cmd() -> String {
         // Release builds must never silently use the host Python or an old user venv.
         if !cfg!(debug_assertions) || python.is_file() { return python.to_string_lossy().into_owned(); }
     }
-    // 1. Check ~/.pihu-os/venv (installed app)
-    let home = std::env::var("HOME").unwrap_or_default();
-    let installed_venv = format!("{home}/.pihu-os/venv/bin/python");
-    if std::path::Path::new(&installed_venv).exists() {
-        return installed_venv;
-    }
-
-    // 2. Check development paths
-    let relative_paths = [
-        "python/venv/bin/python",
-        "python/venv/Scripts/python.exe",
-        "src-tauri/python/venv/bin/python",
-        "src-tauri/python/venv/Scripts/python.exe",
-    ];
-
-    for path in &relative_paths {
-        if std::path::Path::new(path).exists() {
-            return path.to_string();
-        }
-    }
+    // Resolve project paths absolutely: Tauri's working directory varies.
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let dev = root.join(if cfg!(windows) { "../.pihu-setup/dev-python/Scripts/python.exe" } else { "../.pihu-setup/dev-python/bin/python3" });
+    if dev.is_file() { return dev.to_string_lossy().into_owned(); }
+    let local = root.join(if cfg!(windows) { "python/venv/Scripts/python.exe" } else { "python/venv/bin/python" });
+    if local.is_file() { return local.to_string_lossy().into_owned(); }
 
     "python3".to_string()
 }

@@ -75,7 +75,13 @@ fn run(app: &tauri::AppHandle, args: &[&str]) -> Result<String, String> {
     let status = child.wait().map_err(|e| e.to_string())?;
     let stderr = errors.join().unwrap_or_default();
     if !status.success() {
-        return Err(stderr.trim().to_string().if_empty(&result.trim().to_string().if_empty("MCP operation failed")));
+        if stderr.contains("ModuleNotFoundError") {
+            return Err(if cfg!(debug_assertions) {
+                "PIHU's development Python runtime is missing dependencies. Run npm run runtime:dev, then restart PIHU."
+            } else { "PIHU's bundled Python runtime is incomplete. Reinstall PIHU to repair it." }.into());
+        }
+        let detail = stderr.lines().rev().find(|line| !line.trim().is_empty()).unwrap_or(result.trim());
+        return Err(detail.trim().trim_start_matches("ValueError: ").to_string().if_empty("MCP operation failed"));
     }
     Ok(result.trim().to_string())
 }

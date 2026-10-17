@@ -13,7 +13,8 @@ export interface ServiceDiagnosis {
 }
 
 export interface EngineDiagnosticsState {
-  bundle: { ok: boolean; checks: { name: string; ok: boolean; detail: string }[] } | null;
+  bundle: { mode?: 'development' | 'release'; python?: { executable: string; version: string }; ok: boolean; checks: { name: string; ok: boolean; detail: string }[] } | null;
+  mcpInventory: Array<{ id: string; version?: string; enabled?: boolean; bundled?: boolean; status?: string; account_state?: string; last_error?: string }> | null;
   isDiagnosing: boolean;
   lastDiagnosedAt: number | null;
   
@@ -50,6 +51,7 @@ export interface EngineDiagnosticsState {
 
 export const useDiagnosticsStore = create<EngineDiagnosticsState>((set, get) => ({
   bundle: null,
+  mcpInventory: null,
   isDiagnosing: false,
   lastDiagnosedAt: null,
 
@@ -122,7 +124,7 @@ export const useDiagnosticsStore = create<EngineDiagnosticsState>((set, get) => 
     if (get().isDiagnosing) return;
     set({ isDiagnosing: true });
 
-    const runtimePromise = invoke<{ ok: boolean; checks: { name: string; ok: boolean; detail: string }[]; wakeWord: { online: boolean; error: string | null } }>('diagnose_runtime').catch(error => ({
+    const runtimePromise = invoke<{ mode?: 'development' | 'release'; python?: { executable: string; version: string }; ok: boolean; checks: { name: string; ok: boolean; detail: string }[]; wakeWord: { online: boolean; error: string | null } }>('diagnose_runtime').catch(error => ({
       ok: false, checks: [{ name: 'Bundled runtime', ok: false, detail: String(error) }],
       wakeWord: { online: false, error: String(error) }
     }));
@@ -476,6 +478,7 @@ export const useDiagnosticsStore = create<EngineDiagnosticsState>((set, get) => 
     set({
       isDiagnosing: false,
       bundle: runtime,
+      mcpInventory: mcps,
       lastDiagnosedAt: Date.now(),
       stt: {
         activeEngine: sttActive,

@@ -41,8 +41,7 @@ fn start(script: &std::path::Path, bundled_node: &std::path::Path) -> Result<Ses
 pub async fn browser_mcp_action(app: tauri::AppHandle, payload: serde_json::Value) -> Result<serde_json::Value,String> {
     let request = serde_json::to_string(&payload).map_err(|e|e.to_string())?;
     if !payload.is_object() || request.len()>32768 { return Err("Invalid browser request".into()); }
-    let root = app.path().resource_dir().map_err(|e|e.to_string())?;
-    let node = root.join(if cfg!(windows) { "runtime/node/node.exe" } else { "runtime/node/node" });
+    let node = crate::bundled_runtime::node();
     tauri::async_runtime::spawn_blocking(move || {
         let _guard = crate::mcp_market::package_lock("browser-mcp").lock().map_err(|_| "MCP package lock failed")?;
         let script = crate::mcp_market::installed_asset(&app, "browser-mcp", "bridge.mjs")?;

@@ -3,7 +3,7 @@
   "version": "1.2.8",
   "identifier": "com.mayankjha.pihuos",
   "build": {
-    "beforeDevCommand": "npm run dev",
+    "beforeDevCommand": "node bin/prepare-dev-runtime.mjs && npm run dev",
     "beforeBuildCommand": "node bin/prepare-desktop-build.mjs",
     "devUrl": "http://127.0.0.1:5173",
     "frontendDist": "../dist"

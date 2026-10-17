@@ -14,6 +14,7 @@ import type { KeybindingAction } from '../../stores/settingsStore';
 import { acceleratorFromKeyboardEvent, formatAccelerator } from '../../core/shortcuts';
 import { SpiritsSettings } from '../../features/spirits/SpiritsSettings';
 import { useLayoutStore } from '../../core/layout/LayoutStore';
+import { EngineDiagnosticsSummary } from './EngineDiagnosticsSummary';
 import { useDiagnosticsStore } from '../../core/voice/diagnosis/EngineDiagnostics';
 import { motion } from 'framer-motion';
 import pihuLogo from '../../assets/logo.png';
@@ -247,9 +248,13 @@ export const SettingsWindow: React.FC = () => {
   };
 
   useEffect(() => {
-    // Run diagnostics immediately on opening settings
-    diagnostics.runDiagnosis().catch(() => {});
-  }, []);
+    if (activeSidebarCategory !== 'diagnostics') return;
+    const refresh = () => { if (!document.hidden) void useDiagnosticsStore.getState().runDiagnosis(); };
+    refresh();
+    const timer = setInterval(refresh, 60000);
+    window.addEventListener('focus', refresh);
+    return () => { clearInterval(timer); window.removeEventListener('focus', refresh); };
+  }, [activeSidebarCategory]);
 
   useEffect(() => {
     let active = true;
@@ -1144,7 +1149,7 @@ export const SettingsWindow: React.FC = () => {
                 {activeSidebarCategory === 'about' && 'About PIHU OS'}
               </h1>
               <p className="text-xs text-neutral-400">
-                {activeSidebarCategory === 'general' && 'Operating system profile, runtime context, memory cache, and assistant persona.'}
+                {activeSidebarCategory === 'general' && 'Operating system profile, memory cache, and assistant persona.'}
                 {activeSidebarCategory === 'connections' && (activeMcpDetailId ? `Listing all ${currentSelectedMcp?.tools.length} executable tool declarations and parameters.` : 'Google Workspace OAuth, project MCP, file MCP, and external tool protocols.')}
                 {activeSidebarCategory === 'advanced' && 'Developer options and advanced service configuration.'}
                 {activeSidebarCategory === 'widgets' && 'Toggle canvas widgets, dock magnification, and screen layout.'}
@@ -1226,279 +1231,6 @@ export const SettingsWindow: React.FC = () => {
                         className="w-full px-3.5 py-2 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-500 transition font-mono"
                       />
                     </div>
-                  </div>
-                </div>
-
-                {/* Real AI Engine Diagnosis & Architecture Stack */}
-                <div className="p-5 rounded-3xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                      <Cpu className="w-4 h-4 text-neutral-400" /> PIHU OS Local AI Engines & Live Diagnosis
-                    </h4>
-                    <button
-                      onClick={() => diagnostics.runDiagnosis()}
-                      disabled={diagnostics.isDiagnosing}
-                      className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-neutral-200 text-xs font-medium flex items-center gap-1.5 transition disabled:opacity-50"
-                    >
-                      <RefreshCw className={`w-3.5 h-3.5 ${diagnostics.isDiagnosing ? 'animate-spin text-neutral-400' : 'text-neutral-400'}`} />
-                      {diagnostics.isDiagnosing ? 'Diagnosing...' : 'Run Diagnosis'}
-                    </button>
-                  </div>
-
-                  {/* Diagnosis Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-                    {diagnostics.bundle && (
-                      <div className="space-y-2 rounded-2xl border border-white/10 bg-black/10 p-4">
-                        <h3 className="text-sm font-semibold">Release bundle · {diagnostics.bundle.ok ? 'Complete' : 'Needs attention'}</h3>
-                        {diagnostics.bundle.checks.map(check => (
-                          <div key={check.name} className="text-xs">
-                            <span className={check.ok ? 'text-emerald-400' : 'text-rose-400'}>{check.ok ? '✓' : '×'} {check.name}</span>
-                            {!check.ok && <p className="mt-1 break-words text-neutral-400">{check.detail}</p>}
-                          </div>
-                        ))}
-                        {diagnostics.wakeWord.error && <p className="text-xs text-rose-400">{diagnostics.wakeWord.error}</p>}
-                      </div>
-                    )}
-                    {/* STT Status Card */}
-                    <div className="p-3.5 rounded-2xl bg-black/[0.12] backdrop-blur-lg border border-white/5 flex items-center justify-between">
-                      <div className="pr-2">
-                        <span className="text-[10px] text-neutral-500 font-semibold block">STT Engine</span>
-                        <span className="text-xs font-bold text-neutral-200 block truncate">
-                          {diagnostics.stt.activeEngine === 'whisper' ? 'Whisper.cpp Small (Hindi + English)' : 'Gemini Live Cloud STT'}
-                        </span>
-                        <span className="text-[10px] text-neutral-400 block">
-                          {diagnostics.stt.whisper.online 
-                            ? `ws://5001 (${diagnostics.stt.whisper.latencyMs ?? 0}ms)` 
-                            : diagnostics.stt.geminiLive.online 
-                            ? `Fallback: Gemini Flash (${diagnostics.stt.geminiLive.latencyMs ?? 0}ms)` 
-                            : 'No STT engine reachable'}
-                        </span>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        {diagnostics.stt.whisper.online ? (
-                          <span className="text-[10px] font-mono text-emerald-400 px-2 py-0.5 rounded-md bg-emerald-500/10 flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Local C++
-                          </span>
-                        ) : diagnostics.stt.geminiLive.online ? (
-                          <span className="text-[10px] font-mono text-amber-400 px-2 py-0.5 rounded-md bg-amber-500/10 flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" /> Cloud Fallback
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-mono text-rose-400 px-2 py-0.5 rounded-md bg-rose-500/10">
-                            Offline
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* TTS Status Card */}
-                    <div className="p-3.5 rounded-2xl bg-black/[0.12] backdrop-blur-lg border border-white/5 flex items-center justify-between">
-                      <div className="pr-2">
-                        <span className="text-[10px] text-neutral-500 font-semibold block">TTS Engine</span>
-                        <span className="text-xs font-bold text-neutral-200 block truncate">
-                          {diagnostics.tts.activeEngine === 'kokoro' 
-                            ? 'Kokoro Neural Synthesizer' 
-                            : diagnostics.tts.activeEngine === 'sarvam' 
-                            ? 'Sarvam AI (Aarti hi-IN)' 
-                            : diagnostics.tts.activeEngine === 'elevenlabs' 
-                            ? 'ElevenLabs Multilingual' 
-                            : 'System Native Speech'}
-                        </span>
-                        <span className="text-[10px] text-neutral-400 block">
-                          {diagnostics.tts.kokoro.online 
-                            ? `Port 48126 (${diagnostics.tts.kokoro.latencyMs ?? 0}ms)` 
-                            : diagnostics.tts.sarvam.online 
-                            ? `Sarvam Aarti (${diagnostics.tts.sarvam.latencyMs ?? 0}ms)` 
-                            : diagnostics.tts.elevenLabs.online 
-                            ? 'ElevenLabs Multilingual' 
-                            : 'System Native Voice'}
-                        </span>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        {diagnostics.tts.kokoro.online ? (
-                          <span className="text-[10px] font-mono text-emerald-400 px-2 py-0.5 rounded-md bg-emerald-500/10 flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Port 48126
-                          </span>
-                        ) : diagnostics.tts.sarvam.online ? (
-                          <span className="text-[10px] font-mono text-amber-400 px-2 py-0.5 rounded-md bg-amber-500/10 flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" /> Fallback: Sarvam AI
-                          </span>
-                        ) : diagnostics.tts.elevenLabs.online ? (
-                          <span className="text-[10px] font-mono text-amber-400 px-2 py-0.5 rounded-md bg-amber-500/10">
-                            Fallback: ElevenLabs
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-mono text-blue-400 px-2 py-0.5 rounded-md bg-blue-500/10">
-                            Native Speech
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* WakeWord Listener */}
-                    <div className="p-3.5 rounded-2xl bg-black/[0.12] backdrop-blur-lg border border-white/5 flex items-center justify-between">
-                      <div>
-                        <span className="text-[10px] text-neutral-500 font-semibold block">WakeWord Listener</span>
-                        <span className="text-xs font-bold text-neutral-200">OpenWakeWord + Silero VAD</span>
-                        <span className="text-[10px] text-neutral-400 block">Microphone · PCM 16 kHz</span>
-                      </div>
-                      <span className={`text-[10px] font-mono px-2 py-0.5 rounded-md ${diagnostics.wakeWord.online ? 'text-emerald-400 bg-emerald-500/10' : 'text-rose-400 bg-rose-500/10'}`}>
-                        {diagnostics.wakeWord.online ? `${diagnostics.wakeWord.modelsCount} models · Listening` : 'Not running'}
-                      </span>
-                    </div>
-
-                    {/* Web Project Port Allocator */}
-                    <div className="p-3.5 rounded-2xl bg-black/[0.12] backdrop-blur-lg border border-white/5 flex items-center justify-between">
-                      <div>
-                        <span className="text-[10px] text-neutral-500 font-semibold block">Web Project Port Allocator</span>
-                        <span className="text-xs font-bold text-neutral-200">Port 5180+ Auto-Scanned</span>
-                        <span className="text-[10px] text-neutral-400 block">Vite / Next.js Scaffolding</span>
-                      </div>
-                      <span className="text-[10px] font-mono text-neutral-400 px-2 py-0.5 rounded-md bg-neutral-500/10">Reserved 5173</span>
-                    </div>
-                  </div>
-
-                  {/* Fallback & Diagnosis Alert Banner */}
-                  {(diagnostics.stt.isFallback || diagnostics.tts.isFallback || diagnostics.stt.error || diagnostics.tts.error) && (
-                    <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200 space-y-1">
-                      <div className="font-semibold flex items-center gap-1.5 text-amber-300">
-                        <Sparkles className="w-3.5 h-3.5" /> Engine Diagnosis & Automatic Fallback Active
-                      </div>
-                      {diagnostics.stt.error && (
-                        <p className="text-[11px] text-amber-200/90 leading-relaxed">
-                          • <strong className="text-amber-100">STT:</strong> {diagnostics.stt.error}
-                        </p>
-                      )}
-                      {diagnostics.tts.error && (
-                        <p className="text-[11px] text-amber-200/90 leading-relaxed">
-                          • <strong className="text-amber-100">TTS:</strong> {diagnostics.tts.error}
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Engine Selection Controls */}
-                  <div className="pt-2 border-t border-white/5 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-neutral-300 mb-1.5">STT Engine Preference</label>
-                      <select
-                        value={sttEnginePreference}
-                        onChange={(e) => {
-                          setSttEnginePreference(e.target.value as any);
-                          setTimeout(() => diagnostics.runDiagnosis(), 100);
-                        }}
-                        className="w-full px-3 py-2 rounded-xl bg-black/[0.12] border border-white/10 text-xs text-white focus:outline-none focus:border-neutral-500"
-                      >
-                        <option value="auto">Auto Fallback (Whisper → Sarvam → Gemini Live)</option>
-                        <option value="whisper">Local Whisper.cpp Only (ws://5001)</option>
-                        <option value="sarvam">Sarvam AI Cloud STT (Hindi/Hinglish)</option>
-                        <option value="gemini_live">Gemini Live STT API (Cloud Only)</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-semibold text-neutral-300 mb-1.5">TTS Engine Preference</label>
-                      <select
-                        value={ttsEnginePreference}
-                        onChange={(e) => {
-                          setTtsEnginePreference(e.target.value as any);
-                          setTimeout(() => diagnostics.runDiagnosis(), 100);
-                        }}
-                        className="w-full px-3 py-2 rounded-xl bg-black/[0.12] border border-white/10 text-xs text-white focus:outline-none focus:border-neutral-500"
-                      >
-                        <option value="auto">Auto Fallback (Kokoro → Sarvam AI → ElevenLabs → Native)</option>
-                        <option value="kokoro">Local Kokoro Neural Synthesizer (Port 48126)</option>
-                        <option value="sarvam">Sarvam AI (Aarti - Hindi/Hinglish - hi-IN)</option>
-                        <option value="elevenlabs">ElevenLabs Multilingual (Cloud)</option>
-                        <option value="native">macOS Native Speech (Web Speech API)</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Sarvam AI Configuration Section */}
-                  <div className="pt-3 border-t border-white/5 space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-white flex items-center gap-1.5">
-                        <Key className="w-3.5 h-3.5 text-neutral-400" /> Sarvam AI Cloud TTS Setup
-                      </span>
-                      <span className="text-[10px] text-neutral-400 font-mono">
-                        Speaker: <strong className="text-neutral-200">aarti_hi_customer</strong> (hi-IN)
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <div className="relative flex-1">
-                        <input
-                          type={showSarvamKey ? 'text' : 'password'}
-                          value={sarvamKeyInput}
-                          onChange={(e) => setSarvamKeyInput(e.target.value)}
-                          placeholder="Paste your SARVAM_API_KEY..."
-                          className="w-full px-3.5 py-2 pr-16 rounded-xl bg-black/[0.12] border border-white/10 text-xs text-white placeholder-neutral-500 font-mono focus:outline-none focus:border-neutral-500"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowSarvamKey(!showSarvamKey)}
-                          className="absolute right-2.5 top-2.5 text-[10px] text-neutral-400 hover:text-white"
-                        >
-                          {showSarvamKey ? 'Hide' : 'Show'}
-                        </button>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSarvamApiKey(sarvamKeyInput);
-                          diagnostics.runDiagnosis();
-                        }}
-                        className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold text-white transition"
-                      >
-                        Save Key
-                      </button>
-
-                      <button
-                        type="button"
-                        disabled={isTestingSarvam || !sarvamKeyInput}
-                        onClick={async () => {
-                          setIsTestingSarvam(true);
-                          setSarvamTestStatus('Synthesizing speech with Aarti...');
-                          try {
-                            const res = await fetch('https://api.sarvam.ai/text-to-speech', {
-                              method: 'POST',
-                              headers: {
-                                'Content-Type': 'application/json',
-                                'api-subscription-key': sarvamKeyInput.trim(),
-                              },
-                              body: JSON.stringify({
-                                text: 'नमस्ते! मैं पीहू हूँ। सर्वम एआई वॉइस इंजन सक्रिय है।',
-                                language_code: 'hi-IN',
-                                speaker: 'aarti_hi_customer',
-                                model: 'bulbul:v4-flash',
-                              }),
-                            });
-                            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                            const data = await res.json();
-                            if (data.audios?.[0]) {
-                              const audio = new Audio(`data:audio/wav;base64,${data.audios[0]}`);
-                              await audio.play();
-                              setSarvamTestStatus('Playing Aarti sample audio!');
-                            }
-                          } catch (e: any) {
-                            setSarvamTestStatus(`Error: ${e.message}`);
-                          } finally {
-                            setIsTestingSarvam(false);
-                            setTimeout(() => setSarvamTestStatus(null), 4000);
-                          }
-                        }}
-                        className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-semibold text-white transition disabled:opacity-50 flex items-center gap-1.5"
-                      >
-                        <Volume2 className="w-3.5 h-3.5 text-neutral-300" />
-                        {isTestingSarvam ? 'Testing...' : 'Test Voice'}
-                      </button>
-                    </div>
-
-                    {sarvamTestStatus && (
-                      <p className="text-[11px] text-neutral-400 italic">{sarvamTestStatus}</p>
-                    )}
                   </div>
                 </div>
 
@@ -2713,77 +2445,170 @@ export const SettingsWindow: React.FC = () => {
             {/* ══════ SECTION 7: ENGINE DIAGNOSTICS ══════ */}
             {activeSidebarCategory === 'diagnostics' && (
               <div className="space-y-6">
-                <h3 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider">Engine Health Matrix</h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-4 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-neutral-500/10 text-neutral-400 flex items-center justify-center">
-                        <Cpu className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-semibold text-white">WakeWord Engine</h4>
-                        <p className="text-[11px] text-neutral-500">openwakeword + pyaudio (4 models)</p>
-                      </div>
-                    </div>
-                    <span className="flex items-center gap-1.5 text-xs text-emerald-400 font-semibold">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> Ready
-                    </span>
+                {/* Real AI Engine Diagnosis & Architecture Stack */}
+                <div className="p-5 rounded-3xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                      <Cpu className="w-4 h-4 text-neutral-400" /> Live Engine Diagnostics
+                    </h4>
+                    <button
+                      onClick={() => diagnostics.runDiagnosis()}
+                      disabled={diagnostics.isDiagnosing}
+                      className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-neutral-200 text-xs font-medium flex items-center gap-1.5 transition disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${diagnostics.isDiagnosing ? 'animate-spin text-neutral-400' : 'text-neutral-400'}`} />
+                      {diagnostics.isDiagnosing ? 'Diagnosing...' : 'Run Diagnosis'}
+                    </button>
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-neutral-500/10 text-neutral-400 flex items-center justify-center">
-                        <Mic className="w-4 h-4" />
+                  <EngineDiagnosticsSummary />
+
+                  {/* Fallback & Diagnosis Alert Banner */}
+                  {(diagnostics.stt.isFallback || diagnostics.tts.isFallback || diagnostics.stt.error || diagnostics.tts.error) && (
+                    <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200 space-y-1">
+                      <div className="font-semibold flex items-center gap-1.5 text-amber-300">
+                        <Sparkles className="w-3.5 h-3.5" /> Engine Diagnosis & Automatic Fallback Active
                       </div>
-                      <div>
-                        <h4 className="text-xs font-semibold text-white">Speech STT Server</h4>
-                        <p className="text-[11px] text-neutral-500">Whisper C++ (ws://5001)</p>
-                      </div>
+                      {diagnostics.stt.error && (
+                        <p className="text-[11px] text-amber-200/90 leading-relaxed">
+                          • <strong className="text-amber-100">STT:</strong> {diagnostics.stt.error}
+                        </p>
+                      )}
+                      {diagnostics.tts.error && (
+                        <p className="text-[11px] text-amber-200/90 leading-relaxed">
+                          • <strong className="text-amber-100">TTS:</strong> {diagnostics.tts.error}
+                        </p>
+                      )}
                     </div>
-                    <span className="flex items-center gap-1.5 text-xs text-emerald-400 font-semibold">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> Listening
-                    </span>
+                  )}
+
+                  {/* Engine Selection Controls */}
+                  <div className="pt-2 border-t border-white/5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-neutral-300 mb-1.5">STT Engine Preference</label>
+                      <select
+                        value={sttEnginePreference}
+                        onChange={(e) => {
+                          setSttEnginePreference(e.target.value as any);
+                          setTimeout(() => diagnostics.runDiagnosis(), 100);
+                        }}
+                        className="w-full px-3 py-2 rounded-xl bg-black/[0.12] border border-white/10 text-xs text-white focus:outline-none focus:border-neutral-500"
+                      >
+                        <option value="auto">Auto Fallback (Whisper → Sarvam → Gemini Live)</option>
+                        <option value="whisper">Local Whisper.cpp Only (ws://5001)</option>
+                        <option value="sarvam">Sarvam AI Cloud STT (Hindi/Hinglish)</option>
+                        <option value="gemini_live">Gemini Live STT API (Cloud Only)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-neutral-300 mb-1.5">TTS Engine Preference</label>
+                      <select
+                        value={ttsEnginePreference}
+                        onChange={(e) => {
+                          setTtsEnginePreference(e.target.value as any);
+                          setTimeout(() => diagnostics.runDiagnosis(), 100);
+                        }}
+                        className="w-full px-3 py-2 rounded-xl bg-black/[0.12] border border-white/10 text-xs text-white focus:outline-none focus:border-neutral-500"
+                      >
+                        <option value="auto">Auto Fallback (Kokoro → Sarvam AI → ElevenLabs → Native)</option>
+                        <option value="kokoro">Local Kokoro Neural Synthesizer (Port 48126)</option>
+                        <option value="sarvam">Sarvam AI (Aarti - Hindi/Hinglish - hi-IN)</option>
+                        <option value="elevenlabs">ElevenLabs Multilingual (Cloud)</option>
+                        <option value="native">macOS Native Speech (Web Speech API)</option>
+                      </select>
+                    </div>
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-neutral-500/10 text-neutral-400 flex items-center justify-center">
-                        <Volume2 className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-semibold text-white">Kokoro TTS Engine</h4>
-                        <p className="text-[11px] text-neutral-500">Flask HTTP (port 48126)</p>
-                      </div>
+                  {/* Sarvam AI Configuration Section */}
+                  <div className="pt-3 border-t border-white/5 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-white flex items-center gap-1.5">
+                        <Key className="w-3.5 h-3.5 text-neutral-400" /> Sarvam AI Cloud TTS Setup
+                      </span>
+                      <span className="text-[10px] text-neutral-400 font-mono">
+                        Speaker: <strong className="text-neutral-200">aarti_hi_customer</strong> (hi-IN)
+                      </span>
                     </div>
-                    <span className="flex items-center gap-1.5 text-xs text-emerald-400 font-semibold">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500" /> Active
-                    </span>
-                  </div>
 
-                  <div className="p-4 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center">
-                        <Activity className="w-4 h-4" />
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <input
+                          type={showSarvamKey ? 'text' : 'password'}
+                          value={sarvamKeyInput}
+                          onChange={(e) => setSarvamKeyInput(e.target.value)}
+                          placeholder="Paste your SARVAM_API_KEY..."
+                          className="w-full px-3.5 py-2 pr-16 rounded-xl bg-black/[0.12] border border-white/10 text-xs text-white placeholder-neutral-500 font-mono focus:outline-none focus:border-neutral-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowSarvamKey(!showSarvamKey)}
+                          className="absolute right-2.5 top-2.5 text-[10px] text-neutral-400 hover:text-white"
+                        >
+                          {showSarvamKey ? 'Hide' : 'Show'}
+                        </button>
                       </div>
-                      <div>
-                        <h4 className="text-xs font-semibold text-white">MCP Servers Suite</h4>
-                        <p className="text-[11px] text-neutral-500">6 Connected Servers</p>
-                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSarvamApiKey(sarvamKeyInput);
+                          diagnostics.runDiagnosis();
+                        }}
+                        className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold text-white transition"
+                      >
+                        Save Key
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isTestingSarvam || !sarvamKeyInput}
+                        onClick={async () => {
+                          setIsTestingSarvam(true);
+                          setSarvamTestStatus('Synthesizing speech with Aarti...');
+                          try {
+                            const res = await fetch('https://api.sarvam.ai/text-to-speech', {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                'api-subscription-key': sarvamKeyInput.trim(),
+                              },
+                              body: JSON.stringify({
+                                text: 'नमस्ते! मैं पीहू हूँ। सर्वम एआई वॉइस इंजन सक्रिय है।',
+                                language_code: 'hi-IN',
+                                speaker: 'aarti_hi_customer',
+                                model: 'bulbul:v4-flash',
+                              }),
+                            });
+                            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                            const data = await res.json();
+                            if (data.audios?.[0]) {
+                              const audio = new Audio(`data:audio/wav;base64,${data.audios[0]}`);
+                              await audio.play();
+                              setSarvamTestStatus('Playing Aarti sample audio!');
+                            }
+                          } catch (e: any) {
+                            setSarvamTestStatus(`Error: ${e.message}`);
+                          } finally {
+                            setIsTestingSarvam(false);
+                            setTimeout(() => setSarvamTestStatus(null), 4000);
+                          }
+                        }}
+                        className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-semibold text-white transition disabled:opacity-50 flex items-center gap-1.5"
+                      >
+                        <Volume2 className="w-3.5 h-3.5 text-neutral-300" />
+                        {isTestingSarvam ? 'Testing...' : 'Test Voice'}
+                      </button>
                     </div>
-                    <span className="flex items-center gap-1.5 text-xs text-emerald-400 font-semibold">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500" /> Connected
-                    </span>
+
+                    {sarvamTestStatus && (
+                      <p className="text-[11px] text-neutral-400 italic">{sarvamTestStatus}</p>
+                    )}
                   </div>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-black/[0.12] backdrop-blur-lg border border-white/5 flex items-center justify-between text-xs text-neutral-400">
-                  <span>Python Runtime Environment:</span>
-                  <span className="font-mono text-neutral-400">~/.pihu-os/venv/bin/python (3.10)</span>
-                </div>
               </div>
             )}
-
 
             {/* ══════ SECTION 8: PRIVACY & SECURITY ══════ */}
             {activeSidebarCategory === 'privacy' && (

@@ -21,7 +21,8 @@
     "version:major": "node bin/bump-version.mjs --major",
     "pihu:setup": "node bin/pihu setup",
     "browser:prepare": "npm ci --prefix bin/browser-runtime --omit=dev",
-    "mcp:browser": "node node_modules/@playwright/mcp/cli.js --browser chrome"
+    "mcp:browser": "node node_modules/@playwright/mcp/cli.js --browser chrome",
+    "runtime:dev": "node bin/prepare-dev-runtime.mjs"
   },
   "bin": {
     "pihu": "./bin/pihu",

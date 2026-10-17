@@ -8,9 +8,11 @@ from pathlib import Path
 import platform
 import subprocess
 import sys
+import shutil
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--root', type=Path, required=True)
+parser.add_argument('--development', action='store_true')
 parser.add_argument('--verify', action='store_true')
 parser.add_argument('--smoke', action='store_true')
 args = parser.parse_args()
@@ -30,7 +32,7 @@ runtime = root / 'runtime'
 os.environ['HF_HUB_OFFLINE'] = '1'
 os.environ['TRANSFORMERS_OFFLINE'] = '1'
 os.environ['HF_HUB_CACHE'] = str(runtime / 'tts/hub')
-check('Python runtime', lambda: require(runtime / 'python' / ('python.exe' if os.name == 'nt' else 'bin/python3')))
+check('Python runtime', lambda: require(Path(sys.executable)) if args.development else require(runtime / 'python' / ('python.exe' if os.name == 'nt' else 'bin/python3')))
 for module in ['numpy', 'sounddevice', 'onnxruntime', 'openwakeword', 'pywhispercpp.model', 'kokoro', 'flask', 'websockets', 'ytmusicapi', 'mcp.server.fastmcp', 'pydantic_settings', 'httpx', 'psutil', 'bs4', 'trafilatura', 'espeakng_loader']:
     check('Python: ' + module, lambda module=module: importlib.import_module(module).__file__)
 def espeak():
@@ -39,12 +41,19 @@ def espeak():
     from phonemizer.backend.espeak.wrapper import EspeakWrapper
     return EspeakWrapper().version
 check('eSpeak phonemizer', espeak)
-check('Whisper Small model', lambda: require(runtime / 'models/stt/ggml-small.bin'))
+def stt_model():
+    directories = [runtime / 'models/stt']
+    if args.development: directories += [Path.home() / '.pihu-os/models/stt', root.parent / 'models/stt']
+    for directory in directories:
+        for name in (['ggml-small.bin','ggml-base.bin','ggml-base.en.bin'] if args.development else ['ggml-small.bin']):
+            if (directory / name).is_file(): return require(directory / name)
+    raise RuntimeError('Whisper model is missing from the active runtime')
+check('Whisper model', stt_model)
 wake_dir = root / '_up_/models/wakeWord'
 if not wake_dir.is_dir(): wake_dir = root.parent / 'models/wakeWord'
 for name in ['pihu.onnx', 'hey_pihu.onnx', 'hi_pihu.onnx', 'Gen-pihu.onnx', 'silero_vad.onnx', 'embedding_model.onnx', 'melspectrogram.onnx']:
     check('Wake model: ' + name, lambda name=name: require(wake_dir / name))
-node = runtime / 'node' / ('node.exe' if os.name == 'nt' else 'node')
+node = Path(os.environ.get('PIHU_NODE_EXECUTABLE') or shutil.which('node') or 'node') if args.development else runtime / 'node' / ('node.exe' if os.name == 'nt' else 'node')
 check('Node runtime', lambda: subprocess.check_output([str(require(node)), '--version'], timeout=10, text=True).strip())
 for name in ['pihu_file_mcp.py', 'pihu_system_mcp.py', 'pihu_project_mcp.js', 'web_search_mcp/server.py']:
     check('Core MCP source: ' + name, lambda name=name: next(p for p in (root / 'mcp-agent-bundle').rglob('*') if p.is_file() and str(p).endswith(name)))
@@ -73,7 +82,7 @@ def validate_manifest():
         if path.suffix in {'.bin', '.onnx', '.pth', '.pt', '.data'} and digest(path) != metadata['sha256']:
             raise RuntimeError(f'Corrupt speech model: {name}')
     return f"{len(manifest['files'])} packaged files checked; speech model hashes verified"
-check('Bundle inventory', validate_manifest)
+if not args.development: check('Bundle inventory', validate_manifest)
 if args.smoke:
     # Verify native ONNX libraries and external tensor files, not just filenames.
     def wake_models():
@@ -119,5 +128,5 @@ if args.smoke:
     if not project.is_file(): project = root.parent / 'bin/pihu-project-mcp.js'
     check('MCP handshake: project', lambda: mcp_tools('project', str(node), [str(project)]))
 
-print(json.dumps({'ok': all(c['ok'] for c in checks), 'checks': checks}))
+print(json.dumps({'python': {'executable': sys.executable, 'version': platform.python_version()}, 'mode': 'development' if args.development else 'release', 'ok': all(c['ok'] for c in checks), 'checks': checks}))
 sys.exit(0 if all(c['ok'] for c in checks) else 1)
