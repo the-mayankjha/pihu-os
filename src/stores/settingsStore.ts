@@ -7,8 +7,8 @@ export const DEFAULT_KEYBINDINGS = {
   commandPalette: 'CommandOrControl+K',
   globalCommandPalette: 'CommandOrControl+Shift+K',
   tasks: 'CommandOrControl+T',
-  music: 'CommandOrControl+M',
-  marketplace: 'CommandOrControl+Shift+M',
+  music: 'CommandOrControl+Shift+M',
+  marketplace: 'CommandOrControl+M',
   dismissOverlay: 'Escape',
 } as const;
 
@@ -283,10 +283,18 @@ export const useSettingsStore = create<SettingsState>()(
       name: 'pihu-settings-storage',
       merge: (persisted, current) => {
         const saved = persisted as Partial<typeof current> | undefined;
+        const savedKeybindings = { ...DEFAULT_KEYBINDINGS, ...saved?.keybindings };
+        // Swap the previous defaults during hydration while preserving any custom shortcuts.
+        if (savedKeybindings.music === 'CommandOrControl+M') {
+          savedKeybindings.music = DEFAULT_KEYBINDINGS.music;
+        }
+        if (savedKeybindings.marketplace === 'CommandOrControl+Shift+M') {
+          savedKeybindings.marketplace = DEFAULT_KEYBINDINGS.marketplace;
+        }
         return {
           ...current,
           ...saved,
-          keybindings: { ...DEFAULT_KEYBINDINGS, ...saved?.keybindings },
+          keybindings: savedKeybindings,
         };
       },
     }
