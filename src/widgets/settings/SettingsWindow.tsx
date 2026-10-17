@@ -78,6 +78,7 @@ const SHORTCUT_ROWS: { action: KeybindingAction; label: string; scope: 'Global' 
   { action: 'globalCommandPalette', label: 'Open Command Palette from any app', scope: 'Global' },
   { action: 'tasks', label: 'Toggle Task Window', scope: 'In PIHU' },
   { action: 'music', label: 'Toggle YouTube Music Player', scope: 'In PIHU' },
+  { action: 'marketplace', label: 'Open PIHU Market', scope: 'In PIHU' },
   { action: 'dismissOverlay', label: 'Dismiss active voice overlay', scope: 'In PIHU' },
 ];
 

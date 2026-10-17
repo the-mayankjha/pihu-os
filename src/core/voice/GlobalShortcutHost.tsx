@@ -49,6 +49,9 @@ export function GlobalShortcutHost() {
         case 'music':
           useLayoutStore.getState().toggleWidget('ytmusic-plugin');
           break;
+        case 'marketplace':
+          useLayoutStore.getState().toggleWidget('marketplace-window');
+          break;
         case 'commandPalette':
           useVoiceStore.getState().toggleCommandPalette();
           break;
@@ -80,7 +83,7 @@ export function GlobalShortcutHost() {
         runAction('commandPalette');
         return;
       }
-      const localActions = isTauri() ? ['settings', 'tasks', 'music'] as const : ['voice', 'settings', 'tasks', 'music'] as const;
+      const localActions = isTauri() ? ['settings', 'tasks', 'music', 'marketplace'] as const : ['voice', 'settings', 'tasks', 'music', 'marketplace'] as const;
       for (const action of localActions) {
         if (matchesAccelerator(event, keybindings[action])) {
           event.preventDefault();
