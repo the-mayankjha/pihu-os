@@ -597,10 +597,11 @@ export const googleWorkspaceTools: ActionTool[] = [
   {
     declaration: {
       name: 'google_workspace_create_doc',
-      description: 'Creates a real Google Doc via Google Docs API. Use when user says "create a Google Doc titled [title]", "new document [title]".',
+      description: 'Stages an editable Google Doc preview before upload. Include the full content; never claim it is uploaded until the user clicks Create. Use when user says "create a Google Doc titled [title]", "new document [title]".',
       parameters: {
         type: 'OBJECT',
         properties: {
+          content: { type: 'STRING', description: 'Full proposed document text for review.' },
           title: {
             type: 'STRING',
             description: 'Title of the new document.',
@@ -611,17 +612,9 @@ export const googleWorkspaceTools: ActionTool[] = [
     },
     execute: async (args): Promise<ToolResult> => {
       try {
-        const apiRes = await runGoogleApiClient('create_doc', args.title);
-        if (apiRes.error) return { success: false, error: apiRes.error };
-        return {
-          success: true,
-          data: {
-            action: 'created_google_doc',
-            document_id: apiRes.document_id,
-            doc_url: apiRes.doc_url,
-            message: `Created Google Doc "${args.title}": ${apiRes.doc_url}`,
-          },
-        };
+        const { useGoogleDocDraft } = await import('../../../services/googleDocDraft');
+        useGoogleDocDraft.getState().setDraft({ title: args.title, content: args.content || '', sources: [], limited: false });
+        return { success: true, data: { action: 'google_doc_draft', message: 'The editable Google Doc draft is ready. Review it and click Create Google Doc to upload.' } };
       } catch (e: any) {
         return { success: false, error: `Failed to create Google Doc: ${e?.message || String(e)}` };
       }

@@ -47,7 +47,10 @@ export interface PendingWhatsAppAction {
   createdAt: number;
 }
 
+export type GoogleDocDraft = { title: string; content: string; sources: string[]; limited: boolean; documentId?: string; url?: string };
+
 interface VoiceState {
+  pendingGoogleDoc: GoogleDocDraft | null;
   isActive: boolean;
   isListening: boolean;
   transcription: string;
@@ -101,6 +104,7 @@ export const useVoiceStore = create<VoiceState>((set) => ({
   response: '',
   processingStatus: null,
   activeProject: initialActiveProject,
+  pendingGoogleDoc: null,
   pendingProjectAction: null,
   pendingEmailAction: null,
   pendingWhatsAppAction: null,

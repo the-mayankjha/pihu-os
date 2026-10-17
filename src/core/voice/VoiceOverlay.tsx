@@ -1,3 +1,4 @@
+import { GoogleDocPreview } from '../../shared/components/GoogleDocPreview';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { emitTo } from '@tauri-apps/api/event';
 import { VoiceManager } from './VoiceManager';
@@ -28,6 +29,7 @@ export const VoiceOverlay: React.FC = () => {
     response,
     processingStatus,
     activeProject,
+    pendingGoogleDoc,
     pendingProjectAction,
     pendingEmailAction,
     pendingWhatsAppAction,
@@ -60,6 +62,7 @@ export const VoiceOverlay: React.FC = () => {
   // Auto-expand when code blocks, staged project actions, staged emails, WhatsApp confirmations, or coding plans/diffs are present
   useEffect(() => {
     if (
+      pendingGoogleDoc ||
       pendingProjectAction ||
       pendingEmailAction ||
       pendingWhatsAppAction ||
@@ -71,6 +74,7 @@ export const VoiceOverlay: React.FC = () => {
       setIsExpanded(true);
     }
   }, [
+    pendingGoogleDoc,
     pendingProjectAction,
     pendingEmailAction,
     pendingWhatsAppAction,
@@ -108,6 +112,7 @@ export const VoiceOverlay: React.FC = () => {
     if (isListening) return transcription ? `"${transcription}"` : 'PIHU Listening';
     if (orbState === OrbState.EXECUTING) return processingStatus || 'Executing...';
     if (orbState === OrbState.THINKING) return processingStatus || 'Thinking...';
+    if (pendingGoogleDoc) return `Google Doc: ${pendingGoogleDoc.title}`;
     if (pendingEmailAction) return `Email Preview: ${pendingEmailAction.subject || 'Draft ready'}`;
     if (pendingProjectAction) return `Awaiting Confirmation: ${pendingProjectAction.title}`;
     if (orbState === OrbState.SPEAKING) return response ? response.slice(0, 70) + (response.length > 70 ? '...' : '') : 'Speaking...';
@@ -163,7 +168,7 @@ export const VoiceOverlay: React.FC = () => {
               }}
               onClick={() => {
                 if (wasDragged.current) return;
-                if (response || processingStatus || pendingProjectAction || (transcription && transcription.length > 25)) {
+                if (pendingGoogleDoc || response || processingStatus || pendingProjectAction || (transcription && transcription.length > 25)) {
                   setIsExpanded(!isExpanded);
                 }
               }}
@@ -197,7 +202,7 @@ export const VoiceOverlay: React.FC = () => {
               </div>
 
               {/* Expand Toggle */}
-              {(response || processingStatus || pendingProjectAction || pendingEmailAction || (transcription && transcription.length > 25)) && (
+              {(pendingGoogleDoc || response || processingStatus || pendingProjectAction || pendingEmailAction || (transcription && transcription.length > 25)) && (
                 <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center text-white/60 hover:text-white transition-colors">
                   <ChevronDown className={`w-4 h-4 ${isExpanded ? 'rotate-180' : ''}`} />
                 </div>
@@ -231,6 +236,7 @@ export const VoiceOverlay: React.FC = () => {
                     <WhatsAppConfirmationCard className="mb-4" />
                   )}
 
+                  <GoogleDocPreview />
                   {/* ─── PENDING EMAIL DRAFT & EDITABLE PREVIEW CARD ─── */}
                   {pendingEmailAction && (
                     <EmailPreviewCard className="mb-4" />

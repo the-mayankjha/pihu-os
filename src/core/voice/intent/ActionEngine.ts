@@ -1,3 +1,4 @@
+import { draftProjectGoogleDoc } from '../../services/googleDocDraft';
 import { hasMcpUpdate } from '../../services/mcpVersion';
 import { openMcpConfiguration } from '../../services/mcpNavigation';
 import { parseSpotifyIntent } from '../../services/spotifyIntent';
@@ -751,6 +752,10 @@ export class ActionEngine {
         if (installed) return installed;
       }
 
+      if (/\b(?:create|make|draft|write)\b/i.test(cleanText) && /\bgoogle\s+doc(?:s|ument)?\b/i.test(cleanText) && /\b(?:project|architecture|codebase)\b/i.test(cleanText)) {
+        onMode('thinking');
+        return await draftProjectGoogleDoc(cleanText);
+      }
       let spotifyIntent = parseSpotifyIntent(cleanText);
       let spotifyConnected = false;
       if (!spotifyIntent && /\b(?:play|search|pause|stop|resume|next|previous|skip|what(?:'s| is) playing|playlists?|feel(?:ing)?|mood)\b/i.test(cleanText)) {

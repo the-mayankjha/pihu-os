@@ -76,6 +76,10 @@ export async function loadInstalledMcpTools(): Promise<ActionTool[]> {
           }
           try {
             const data = await invoke<string>('mcp_call_tool', { serverId: tool.server, toolName: tool.name, arguments: args });
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed && (parsed.error || parsed.status === 'error')) return { success: false, error: String(parsed.error || parsed.message || 'MCP action failed'), data: parsed };
+            } catch { /* Some MCP tools return plain text. */ }
             return { success: true, data };
           } catch (error) { return { success: false, error: String(error) }; }
           finally {

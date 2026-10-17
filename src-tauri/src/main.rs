@@ -5,6 +5,7 @@ mod ytmusic;
 mod stt;
 mod system_monitor;
 mod tts;
+mod project_document;
 mod automation;
 mod google_oauth;
 mod spotify_mcp;
@@ -115,6 +116,7 @@ fn main() {
         .manage(whatsapp_mcp::WhatsAppMcpState::default())
         .invoke_handler(tauri::generate_handler![
             bundled_runtime::diagnose_runtime,
+            project_document::project_document_context,
             spirits::sync_spirits,
             spirits::refresh_spirit_windows,
             spirits::sync_voice_overlay,
