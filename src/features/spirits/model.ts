@@ -26,7 +26,6 @@ export const SPIRIT_EXTRA_ANIMATIONS = {
   'idle-guitar': { path: 'animations/idle/guitar.png', frames: 6, fps: 6, fallback: 'idle' },
   'idle-sitting': { path: 'animations/idle/sitting.png', frames: 6, fps: 6, fallback: 'idle' },
   'idle-butterfly': { path: 'animations/idle/butterfly.png', frames: 6, fps: 6, fallback: 'idle' },
-  'idle-cat': { path: 'animations/idle/cat.png', frames: 6, fps: 6, fallback: 'running' },
   'idle-hairflip': { path: 'animations/idle/hairflip.png', frames: 6, fps: 6, fallback: 'review' },
   'idle-pouting': { path: 'animations/idle/pouting.png', frames: 6, fps: 6, fallback: 'review' },
   'talking-expressive': { path: 'animations/talking/expressive.png', frames: 16, fps: 8, fallback: 'review' },
@@ -37,7 +36,7 @@ export const SPIRIT_EXTRA_ANIMATIONS = {
   'browser-automation-enhanced': { path: 'animations/browser/automation-enhanced.png', frames: 8, fps: 8, fallback: 'running' },
 } as const;
 export type SpiritExtraAnimation = keyof typeof SPIRIT_EXTRA_ANIMATIONS;
-export type SpiritPose = SpiritAnimation | SpiritExtraAnimation | 'cat-play' | 'hair-flip' | 'speaking' | 'thinking';
+export type SpiritPose = SpiritAnimation | SpiritExtraAnimation | 'hair-flip' | 'speaking' | 'thinking';
 export type BrowserSpiritTask = 'playwright' | 'web-search' | null;
 
 export function pihuPose(animation: SpiritAnimation, speaking: boolean, idleMs: number): SpiritPose {
@@ -45,11 +44,10 @@ export function pihuPose(animation: SpiritAnimation, speaking: boolean, idleMs: 
   if (animation === 'running') return 'waiting';
   if (animation !== 'idle') return animation;
   if (idleMs >= 12000 && idleMs % 15000 >= 12000 && idleMs % 15000 < 13000) return 'hair-flip';
-  return idleMs >= 20000 ? 'cat-play' : 'idle';
+  return 'idle';
 }
 
 export function poseConfig(pose: SpiritPose) {
-  if (pose === 'cat-play') return { ...ANIMATIONS.running, fps: 4 };
   if (pose === 'hair-flip') return ANIMATIONS.review;
   if (pose === 'speaking') return { row: 3, frames: 8, fps: 10 };
   if (pose === 'thinking') return { ...ANIMATIONS.running, fps: 6 };
@@ -68,12 +66,11 @@ export function pihuV2Pose(animation: SpiritAnimation, speaking: boolean, idleMs
   if (animation !== 'idle') return animation;
   // Sitting is reserved for the browser-work transition. Rotate through all
   // other idle performances before returning to the regular idle loop.
-  const idleCycle = idleMs % 48000;
-  if (idleCycle >= 6000 && idleCycle < 12000) return 'idle-hairflip';
-  if (idleCycle >= 12000 && idleCycle < 18000) return 'idle-cat';
-  if (idleCycle >= 18000 && idleCycle < 24000) return 'idle-butterfly';
-  if (idleCycle >= 24000 && idleCycle < 30000) return 'idle-guitar';
-  if (idleCycle >= 30000 && idleCycle < 36000) return 'idle-pouting';
+  const idleCycle = idleMs % 50000;
+  if ((idleCycle >= 6000 && idleCycle < 7000) || (idleCycle >= 33000 && idleCycle < 34000)) return 'idle-hairflip';
+  if (idleCycle >= 21000 && idleCycle < 27000) return 'idle-butterfly';
+  if (idleCycle >= 27000 && idleCycle < 33000) return 'idle-guitar';
+  if (idleCycle >= 34000 && idleCycle < 40000) return 'idle-pouting';
   return 'idle';
 }
 

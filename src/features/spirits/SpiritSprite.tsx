@@ -146,8 +146,20 @@ export function SpiritSprite({ id, version, size = 128, animation = 'idle', dire
     let frame = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const draw = () => {
-      const context = canvas.current?.getContext('2d');
-      if (!context) return;
+      const target = canvas.current;
+      const context = target?.getContext('2d');
+      if (!target || !context) return;
+      // Render at device resolution so CSS scaling doesn't soften the 192px atlas cells.
+      const pixelRatio = Math.max(1, window.devicePixelRatio || 1);
+      const backingWidth = Math.round(CELL_WIDTH * pixelRatio);
+      const backingHeight = Math.round(CELL_HEIGHT * pixelRatio);
+      if (target.width !== backingWidth || target.height !== backingHeight) {
+        target.width = backingWidth;
+        target.height = backingHeight;
+      }
+      context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = 'high';
       const cell = animation === 'idle' && frame === 0 && gaze.current !== null
         ? lookCell(gaze.current) : { row: config.row, column: frame };
       context.clearRect(0, 0, CELL_WIDTH, CELL_HEIGHT);
@@ -155,6 +167,7 @@ export function SpiritSprite({ id, version, size = 128, animation = 'idle', dire
       const extraPose = browserPhase === 'working' && browserTask
         ? extra?.[browserTask === 'playwright' ? 'browser-automation-enhanced' : 'browser-automation']
         : extra?.[animation as SpiritExtraAnimation];
+      const normalizeIdlePose = id === 'pihu-v2-1-2' && ['idle-hairflip', 'idle-guitar', 'idle-butterfly', 'idle-pouting'].includes(animation);
       const transitionStrip = hasListeningTransition ? extra?.['headphones-transition'] : undefined;
       const focusedListeningStrip = hasListeningTransition ? extra?.listening : undefined;
       const thinkingSheet = animation === 'thinking' && thinking?.id === id ? thinking.image : undefined;
@@ -179,11 +192,25 @@ export function SpiritSprite({ id, version, size = 128, animation = 'idle', dire
       else if (transitionStrip && focusedListeningStrip && animation === 'listening' && listeningPhase === 'focused') {
         context.drawImage(focusedListeningStrip, (frame % SPIRIT_EXTRA_ANIMATIONS.listening.frames) * CELL_WIDTH, 0, CELL_WIDTH, CELL_HEIGHT, 0, 0, CELL_WIDTH, CELL_HEIGHT);
       }
+      else if (animation === 'idle-hairflip' && frame >= config.frames) {
+        // Keep the rest pose visible for the remainder of its idle time slot.
+        context.drawImage(image, 0, 0, CELL_WIDTH, CELL_HEIGHT, 0, 0, CELL_WIDTH, CELL_HEIGHT);
+      }
       else if (extraPose && !motion.matches) {
         if (animation === 'talking-expressive' && extra?.talking) {
           const expressiveFrames = SPIRIT_EXTRA_ANIMATIONS['talking-expressive'].frames / 2;
           const strip = frame < expressiveFrames ? extraPose : extra.talking;
           context.drawImage(strip, (frame % expressiveFrames) * CELL_WIDTH, 0, CELL_WIDTH, CELL_HEIGHT, 0, 0, CELL_WIDTH, CELL_HEIGHT);
+        } else if (normalizeIdlePose) {
+          // These idle strips have visibly taller artwork than the base Pihu atlas.
+          // Scale around the shared foot and body center so the character stays the same size.
+          const scale = 169 / 198;
+          context.save();
+          context.translate(CELL_WIDTH / 2, 204);
+          context.scale(scale, scale);
+          context.translate(-CELL_WIDTH / 2, -204);
+          context.drawImage(extraPose, (frame % (extraPose.naturalWidth / CELL_WIDTH)) * CELL_WIDTH, 0, CELL_WIDTH, CELL_HEIGHT, 0, 0, CELL_WIDTH, CELL_HEIGHT);
+          context.restore();
         } else context.drawImage(extraPose, (frame % (extraPose.naturalWidth / CELL_WIDTH)) * CELL_WIDTH, 0, CELL_WIDTH, CELL_HEIGHT, 0, 0, CELL_WIDTH, CELL_HEIGHT);
       }
       else if (listeningSheet) context.drawImage(listeningSheet, (motion.matches ? Math.min(7, listeningState!.frames - 1) : frame % listeningState!.frames) * CELL_WIDTH, 0, CELL_WIDTH, CELL_HEIGHT, 0, 0, CELL_WIDTH, CELL_HEIGHT);
@@ -213,7 +240,8 @@ export function SpiritSprite({ id, version, size = 128, animation = 'idle', dire
         else frame += 1;
       } else if (transitionStrip && focusedListeningStrip && animation === 'listening' && listeningPhase === 'focused') {
         frame = (frame + 1) % SPIRIT_EXTRA_ANIMATIONS.listening.frames;
-      } else frame = animation === 'listening' && listeningSheet ? (frame + 1) % listeningState!.frames
+      } else if (animation === 'idle-hairflip') frame = Math.min(frame + 1, config.frames);
+      else frame = animation === 'listening' && listeningSheet ? (frame + 1) % listeningState!.frames
           : animation === 'listening' && frame >= 15 ? 12 : (frame + 1) % config.frames;
     };
     let idleHold = 0;
