@@ -1,5 +1,4 @@
 import { SpotifyConnection, SpotifyDeveloperSettings } from './SpotifyConnection';
-import spotifyCatalog from '../../core/services/spotifyToolCatalog.json';
 import { useVoiceStore } from '../../stores/voiceStore';
 import { ensureWhatsAppBridge, WHATSAPP_API_URL } from '../../core/services/whatsappBridge';
 import { GlassCard } from '../../shared/components/GlassCard/GlassCard';
@@ -14,6 +13,7 @@ import type { KeybindingAction } from '../../stores/settingsStore';
 import { acceleratorFromKeyboardEvent, formatAccelerator } from '../../core/shortcuts';
 import { SpiritsSettings } from '../../features/spirits/SpiritsSettings';
 import { useLayoutStore } from '../../core/layout/LayoutStore';
+import { InstalledMcpConnections } from './InstalledMcpConnections';
 import { EngineDiagnosticsSummary } from './EngineDiagnosticsSummary';
 import { useDiagnosticsStore } from '../../core/voice/diagnosis/EngineDiagnostics';
 import { motion } from 'framer-motion';
@@ -39,8 +39,6 @@ import {
   Check,
   Cpu,
   Search,
-  ChevronRight,
-  ArrowLeft,
   Wrench,
   Code,
   User,
@@ -53,24 +51,6 @@ import {
   Edit2,
   CheckCircle2,
 } from 'lucide-react';
-
-interface McpToolDef {
-  name: string;
-  description: string;
-  parameters: string[];
-  category: string;
-}
-
-interface McpServerDef {
-  id: string;
-  name: string;
-  desc: string;
-  status: string;
-  port: string;
-  version: string;
-  transport: string;
-  tools: McpToolDef[];
-}
 
 const SHORTCUT_ROWS: { action: KeybindingAction; label: string; scope: 'Global' | 'In PIHU' }[] = [
   { action: 'voice', label: 'Activate PIHU Voice Assistant', scope: 'Global' },
@@ -268,8 +248,13 @@ export const SettingsWindow: React.FC = () => {
   
   // MCP Inspector & In-Place Navigation states
   const [activeMcpDetailId, setActiveMcpDetailId] = useState<string | null>(null);
-  const [mcpSearchQuery, setMcpSearchQuery] = useState('');
-  const [copiedToolName, setCopiedToolName] = useState<string | null>(null);
+  useEffect(() => {
+    const open = (event: Event) => { setActiveMcpDetailId((event as CustomEvent<string>).detail); sessionStorage.removeItem('pihu-configure-mcp'); };
+    window.addEventListener('pihu-configure-mcp', open);
+    const pending = sessionStorage.getItem('pihu-configure-mcp');
+    if (pending) { setActiveMcpDetailId(pending); sessionStorage.removeItem('pihu-configure-mcp'); }
+    return () => window.removeEventListener('pihu-configure-mcp', open);
+  }, []);
 
   // General Page PIHU OS States
   const [userName, setUserName] = useState('Sir Mayank');
@@ -350,6 +335,7 @@ export const SettingsWindow: React.FC = () => {
 
   // WhatsApp Bridge live status & QR poller
   useEffect(() => {
+    if (activeSidebarCategory !== 'connections' || activeMcpDetailId !== 'pihu-whatsapp-mcp') return;
     let isMounted = true;
     let polling = false;
     const fetchWaStatus = async () => {
@@ -433,7 +419,7 @@ export const SettingsWindow: React.FC = () => {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [activeSidebarCategory]);
+  }, [activeSidebarCategory, activeMcpDetailId]);
 
   // People & Directory States
   const [contactSearchQuery, setContactSearchQuery] = useState('');
@@ -480,389 +466,11 @@ export const SettingsWindow: React.FC = () => {
   }, [contacts, contactsHydrated]);
 
   const messageVoiceAlerts = useSettingsStore(state => state.messageVoiceAlerts);
-  const [spotifyConnected, setSpotifyConnected] = useState(false);
   // Notification states
   const [bannerAlerts, setBannerAlerts] = useState(true);
   const [spokenVoiceAlerts, setSpokenVoiceAlerts] = useState(true);
   const [soundChimes, setSoundChimes] = useState(true);
   const [doNotDisturb, setDoNotDisturb] = useState(false);
-
-  // Master MCP Server & Tool Registry
-  const mcpServers: McpServerDef[] = [
-    { id: 'spotify-mcp', name: 'Spotify MCP', desc: 'Marcel Marais’s Spotify server: search, playback, devices, queue and playlists.', status: spotifyConnected ? 'Active' : 'Connect account', port: 'OAuth 8888', version: '1.0.0', transport: 'stdio', tools: spotifyCatalog.map(tool => ({ name: tool.name, description: tool.description || '', parameters: Object.keys(tool.inputSchema.properties || {}), category: 'Spotify' })) },
-    {
-      id: 'pihu-project-mcp',
-      name: 'pihu-project-mcp',
-      desc: 'Multi-language project scaffolding, runner, diagnosis, health, and server supervisor.',
-      status: 'Active',
-      port: 'stdio',
-      version: '1.0.0',
-      transport: 'JSON-RPC 2.0 (stdio)',
-      tools: [
-        {
-          name: 'project_mcp_plan_project',
-          description: 'Formulates comprehensive architecture plans covering target directories, framework tech stack, and module structure.',
-          parameters: ['project_name', 'prompt', 'stack', 'styling', 'target_dir'],
-          category: 'Architecture'
-        },
-        {
-          name: 'project_mcp_create_react_project',
-          description: 'Scaffolds a production-ready Vite + React + TypeScript + Tailwind + Framer Motion project with Lucide icons.',
-          parameters: ['project_name', 'prompt', 'styling', 'target_dir'],
-          category: 'Scaffolding'
-        },
-        {
-          name: 'project_mcp_scaffold_project',
-          description: 'Scaffolds multi-language stacks: Python (FastAPI, Django, Flask), Java (Spring Boot), Rust (Axum, Cargo), Go (Gin), C/C++, Lua.',
-          parameters: ['project_name', 'language', 'stack', 'description', 'target_dir'],
-          category: 'Scaffolding'
-        },
-        {
-          name: 'project_mcp_run_and_open_web',
-          description: 'Allocates non-reserved port (5180+), starts development server, validates health, and opens in user browser.',
-          parameters: ['project_dir', 'preferred_port'],
-          category: 'Runtime'
-        },
-        {
-          name: 'project_mcp_diagnose_and_fix',
-          description: 'Analyzes build & runtime error logs, automatically fixes missing dependencies, broken imports, and type errors.',
-          parameters: ['project_dir', 'error_log', 'auto_fix'],
-          category: 'Diagnostics'
-        },
-        {
-          name: 'project_mcp_test_project',
-          description: 'Executes stack-specific automated test suites (pytest, cargo test, go test, mvn test, ctest) and generates reports.',
-          parameters: ['project_dir', 'test_framework'],
-          category: 'Testing'
-        },
-        {
-          name: 'project_mcp_manage_server',
-          description: 'Lists, monitors, inspects logs, and terminates background server processes and daemon port allocations.',
-          parameters: ['action', 'port', 'pid'],
-          category: 'Server Supervisor'
-        },
-        {
-          name: 'project_mcp_health_check',
-          description: 'Verifies project health, toolchain binaries (cargo, node, python, go, cmake), and memory consumption.',
-          parameters: ['project_dir'],
-          category: 'Telemetry'
-        },
-      ]
-    },
-    {
-      id: 'google-workspace-mcp',
-      name: 'google-workspace-mcp',
-      desc: 'Google Workspace orchestration across Gmail, Calendar, Docs, Tasks, Keep, and Google Drive.',
-      status: 'Connected',
-      port: '8080',
-      version: '1.0.0',
-      transport: 'OAuth 2.0 / REST API',
-      tools: [
-        {
-          name: 'google_workspace_list_emails',
-          description: 'Queries and fetches Gmail threads, unread messages, senders, and attachment metadata.',
-          parameters: ['query', 'max_results', 'include_body'],
-          category: 'Gmail'
-        },
-        {
-          name: 'google_workspace_send_email',
-          description: 'Composes and sends emails via authorized Gmail API with subject and HTML/plain text body.',
-          parameters: ['to', 'subject', 'body', 'cc'],
-          category: 'Gmail'
-        },
-        {
-          name: 'google_workspace_list_calendar_events',
-          description: 'Retrieves Google Calendar upcoming meetings, schedules, attendee RSVPs, and location details.',
-          parameters: ['time_min', 'time_max', 'max_results'],
-          category: 'Calendar'
-        },
-        {
-          name: 'google_workspace_create_calendar_event',
-          description: 'Creates new Google Calendar events with summary, description, start/end timestamps, and reminders.',
-          parameters: ['summary', 'start_time', 'end_time', 'description', 'attendees'],
-          category: 'Calendar'
-        },
-        {
-          name: 'google_workspace_list_tasks',
-          description: 'Fetches active task lists, pending todo items, and deadlines from Google Tasks.',
-          parameters: ['task_list_id', 'show_completed'],
-          category: 'Tasks'
-        },
-        {
-          name: 'google_workspace_create_task',
-          description: 'Adds new actionable items to Google Tasks with due dates and notes.',
-          parameters: ['title', 'notes', 'due_date'],
-          category: 'Tasks'
-        },
-        {
-          name: 'google_workspace_list_drive_files',
-          description: 'Searches, queries, and retrieves files, folders, and shared documents in Google Drive.',
-          parameters: ['query', 'mime_type', 'max_results'],
-          category: 'Drive'
-        },
-        {
-          name: 'google_workspace_create_doc',
-          description: 'Creates and edits Google Docs documents with formatted text and sections.',
-          parameters: ['title', 'initial_content'],
-          category: 'Docs'
-        },
-        {
-          name: 'google_workspace_create_keep_note',
-          description: 'Creates structured notes and checklists in Google Keep.',
-          parameters: ['title', 'text', 'tags'],
-          category: 'Keep'
-        },
-        {
-          name: 'google_workspace_execute_cross_workflow',
-          description: 'Executes automated multi-service flows (e.g. email meeting notes + create calendar event + add task).',
-          parameters: ['workflow_type', 'parameters'],
-          category: 'Orchestrator'
-        },
-      ]
-    },
-    {
-      id: 'file-mcp',
-      name: 'file-mcp',
-      desc: 'Local filesystem deep indexer, semantic search, file creator, and atomic batch writer.',
-      status: 'Active',
-      port: 'in-proc',
-      version: '1.0.0',
-      transport: 'In-Process Native Bridge',
-      tools: [
-        {
-          name: 'file_mcp_read_file',
-          description: 'Reads local file contents with line range slicing and encoding detection.',
-          parameters: ['path', 'offset', 'limit'],
-          category: 'Read'
-        },
-        {
-          name: 'file_mcp_write_file',
-          description: 'Creates or modifies files on the local filesystem with automatic parent directory scaffolding.',
-          parameters: ['path', 'content', 'overwrite'],
-          category: 'Write'
-        },
-        {
-          name: 'file_mcp_write_batch_files',
-          description: 'Atomically writes multiple files across different directories in a single unified operation.',
-          parameters: ['files'],
-          category: 'Batch'
-        },
-        {
-          name: 'file_mcp_search_files',
-          description: 'Performs deep recursive searches across workspace by file pattern or text content.',
-          parameters: ['query', 'directory', 'regex'],
-          category: 'Search'
-        },
-        {
-          name: 'file_mcp_open_folder',
-          description: 'Reveals and opens specified directory paths directly in macOS Finder.',
-          parameters: ['path'],
-          category: 'System'
-        },
-        {
-          name: 'file_mcp_open_file',
-          description: 'Launches local files directly in system default applications or code editors.',
-          parameters: ['path'],
-          category: 'System'
-        },
-      ]
-    },
-    {
-      id: 'system-mcp',
-      name: 'system-mcp',
-      desc: 'Host OS supervisor, application launcher, shell executor, and settings orchestrator.',
-      status: 'Active',
-      port: 'in-proc',
-      version: '1.0.0',
-      transport: 'In-Process Native Bridge',
-      tools: [
-        {
-          name: 'system_open_application',
-          description: 'Launches desktop applications on macOS (VS Code, Chrome, Brave, Spotify, Terminal, Finder).',
-          parameters: ['app_name'],
-          category: 'Apps'
-        },
-        {
-          name: 'system_search_web_browser',
-          description: 'Executes web searches directly in the user preferred web browser.',
-          parameters: ['query', 'browser'],
-          category: 'Browser'
-        },
-        {
-          name: 'system_execute_command',
-          description: 'Executes terminal shell commands and script executions with live stdout/stderr capture.',
-          parameters: ['command', 'cwd'],
-          category: 'Shell'
-        },
-        {
-          name: 'system_get_running_servers',
-          description: 'Lists all active background development servers and bound ports.',
-          parameters: [],
-          category: 'Telemetry'
-        },
-        {
-          name: 'system_open_settings',
-          description: 'Opens PIHU Settings Control Center and switches to the specified tab.',
-          parameters: ['section'],
-          category: 'Navigation'
-        },
-        {
-          name: 'system_setup_workspace',
-          description: 'Initializes and validates Python virtual environments and MCP runtime dependencies.',
-          parameters: [],
-          category: 'Setup'
-        },
-      ]
-    },
-    {
-      id: 'memory-mcp',
-      name: 'memory-mcp',
-      desc: 'MemPalace persistent memory, user preferences, and session context recall.',
-      status: 'Active',
-      port: 'in-proc',
-      version: '1.0.0',
-      transport: 'In-Process Vector Store',
-      tools: [
-        {
-          name: 'memplace_recall_projects',
-          description: 'Recalls past user projects, architecture preferences, and recent milestones.',
-          parameters: ['query', 'limit'],
-          category: 'Memory'
-        },
-        {
-          name: 'memplace_get_session_summary',
-          description: 'Generates a concise summary of active session context and accomplished tasks.',
-          parameters: [],
-          category: 'Summary'
-        },
-        {
-          name: 'memplace_check_health_guard',
-          description: 'Checks continuous session duration and generates ergonomic wellness recommendations.',
-          parameters: [],
-          category: 'Health'
-        },
-      ]
-    },
-    {
-      id: 'music-mcp',
-      name: 'music-mcp',
-      desc: 'YouTube Music streaming controller with OAuth library integration and queue management.',
-      status: 'Active',
-      port: '48123',
-      version: '1.0.0',
-      transport: 'HTTP / Python ytmusicapi',
-      tools: [
-        {
-          name: 'music_play',
-          description: 'Searches and streams tracks, playlists, or albums directly on YouTube Music.',
-          parameters: ['query', 'artist'],
-          category: 'Playback'
-        },
-        {
-          name: 'music_pause',
-          description: 'Pauses the currently playing track.',
-          parameters: [],
-          category: 'Playback'
-        },
-        {
-          name: 'music_resume',
-          description: 'Resumes audio playback.',
-          parameters: [],
-          category: 'Playback'
-        },
-        {
-          name: 'music_next',
-          description: 'Skips to the next track in the current playlist queue.',
-          parameters: [],
-          category: 'Playback'
-        },
-        {
-          name: 'music_prev',
-          description: 'Returns to the previous song in queue.',
-          parameters: [],
-          category: 'Playback'
-        },
-        {
-          name: 'music_set_volume',
-          description: 'Sets the playback volume level (0 to 100%).',
-          parameters: ['volume'],
-          category: 'Controls'
-        },
-      ]
-    },
-    {
-      id: 'pihu-whatsapp-mcp',
-      name: 'pihu-whatsapp-mcp',
-      desc: 'WhatsApp Desktop Bridge: autonomous messaging, contact lookup, history sync, and audio messages.',
-      status: 'Active',
-      port: '8080',
-      version: '1.0.0',
-      transport: 'FastMCP (stdio) + Go Bridge',
-      tools: [
-        {
-          name: 'whatsapp_send_message',
-          description: 'Sends a WhatsApp text message to any phone number or group JID.',
-          parameters: ['recipient', 'message'],
-          category: 'Messaging'
-        },
-        {
-          name: 'whatsapp_search_contacts',
-          description: 'Searches WhatsApp contacts by name or phone number.',
-          parameters: ['query'],
-          category: 'Contacts'
-        },
-        {
-          name: 'whatsapp_list_messages',
-          description: 'Retrieves recent chat history with timestamp filters and context.',
-          parameters: ['chat_jid', 'sender_phone_number', 'limit', 'query'],
-          category: 'History'
-        },
-        {
-          name: 'whatsapp_list_chats',
-          description: 'Lists active WhatsApp conversations sorted by last activity.',
-          parameters: ['query', 'limit', 'page'],
-          category: 'Chats'
-        },
-        {
-          name: 'whatsapp_get_chat',
-          description: 'Retrieves specific chat metadata and recent interaction details.',
-          parameters: ['chat_jid'],
-          category: 'Chats'
-        },
-        {
-          name: 'whatsapp_get_last_interaction',
-          description: 'Fetches the most recent message with a specific contact.',
-          parameters: ['jid'],
-          category: 'Contacts'
-        },
-        {
-          name: 'whatsapp_send_file',
-          description: 'Sends an image, video, document, or audio file to a recipient.',
-          parameters: ['recipient', 'media_path'],
-          category: 'Media'
-        },
-        {
-          name: 'whatsapp_send_audio_message',
-          description: 'Sends voice notes or audio messages encoded with Opus format.',
-          parameters: ['recipient', 'media_path'],
-          category: 'Media'
-        },
-        {
-          name: 'whatsapp_download_media',
-          description: 'Downloads media attachments from a message to local disk.',
-          parameters: ['message_id', 'chat_jid'],
-          category: 'Media'
-        },
-      ]
-    },
-  ];
-
-  const currentSelectedMcp = mcpServers.find(m => m.id === activeMcpDetailId);
-  const filteredMcpTools = currentSelectedMcp ? currentSelectedMcp.tools.filter(t => 
-    t.name.toLowerCase().includes(mcpSearchQuery.toLowerCase()) ||
-    t.description.toLowerCase().includes(mcpSearchQuery.toLowerCase()) ||
-    t.category.toLowerCase().includes(mcpSearchQuery.toLowerCase())
-  ) : [];
 
   // Sync Google Workspace accounts from token file
   useEffect(() => {
@@ -972,12 +580,6 @@ export const SettingsWindow: React.FC = () => {
     navigator.clipboard.writeText(key);
     setCopiedKeyIdx(idx);
     setTimeout(() => setCopiedKeyIdx(null), 2000);
-  };
-
-  const handleCopyTool = (name: string) => {
-    navigator.clipboard.writeText(name);
-    setCopiedToolName(name);
-    setTimeout(() => setCopiedToolName(null), 2000);
   };
 
   const handleClearCache = () => {
@@ -1135,7 +737,7 @@ export const SettingsWindow: React.FC = () => {
             <div>
               <h1 className="text-lg font-bold text-white tracking-wide">
                 {activeSidebarCategory === 'general' && 'PIHU OS System Profile'}
-                {activeSidebarCategory === 'connections' && (activeMcpDetailId ? `${currentSelectedMcp?.name} • Tools Explorer` : 'Connections & MCP Servers')}
+                {activeSidebarCategory === 'connections' && (activeMcpDetailId ? `${activeMcpDetailId} · Configuration` : 'Connections & MCP Servers')}
                 {activeSidebarCategory === 'advanced' && 'Advanced Settings'}
                 {activeSidebarCategory === 'widgets' && 'Active Desktop Widgets'}
                 {activeSidebarCategory === 'spirits' && 'Spirits'}
@@ -1150,7 +752,7 @@ export const SettingsWindow: React.FC = () => {
               </h1>
               <p className="text-xs text-neutral-400">
                 {activeSidebarCategory === 'general' && 'Operating system profile, memory cache, and assistant persona.'}
-                {activeSidebarCategory === 'connections' && (activeMcpDetailId ? `Listing all ${currentSelectedMcp?.tools.length} executable tool declarations and parameters.` : 'Google Workspace OAuth, project MCP, file MCP, and external tool protocols.')}
+                {activeSidebarCategory === 'connections' && (activeMcpDetailId ? 'Configure this MCP, connect accounts and manage its installation.' : 'Installed MCPs, accounts and configuration.')}
                 {activeSidebarCategory === 'advanced' && 'Developer options and advanced service configuration.'}
                 {activeSidebarCategory === 'widgets' && 'Toggle canvas widgets, dock magnification, and screen layout.'}
                 {activeSidebarCategory === 'spirits' && 'Add animated companions to your desktop and make them your own.'}
@@ -1351,175 +953,17 @@ export const SettingsWindow: React.FC = () => {
                   </div>
                   {!developerMode && <p className="text-xs text-neutral-400 border-t border-white/10 pt-4">Turn on Developer’s Mode to edit Spotify app credentials. Your Spotify account connection stays available below.</p>}
                 </section>
-                <SpotifyDeveloperSettings enabled={developerMode} />
+                {developerMode && <SpotifyDeveloperSettings enabled={true} />}
               </div>
             )}
 
 
             {/* ══════ SECTION 2: CONNECTIONS (In-Place MCP Tool Explorer) ══════ */}
-            {activeSidebarCategory === 'connections' && (
-              <div className="space-y-6">
-                
-                {/* IF A SPECIFIC MCP IS SELECTED: IN-PLACE DRILL-DOWN TOOL EXPLORER */}
-                {activeMcpDetailId && currentSelectedMcp ? (
-                  <div className="space-y-4 animate-in fade-in duration-150">
-                    
-                    {/* Back Button & Server Header */}
-                    <div className="flex items-center justify-between flex-wrap gap-3 pb-2 border-b border-white/10">
-                      <button
-                        onClick={() => setActiveMcpDetailId(null)}
-                        className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-neutral-400 transition hover:scale-105"
-                      >
-                        <ArrowLeft className="w-3.5 h-3.5" /> Back to All MCP Servers
-                      </button>
-
-                      {/* Tool Search Input */}
-                      <div className="relative w-64">
-                        <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-neutral-500" />
-                        <input
-                          type="text"
-                          placeholder="Search tools in this server..."
-                          value={mcpSearchQuery}
-                          onChange={(e) => setMcpSearchQuery(e.target.value)}
-                          className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-black/[0.12] backdrop-blur-lg border border-white/10 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-500 transition font-medium"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Active MCP Server Banner */}
-                    <div className="p-4 rounded-2xl bg-white/10   border border-neutral-500/30 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-2xl bg-neutral-500/20 border border-neutral-500/40 flex items-center justify-center text-neutral-400 shadow-lg shadow-neutral-500/20">
-                          <Wrench className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="text-sm font-bold text-white font-mono">{currentSelectedMcp.name}</h4>
-                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-[9px] font-bold text-emerald-400">
-                              {currentSelectedMcp.status}
-                            </span>
-                            <span className="px-2 py-0.5 rounded-full bg-neutral-500/20 text-[9px] font-bold text-neutral-400">
-                              {currentSelectedMcp.tools.length} Tools
-                            </span>
-                          </div>
-                          <p className="text-xs text-neutral-300 mt-0.5">{currentSelectedMcp.desc}</p>
-                        </div>
-                      </div>
-                      <span className="text-[11px] font-mono text-neutral-400 px-2.5 py-1 rounded-lg bg-black/[0.12] backdrop-blur-lg border border-white/5">
-                        {currentSelectedMcp.transport}
-                      </span>
-                    </div>
-
-                    {/* Scrollable List of Tools */}
-                    <div className="space-y-3 pt-1">
-                      {filteredMcpTools.length === 0 ? (
-                        <div className="p-8 text-center text-xs text-neutral-500 bg-black/20 rounded-2xl border border-white/5">
-                          No tools matched "{mcpSearchQuery}"
-                        </div>
-                      ) : (
-                        filteredMcpTools.map((tool, idx) => (
-                          <div
-                            key={idx}
-                            className="p-4 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 hover:border-neutral-500/20 hover:bg-black/[0.12] backdrop-blur-lg transition group"
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <Code className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-                                  <span className="font-mono text-xs font-bold text-neutral-300 group-hover:text-neutral-400 transition">
-                                    {tool.name}
-                                  </span>
-                                  <span className="px-2 py-0.5 rounded-full bg-white/5 text-[9px] font-medium text-neutral-400">
-                                    {tool.category}
-                                  </span>
-                                </div>
-                                <p className="text-xs text-neutral-300 mt-1 leading-relaxed">
-                                  {tool.description}
-                                </p>
-                              </div>
-
-                              <button
-                                onClick={() => handleCopyTool(tool.name)}
-                                title="Copy tool declaration name"
-                                className="p-2 rounded-xl text-neutral-500 hover:text-white hover:bg-white/10 transition shrink-0"
-                              >
-                                {copiedToolName === tool.name ? (
-                                  <Check className="w-4 h-4 text-emerald-400" />
-                                ) : (
-                                  <Copy className="w-4 h-4" />
-                                )}
-                              </button>
-                            </div>
-
-                            {/* Parameter Tags */}
-                            {tool.parameters.length > 0 && (
-                              <div className="flex items-center gap-1.5 flex-wrap mt-2.5 pt-2 border-t border-white/5 text-[10px]">
-                                <span className="text-neutral-500 font-medium">Args:</span>
-                                {tool.parameters.map((p, pIdx) => (
-                                  <span
-                                    key={pIdx}
-                                    className="px-2 py-0.5 rounded-md bg-white/5 border border-white/5 font-mono text-neutral-400"
-                                  >
-                                    {p}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  /* TOP LEVEL MCP SERVER CARDS GRID */
-                  <div className="space-y-6">
-                    <SpotifyConnection onConnectionChange={setSpotifyConnected} />
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                          Model Context Protocol (MCP) Servers
-                        </h3>
-                        <span className="text-[11px] text-neutral-400 font-medium">Click any server to list tools</span>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {mcpServers.map((mcp) => (
-                          <button
-                            key={mcp.id}
-                            onClick={() => {
-                              setActiveMcpDetailId(mcp.id);
-                              setMcpSearchQuery('');
-                            }}
-                            className="w-full text-left p-4 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 hover:border-neutral-500/30 hover:bg-black/[0.12] backdrop-blur-lg transition duration-200 flex flex-col justify-between group shadow-lg"
-                          >
-                            <div className="flex items-center justify-between w-full">
-                              <div className="flex items-center gap-2">
-                                <h4 className="text-xs font-bold text-white font-mono group-hover:text-neutral-300 transition">
-                                  {mcp.name}
-                                </h4>
-                                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-[9px] font-bold text-emerald-400">
-                                  {mcp.status}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-mono text-neutral-500 px-2 py-0.5 rounded-lg bg-white/5">
-                                  {mcp.port}
-                                </span>
-                                <ChevronRight className="w-4 h-4 text-neutral-500 group-hover:text-neutral-400 group-hover:translate-x-0.5 transition" />
-                              </div>
-                            </div>
-
-                            <p className="text-[11px] text-neutral-400 mt-1.5 line-clamp-2">{mcp.desc}</p>
-
-                            <div className="flex items-center justify-between mt-3 pt-2 border-t border-white/5 text-[10px] text-neutral-500 w-full">
-                              <span className="text-neutral-400 font-medium">{mcp.tools.length} Executable Tools</span>
-                              <span className="font-mono text-neutral-400">{mcp.transport}</span>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
+            {activeSidebarCategory === 'connections' && <InstalledMcpConnections
+              selectedId={activeMcpDetailId}
+              onSelect={setActiveMcpDetailId}
+              renderConfiguration={id => <>
+                {id === 'google-workspace-mcp' && <>
                     <div className="rounded-2xl border border-white/5 bg-white/[0.045] p-4 text-xs text-neutral-300">
                       Google sign-in is securely handled by pihu.nfks.co.in. Your Google client secret stays on the PIHU server.
                     </div>
@@ -1604,6 +1048,9 @@ export const SettingsWindow: React.FC = () => {
                       </div>
                     </div>
 
+                </>}
+                {id === 'spotify-mcp' && <>{developerMode && <SpotifyDeveloperSettings enabled={true} />}<SpotifyConnection onConnectionChange={() => {}} /></>}
+                {id === 'pihu-whatsapp-mcp' && <>
                     {/* WhatsApp MCP Device Pairing & QR Code Card */}
                     <div className="p-5 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-4">
                       <div className="flex items-center justify-between">
@@ -1718,18 +1165,14 @@ export const SettingsWindow: React.FC = () => {
                                 <li>Go to Settings → Linked Devices → Link a Device</li>
                                 <li>Scan the QR on the PIHU auth page</li>
                               </ol>
-                              <div className="pt-1 text-[10px] text-neutral-500">Pairing page: http://127.0.0.1:8080/mcp/whatsapp/auth</div>
+                              <div className="pt-1 text-[10px] text-neutral-500">Pairing uses the local endpoint assigned by the MCP manager.</div>
                             </div>
                           </div>
                         </div>
                       )}
-                    </div>
-                  </div>
-                )}
-
-              </div>
-            )}
-
+                    </div>                </>}
+              </>}
+            />}
 
             {/* ══════ SECTION 3: WIDGETS ══════ */}
             {activeSidebarCategory === 'widgets' && (

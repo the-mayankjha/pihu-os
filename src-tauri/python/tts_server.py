@@ -249,7 +249,27 @@ def generate():
     )
 
 
+def watch_parent():
+    parent = int(os.environ.get('PIHU_PARENT_PID', '0'))
+    if not parent:
+        return
+    import psutil
+    try:
+        process = psutil.Process(parent)
+        started = process.create_time()
+    except psutil.NoSuchProcess:
+        os._exit(0)
+    while True:
+        time.sleep(2)
+        try:
+            if not process.is_running() or process.create_time() != started:
+                os._exit(0)
+        except psutil.NoSuchProcess:
+            os._exit(0)
+
+
 if __name__ == '__main__':
+    threading.Thread(target=watch_parent, daemon=True).start()
     threading.Thread(target=init_pipelines, daemon=True).start()
     print("TTS Server starting on port 48126 (Hindi + English + Hinglish Auto)", flush=True)
     app.run(host='127.0.0.1', port=48126, threaded=True)

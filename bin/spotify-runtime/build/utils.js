@@ -14,8 +14,8 @@ export function loadSpotifyConfig() {
     }
     try {
         const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
-        if (!(config.clientId && config.clientSecret && config.redirectUri)) {
-            throw new Error('Spotify configuration must include clientId, clientSecret, and redirectUri.');
+        if (!(config.clientId && config.redirectUri)) {
+            throw new Error('Spotify configuration must include clientId and redirectUri.');
         }
         return config;
     }
@@ -195,7 +195,9 @@ export async function createSpotifyApi() {
         cachedAccessToken = config.accessToken;
         return cachedSpotifyApi;
     }
-    // Fallback to client credentials if no user tokens available
+    if (!config.clientSecret)
+        throw new Error('Connect Spotify in PIHU Settings → Connections first.');
+    // Legacy developer configuration can still use client credentials.
     cachedSpotifyApi = SpotifyApi.withClientCredentials(config.clientId, config.clientSecret);
     cachedAccessToken = null;
     return cachedSpotifyApi;
@@ -241,16 +243,17 @@ async function refreshAccessToken(config) {
         throw new Error('No refresh token available');
     }
     const tokenUrl = 'https://accounts.spotify.com/api/token';
-    const authHeader = `Basic ${base64Encode(`${config.clientId}:${config.clientSecret}`)}`;
+    const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+    if (config.clientSecret && config.authType !== 'pkce')
+        headers.Authorization = `Basic ${base64Encode(`${config.clientId}:${config.clientSecret}`)}`;
     const params = new URLSearchParams();
     params.append('grant_type', 'refresh_token');
     params.append('refresh_token', config.refreshToken);
+    if (!headers.Authorization)
+        params.append('client_id', config.clientId);
     const response = await fetch(tokenUrl, {
         method: 'POST',
-        headers: {
-            Authorization: authHeader,
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
+        headers,
         body: params,
     });
     if (!response.ok) {

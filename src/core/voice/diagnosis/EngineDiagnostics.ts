@@ -272,7 +272,7 @@ export const useDiagnosticsStore = create<EngineDiagnosticsState>((set, get) => 
             online: ready,
             latencyMs: elapsed,
             statusText: ready ? `Ready (${elapsed}ms)` : 'Initializing...',
-            error: ready ? null : 'Kokoro model pipelines still initializing',
+            error: ready ? null : data.service !== 'pihu-tts' ? 'Port 48126 is served by an older or unrecognized TTS process. Restart PIHU and its previous TTS process to load the current server.' : 'Kokoro model pipelines still initializing',
             details: `Port 48126 ${data.hindi_ready ? '+ Hindi' : ''} ${data.english_ready ? '+ English' : ''}`
           };
         } else {
@@ -325,7 +325,7 @@ export const useDiagnosticsStore = create<EngineDiagnosticsState>((set, get) => 
             speaker: settings.sarvamSpeaker || 'aarti_hi_customer',
             model: 'bulbul:v4-flash'
           }),
-          signal: AbortSignal.timeout(4000)
+          signal: AbortSignal.timeout(12000)
         });
         const elapsed = Math.round(performance.now() - startTime);
         if (res.ok) {

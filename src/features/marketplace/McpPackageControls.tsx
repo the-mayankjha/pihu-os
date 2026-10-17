@@ -1,5 +1,7 @@
+import { hasMcpUpdate } from '../../core/services/mcpVersion';
+export { hasMcpUpdate } from '../../core/services/mcpVersion';
 import { useState } from 'react';
-import { Download, LoaderCircle } from 'lucide-react';
+import { Download, LoaderCircle, Trash2 } from 'lucide-react';
 
 export const CORE_MCP_IDS = new Set(['pihu-file-mcp', 'pihu-system-mcp', 'pihu-project-mcp', 'pihu-web-search-mcp']);
 export type InstalledMcp = {
@@ -21,13 +23,13 @@ export function McpPackageControls({ id, version, installed, busy, progress, ins
   return <div className="w-full space-y-3">
     <div className="flex flex-wrap items-center gap-2">
       {busy ? <span role="status" className="inline-flex items-center gap-2 text-xs text-neutral-300"><LoaderCircle size={14} className="animate-spin" />{progress || 'Working…'}</span> : <>
-        <button type="button" disabled={installable === false} className={button} onClick={() => action('install')}><Download size={14} />{installable === false ? 'Release not published' : installed ? (version && installed.version !== version ? `Update to ${version}` : 'Repair installation') : 'Install MCP'}</button>
+        <button type="button" disabled={installable === false} className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-white/[0.12] px-4 py-3 text-sm font-semibold text-neutral-200 hover:bg-white/[0.18] disabled:opacity-40" onClick={() => action('install')}><Download size={14} />{installable === false ? 'Release not published' : installed ? (hasMcpUpdate(installed.version, version) ? `Update to ${version}` : 'Repair installation') : 'Install MCP'}</button>
         {installed && <>
           <button type="button" className={button} onClick={() => action(installed.enabled === false ? 'enable' : 'disable')}>{installed.enabled === false ? 'Enable' : 'Disable'}</button>
           <button type="button" className={button} onClick={() => action('diagnose')}>Diagnose</button>
           {!!installed.required_configuration?.length && <button type="button" className={button} onClick={() => setShowSetup(value => !value)}>Configure</button>}
           {installed.previous_version && <button type="button" className={button} onClick={() => action('rollback')}>Restore {installed.previous_version}</button>}
-          <button type="button" className={`${button} text-red-300`} onClick={() => setConfirmRemove(true)}>Remove</button>
+          <button type="button" aria-label={`Remove ${id}`} title="Remove MCP" className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/15 text-neutral-400 hover:border-red-300/30 hover:bg-red-400/10 hover:text-red-300" onClick={() => setConfirmRemove(true)}><Trash2 size={18} strokeWidth={1.7} /></button>
         </>}
       </>}
     </div>

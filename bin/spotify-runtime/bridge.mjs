@@ -13,7 +13,8 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 export const REDIRECT_URI = 'http://127.0.0.1:8888/callback';
 export const CONFIG_PATH = process.env.SPOTIFY_CONFIG_PATH || path.join(os.homedir(), '.pihu-os', 'spotify', 'config.json');
 const root = path.dirname(fileURLToPath(import.meta.url));
-export function loadConfig() { return fs.existsSync(CONFIG_PATH) ? JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')) : {}; }
+export const PIHU_CLIENT_ID = '8ebbeb0d684e4f248ae722f6bbc0b985';
+export function loadConfig() { return { clientId: PIHU_CLIENT_ID, redirectUri: REDIRECT_URI, ...(fs.existsSync(CONFIG_PATH) ? JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')) : {}) }; }
 export function saveConfig(config) {
   fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true, mode: 0o700 });
   const temp = `${CONFIG_PATH}.${crypto.randomBytes(8).toString('hex')}.tmp`;
@@ -37,7 +38,9 @@ function page(success) {
 }
 export async function startAuth(config, { openBrowser = open, fetchToken = fetch, timeoutMs = 300000 } = {}) {
   if (callback) throw Error('Spotify sign-in is already open. Finish it or disconnect before retrying.');
-  if (!config.clientId || !config.clientSecret) throw Error('Enter your Spotify Client ID and Client Secret first.');
+  if (!config.clientId) throw Error('PIHU Spotify client ID is missing.');
+  const verifier = crypto.randomBytes(64).toString('base64url');
+  const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
   const uri = new URL(config.redirectUri || REDIRECT_URI);
   if (uri.protocol !== 'http:' || uri.hostname !== '127.0.0.1' || uri.pathname !== '/callback' || uri.search || uri.hash || uri.username || uri.password || !uri.port) throw Error('Use http://127.0.0.1:8888/callback as your Spotify redirect URI.');
   const state = crypto.randomBytes(32).toString('base64url');
@@ -55,12 +58,13 @@ export async function startAuth(config, { openBrowser = open, fetchToken = fetch
       if (url.searchParams.has('error')) throw Error('Spotify authorization was declined.');
       const code = url.searchParams.get('code');
       if (!code) throw Error('Spotify did not return an authorization code.');
-      const response = await fetchToken('https://accounts.spotify.com/api/token', { method: 'POST', signal: AbortSignal.timeout(15000), headers: { Authorization: `Basic ${Buffer.from(`${config.clientId}:${config.clientSecret}`).toString('base64')}`, 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ grant_type: 'authorization_code', code, redirect_uri: uri.href }) });
+      const response = await fetchToken('https://accounts.spotify.com/api/token', { method: 'POST', signal: AbortSignal.timeout(15000), headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ grant_type: 'authorization_code', code, redirect_uri: uri.href, client_id: config.clientId, code_verifier: verifier }) });
       if (!response.ok) throw Error('Spotify could not authenticate. Check your app credentials and registered redirect URI.');
       const tokens = await response.json();
       if (!tokens.access_token || !tokens.refresh_token) throw Error('Spotify did not return usable tokens. Try connecting again.');
       if (callback !== server) throw Error('Spotify sign-in was cancelled.');
-      saveConfig({ ...config, redirectUri: uri.href, accessToken: tokens.access_token, refreshToken: tokens.refresh_token, expiresAt: Date.now() + (tokens.expires_in || 3600) * 1000 });
+      const { clientSecret: _secret, ...publicConfig } = config;
+      saveConfig({ ...publicConfig, authType: 'pkce', redirectUri: uri.href, accessToken: tokens.access_token, refreshToken: tokens.refresh_token, expiresAt: Date.now() + (tokens.expires_in || 3600) * 1000 });
       await closeClient();
       res.writeHead(303, { Location: 'https://pihu.nfks.co.in/mcp/spotify/auth?status=connected', 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' });res.end();
     } catch (e) {
@@ -72,7 +76,7 @@ export async function startAuth(config, { openBrowser = open, fetchToken = fetch
   server.cancel = stop;
   callback = server;
   timer = setTimeout(() => { authError = 'Spotify sign-in timed out. Connect again.'; stop(); }, timeoutMs);
-  const authUrl = 'https://accounts.spotify.com/authorize?' + new URLSearchParams({ client_id: config.clientId, response_type: 'code', redirect_uri: uri.href, scope: scopes, state, show_dialog: 'true' });
+  const authUrl = 'https://accounts.spotify.com/authorize?' + new URLSearchParams({ client_id: config.clientId, response_type: 'code', redirect_uri: uri.href, scope: scopes, state, code_challenge_method: 'S256', code_challenge: challenge, show_dialog: 'true' });
   const authPage = new URL(process.env.PIHU_SPOTIFY_AUTH_PAGE || 'https://pihu.nfks.co.in/mcp/spotify/auth');
   authPage.search = new URLSearchParams({ callback: uri.href, state, auth_url: authUrl }).toString();
   let provider = 'pihu';
@@ -88,7 +92,7 @@ export async function dispatch(payload) {
   const config = loadConfig();
   switch (payload.action) {
     case 'dashboard': await open('https://developer.spotify.com/dashboard');return { opened: true };
-    case 'status': return { configured: !!(config.clientId && config.clientSecret), connected: !!(config.accessToken && config.refreshToken), clientId: config.clientId || '', redirectUri: REDIRECT_URI, authorizing: !!callback, error: authError };
+    case 'status': return { configured: !!config.clientId, connected: !!(config.accessToken && config.refreshToken), clientId: config.clientId || '', redirectUri: REDIRECT_URI, authorizing: !!callback, error: authError };
     case 'configure': {
       const clientId = String(payload.clientId || '').trim();
       const clientSecret = String(payload.clientSecret || config.clientSecret || '').trim();
@@ -104,11 +108,7 @@ export async function dispatch(payload) {
       return { configured: true, clientId, redirectUri: REDIRECT_URI, connected: !!(next.accessToken && next.refreshToken) };
     }
     case 'auth': {
-      const clientId = String(payload.clientId || config.clientId || '').trim();
-      if (clientId !== config.clientId && !payload.clientSecret) throw Error('Enter the Client Secret for your new Spotify Client ID.');
-      const clientSecret = String(payload.clientSecret || config.clientSecret || '').trim();
-      if (!clientId || !clientSecret) throw Error('Enter Spotify Client ID and Client Secret first.');
-      const next = { clientId, clientSecret, redirectUri: REDIRECT_URI };
+      const next = { clientId: config.clientId || PIHU_CLIENT_ID, redirectUri: REDIRECT_URI };
       return startAuth(next);
     }
     case 'disconnect':

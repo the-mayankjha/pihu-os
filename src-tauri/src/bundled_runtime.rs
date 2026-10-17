@@ -14,7 +14,7 @@ pub fn node() -> PathBuf {
 }
 pub fn configure(command: &mut std::process::Command) {
     let Some(root) = ROOT.get() else { return; };
-    if cfg!(debug_assertions) && !root.join("runtime/python").is_dir() {
+    if cfg!(debug_assertions) {
         command.env("PIHU_DEVELOPMENT_RUNTIME", "1")
             .env("PIHU_NODE_EXECUTABLE", node()).env("PYTHONDONTWRITEBYTECODE", "1")
             .env_remove("PYTHONHOME").env_remove("PYTHONPATH");

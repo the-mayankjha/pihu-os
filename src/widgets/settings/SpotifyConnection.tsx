@@ -26,7 +26,7 @@ export function SpotifyConnection({ onConnectionChange }: { onConnectionChange: 
     setBusy(true); setError(''); setMessage('');
     try {
       if (!status?.configured) {
-        setError('Set up Spotify credentials in Advanced Settings before adding your account.');
+        setError('Spotify sign-in is unavailable. Update the Spotify MCP and try again.');
         return;
       }
       const result = await spotifyAction<{ provider?: string }>({ action: 'auth' });
@@ -41,7 +41,7 @@ export function SpotifyConnection({ onConnectionChange }: { onConnectionChange: 
   };
   return <section className="p-5 rounded-2xl bg-white/[0.045] backdrop-blur-xl border border-white/10 space-y-4">
     <div className="flex items-center justify-between"><div><h3 className="text-sm font-semibold">Spotify</h3><p className="text-xs text-neutral-400 mt-1">Search, playlists and Spotify Connect playback with Marcel Marais’s MCP server.</p></div><span className={`text-xs ${status?.connected ? 'text-emerald-300' : 'text-neutral-300'}`}>{status?.connected ? 'Connected' : status?.authorizing ? 'Waiting for sign-in' : 'Not connected'}</span></div>
-    <p className="text-xs text-neutral-400">Your app owner needs Spotify Premium. Open Spotify on a device before playback. {status?.configured ? 'Credentials stay in PIHU’s private local configuration.' : 'Configure Spotify in Advanced Settings to get started.'}</p>
+    <p className="text-xs text-neutral-400">Your app owner needs Spotify Premium. Open Spotify on a device before playback. Connect your account securely in your browser. No developer credentials are required.</p>
     {message && <p role="status" className="text-xs text-emerald-300">{message}</p>}
     {error && <p role="alert" className="text-xs text-rose-200">{error}</p>}
     <div className="flex gap-3 items-center">

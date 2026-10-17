@@ -1,64 +1,40 @@
 use std::process::Child;
-use std::thread;
-use std::time::Duration;
+use std::sync::Mutex;
 use tauri::Manager;
 
-pub struct TtsServer {
-    process: Option<Child>,
-}
+static PROCESS: Mutex<Option<Child>> = Mutex::new(None);
 
-impl TtsServer {
-    pub fn new() -> Self {
-        TtsServer { process: None }
-    }
-
-    pub fn start(&mut self, resource_dir: &std::path::Path) -> Result<(), String> {
-        println!("Starting TTS Server...");
-        
-        let python_cmd = crate::get_python_cmd();
-        println!("TTS Server using python binary: {}", python_cmd);
-
-        let mut command = crate::background_process::command(&python_cmd);
-        command.arg(resource_dir.join("python/tts_server.py"))
-            .current_dir(resource_dir)
-            .env("PIHU_RESOURCE_DIR", resource_dir)
-            .env("HF_HUB_CACHE", resource_dir.join("runtime/tts/hub"));
-
-        match command.spawn() {
-            Ok(child) => {
-                self.process = Some(child);
-                println!("TTS Server started successfully");
-                Ok(())
-            }
-            Err(e) => Err(format!("Failed to start TTS server: {}", e)),
-        }
-    }
-
-    pub fn stop(&mut self) {
-        if let Some(mut child) = self.process.take() {
-            println!("Stopping TTS Server...");
+pub fn stop_tts_server() {
+    if let Ok(mut process) = PROCESS.lock() {
+        if let Some(mut child) = process.take() {
             let _ = child.kill();
             let _ = child.wait();
-            println!("TTS Server stopped");
         }
     }
 }
 
 pub fn start_tts_server(app: tauri::AppHandle) {
-    thread::spawn(move || {
-        let mut server = TtsServer::new();
-        let resource_dir = match app.path().resource_dir() {
+    // Keep ownership in app state rather than an immortal background thread.
+    let root = if cfg!(debug_assertions) {
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+    } else {
+        match app.path().resource_dir() {
             Ok(path) => path,
-            Err(error) => { eprintln!("Could not locate app resources for TTS: {error}"); return; }
-        };
-        if let Err(e) = server.start(&resource_dir) {
-            eprintln!("TTS Server error: {}", e);
+            Err(error) => { eprintln!("Could not locate TTS resources: {error}"); return; }
         }
-
-        // Keep thread alive to manage the process
-        loop {
-            thread::sleep(Duration::from_secs(1));
-            // In a real app, you might want to add a channel to receive stop signals
-        }
-    });
+    };
+    let mut process = match PROCESS.lock() { Ok(process) => process, Err(_) => return };
+    if let Some(child) = process.as_mut() {
+        if matches!(child.try_wait(), Ok(None)) { return; }
+    }
+    let mut command = crate::background_process::command(crate::get_python_cmd());
+    command.arg(root.join("python/tts_server.py"))
+        .current_dir(&root)
+        .env("PIHU_RESOURCE_DIR", &root)
+        .env("HF_HUB_CACHE", root.join("runtime/tts/hub"))
+        .env("PIHU_PARENT_PID", std::process::id().to_string());
+    match command.spawn() {
+        Ok(child) => { *process = Some(child); }
+        Err(error) => eprintln!("Failed to start TTS server: {error}"),
+    }
 }

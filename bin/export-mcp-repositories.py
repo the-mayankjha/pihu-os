@@ -37,7 +37,7 @@ def export(destination):
         manifest['entrypoint'] = {'command':'python','args':[],'env':{}}
         if package_id in ('browser-mcp','spotify-mcp'):
             folder = ROOT / ('bin/browser-runtime' if package_id == 'browser-mcp' else 'bin/spotify-runtime')
-            for name in ('package.json','package-lock.json','bridge.mjs','vtop.mjs','build','src','tsconfig.json','pihu-logo.png','LICENSE','README.md'):
+            for name in ('package.json','package-lock.json','bridge.mjs','native-playback.mjs','vtop.mjs','build','src','tsconfig.json','pihu-logo.png','LICENSE','README.md'):
                 if (folder/name).exists(): copy(folder/name, target/name)
             manifest['runtime'] = {'type':'node'}
             manifest['entrypoint']['command'] = 'node'

@@ -169,6 +169,7 @@ fn main() {
         .expect("error while building tauri application")
         .run(|app, event| {
             if matches!(event, tauri::RunEvent::Exit | tauri::RunEvent::ExitRequested { .. }) {
+                tts::stop_tts_server();
                 let _ = browser_mcp::stop(app);
                 let _ = spotify_mcp::stop(app);
                 let _ = whatsapp_mcp::stop(app);

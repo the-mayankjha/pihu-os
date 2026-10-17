@@ -1,3 +1,5 @@
+import { hasMcpUpdate } from '../../services/mcpVersion';
+import { openMcpConfiguration } from '../../services/mcpNavigation';
 import { parseSpotifyIntent } from '../../services/spotifyIntent';
 import { callSpotifyTool, spotifyAction } from '../../services/spotify';
 import { parseSpiritCommand } from '../../../features/spirits/voiceControl';
@@ -187,7 +189,7 @@ export class ActionEngine {
   }
 
   private normalizePreLLM(text: string): string {
-    let clean = text.trim();
+    let clean = text.trim().replace(/^(?:hey\s+)?pihu[,:!]?\s+/i, '');
     // Remove Whisper sound hallucination tags
     clean = clean.replace(/\([^\)]*\)/g, '').replace(/\[[^\]]*\]/g, '').trim();
     // Normalize speech artifacts & acoustic variants
@@ -218,17 +220,40 @@ export class ActionEngine {
 
   private async tryFastDirectIntent(text: string, executeTool = defaultExecuteTool): Promise<string | null> {
     const lower = text.toLowerCase().trim();
-    const installIntent = lower.match(/^(?:please\s+)?(?:install|add|get)\s+(.+?)\s+(?:mcp|server)(?:\s+please)?[.!?]*$/i);
+    if (/^(?:please\s+)?(?:check|list|show)(?:\s+for)?\s+(?:mcp\s+)?updates[.!?]*$/i.test(lower)) {
+      try {
+        const [response, inventory] = await Promise.all([
+          fetch('https://pihu.nfks.co.in/api/v2/catalog?type=mcp&limit=100', { cache: 'no-store', signal: AbortSignal.timeout(10000) }),
+          invoke<Array<{id: string; version?: string; bundled?: boolean}>>('mcp_list_installed')
+        ]);
+        if (!response.ok) return 'I could not check for MCP updates. Please try again.';
+        const data = await response.json() as { packages?: Array<{id: string; display_name?: string; version?: string}> };
+        const updates = inventory.filter(item => !item.bundled).flatMap(item => {
+          const latest = data.packages?.find(pkg => pkg.id === item.id);
+          return latest && hasMcpUpdate(item.version, latest.version) ? [`${latest.display_name || item.id}, from ${item.version} to ${latest.version}`] : [];
+        });
+        return updates.length ? `Updates available: ${updates.join('; ')}. Say update followed by the MCP name to install one.` : 'Your installed MCPs are up to date.';
+      } catch { return 'I could not reach the MCP registry to check updates. Please try again.'; }
+    }
+    const installIntent = lower.match(/^(?:please\s+)?(?:install|add|get|update|upgrade)\s+(.+?)(?:\s+(?:mcp|server))?(?:\s+please)?[.!?]*$/i);
     if (installIntent) {
       const query = installIntent[1].trim();
+      const updating = /^(?:please\s+)?(?:update|upgrade)\b/i.test(lower);
       try {
-        const response = await fetch('https://raw.githubusercontent.com/the-mayankjha/pihu_mcp/pihu_market/market/catalog.json');
+        const response = await fetch('https://pihu.nfks.co.in/api/v2/catalog?type=mcp&limit=100', { signal: AbortSignal.timeout(10000) });
         if (!response.ok) throw new Error(`Catalog unavailable (${response.status})`);
         const catalog = await response.json() as { packages?: Array<{ id: string; name?: string; display_name?: string; type?: string }> };
-        const match = (catalog.packages || []).filter(item => item.type === 'mcp' && [item.id, item.name, item.display_name].some(name => name?.toLowerCase() === query.toLowerCase()));
+        const match = (catalog.packages || []).filter(item => item.type === 'mcp' && [item.id, item.name, item.display_name].some(name => name?.toLowerCase().replace(/[-_]/g, ' ').replace(/\s+mcp$/, '').trim() === query.toLowerCase().replace(/[-_]/g, ' ').replace(/\s+mcp$/, '').trim()));
         if (match.length !== 1) return match.length ? `I found multiple MCPs named “${query}”. Please say the exact package name.` : `I couldn't find an MCP named “${query}” in the catalog.`;
+        const inventory = await invoke<Array<{id: string; version?: string}>>('mcp_list_installed');
+        const local = inventory.find(item => item.id === match[0].id);
+        const available = match[0] as typeof match[0] & { version?: string };
+        if (updating && !local) return `${query} is not installed. Say install ${query} first.`;
+        if (local && !hasMcpUpdate(local.version, available.version)) return `${query} is already on the latest available version, ${local.version}.`;
+        useVoiceStore.getState().setProcessingStatus(`Installing ${match[0].display_name || match[0].id}…`);
         const result = await invoke<string>('mcp_install_package', { packageId: match[0].id });
-        return result || `${match[0].display_name || match[0].name || match[0].id} installed.`;
+        openMcpConfiguration(match[0].id);
+        return `${match[0].display_name || match[0].name || match[0].id} ${local ? `updated from ${local.version} to ${available.version}` : `installed, version ${available.version || ''}`}. ${result || ''}`;
       } catch (error) { return `MCP installation failed: ${String(error)}`; }
     }
     const vtop = normalizeCommand(lower).match(/^(?:(set up|setup|configure)|(open|login to|log in to)|(continue|resume|finish))\s+vtop$/);
@@ -719,6 +744,13 @@ export class ActionEngine {
         return "";
       }
 
+      if (/^(?:please\s+)?(?:install|add|get|update|upgrade)\s+/i.test(cleanText) || /^(?:check|list|show)(?:\s+for)?\s+(?:mcp\s+)?updates[.!?]*$/i.test(cleanText)) {
+        onMode('executing');
+        const installed = await this.tryFastDirectIntent(cleanText, executeTool);
+        useVoiceStore.getState().setProcessingStatus(null);
+        if (installed) return installed;
+      }
+
       let spotifyIntent = parseSpotifyIntent(cleanText);
       let spotifyConnected = false;
       if (!spotifyIntent && /\b(?:play|search|pause|stop|resume|next|previous|skip|what(?:'s| is) playing|playlists?|feel(?:ing)?|mood)\b/i.test(cleanText)) {
@@ -727,6 +759,13 @@ export class ActionEngine {
           spotifyConnected = !!spotifyStatus.connected;
           if (spotifyConnected) spotifyIntent = parseSpotifyIntent(cleanText, true);
         } catch { /* Spotify is not available; let the regular intent router handle this. */ }
+      }
+      if (!spotifyIntent && /^play\s+[^.!?]+[.!?]*$/i.test(cleanText) && !/\b(?:video|youtube|movie|game|playlist|album|podcast)\b/i.test(cleanText)) {
+        const packages = await invoke<Array<{ id: string; enabled?: boolean }>>('mcp_list_installed');
+        const spotify = packages.find(item => item.id === 'spotify-mcp');
+        if (!spotify) return 'Spotify MCP is not installed. Say “PIHU install Spotify” or install it from Market, then connect your Spotify account.';
+        if (spotify.enabled === false) return 'Spotify MCP is disabled. Enable it in Settings → Connections before playing music.';
+        if (!spotifyConnected) return 'Spotify is not connected. Open Settings → Connections → Spotify to connect your account, then try again.';
       }
       const spotifyPlaylistRequest = /\bplaylists?\b/i.test(cleanText) &&
         (spotifyConnected || /\bspotify\b/i.test(cleanText));
@@ -887,7 +926,7 @@ export class ActionEngine {
         }
       }
 
-      return response;
+      return response || 'I could not complete that request. Please try again.';
 
     } catch (error: any) {
       console.error('[ActionEngine] ❌ Error processing intent:', error);
