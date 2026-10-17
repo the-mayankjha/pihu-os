@@ -8,6 +8,7 @@ export const DEFAULT_KEYBINDINGS = {
   globalCommandPalette: 'CommandOrControl+Shift+K',
   tasks: 'CommandOrControl+T',
   music: 'CommandOrControl+M',
+  marketplace: 'CommandOrControl+Shift+M',
   dismissOverlay: 'Escape',
 } as const;
 
@@ -280,6 +281,14 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: 'pihu-settings-storage',
+      merge: (persisted, current) => {
+        const saved = persisted as Partial<typeof current> | undefined;
+        return {
+          ...current,
+          ...saved,
+          keybindings: { ...DEFAULT_KEYBINDINGS, ...saved?.keybindings },
+        };
+      },
     }
   )
 );
