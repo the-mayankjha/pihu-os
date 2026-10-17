@@ -1,6 +1,6 @@
 {
   "productName": "Pihu OS",
-  "version": "1.2.6",
+  "version": "1.2.7",
   "identifier": "com.mayankjha.pihuos",
   "build": {
     "beforeDevCommand": "npm run dev",
