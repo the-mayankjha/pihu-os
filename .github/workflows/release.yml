@@ -33,7 +33,6 @@ jobs:
       - name: Initialize the bundled MCP source submodule
         run: |
           git -c submodule.recurse=false -c fetch.recurseSubmodules=false submodule update --init src-tauri/pihu_mcps
-          git -C src-tauri/pihu_mcps -c submodule.recurse=false -c fetch.recurseSubmodules=false submodule update --init mcp/servers/pihu-whatsapp-mcp
 
       - name: Verify release tag matches app version
         shell: bash
@@ -97,26 +96,6 @@ jobs:
       - name: Install JavaScript dependencies
         run: npm ci
 
-      - name: Build WhatsApp bridge runtime
-        shell: bash
-        run: |
-          case "$RUNNER_OS" in
-            macOS) GOOS=darwin; GOARCH=arm64 ;;
-            Windows) GOOS=windows; GOARCH=amd64 ;;
-            Linux) GOOS=linux; GOARCH=amd64 ;;
-          esac
-          case "$PIHU_TARGET" in
-            aarch64-apple-darwin) GOOS=darwin; GOARCH=arm64 ;;
-            x86_64-apple-darwin) GOOS=darwin; GOARCH=amd64 ;;
-          esac
-          OUTPUT=src-tauri/runtime/whatsapp-bridge/bridge
-          if [ "$GOOS" = windows ]; then OUTPUT="$OUTPUT.exe"; fi
-          mkdir -p src-tauri/runtime/whatsapp-bridge
-          cd src-tauri/pihu_mcps/mcp/servers/pihu-whatsapp-mcp/whatsapp-bridge
-          GOOS="$GOOS" GOARCH="$GOARCH" go build -trimpath -ldflags='-s -w' -o "$GITHUB_WORKSPACE/$OUTPUT" .
-        env:
-          PIHU_TARGET: ${{ matrix.target }}
-
       - name: Read release notes
         id: release-notes
         shell: bash
@@ -138,7 +117,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          PIHU_BRIDGE_PREBUILT: '1'
           PIHU_TARGET: ${{ matrix.target }}
         with:
           tagName: v__VERSION__

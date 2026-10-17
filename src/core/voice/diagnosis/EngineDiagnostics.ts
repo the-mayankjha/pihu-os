@@ -126,6 +126,7 @@ export const useDiagnosticsStore = create<EngineDiagnosticsState>((set, get) => 
       ok: false, checks: [{ name: 'Bundled runtime', ok: false, detail: String(error) }],
       wakeWord: { online: false, error: String(error) }
     }));
+    const mcpInventoryPromise = invoke<Array<{ id: string; version?: string; enabled?: boolean; bundled?: boolean; status?: string; account_state?: string; last_error?: string }>>('mcp_list_installed').catch(() => null);
     const nativeAvailable = typeof speechSynthesis !== 'undefined' && speechSynthesis.getVoices().length > 0;
     const settings = useSettingsStore.getState();
 
@@ -390,6 +391,17 @@ export const useDiagnosticsStore = create<EngineDiagnosticsState>((set, get) => 
     ]);
 
     const runtime = await runtimePromise;
+    const mcps = await mcpInventoryPromise;
+    if (mcps) {
+      for (const id of ['browser-mcp', 'github-mcp', 'google-workspace-mcp', 'pihu-whatsapp-mcp', 'spotify-mcp']) {
+        const item = mcps.find(record => record.id === id);
+        runtime.checks.push({ name: `Optional MCP: ${id}`, ok: item?.status !== 'error', detail: item ? `${item.version || ''} · ${item.enabled === false ? 'disabled' : (item.status || 'installed; use Market → Diagnose for a live check')}${item.account_state && item.account_state !== 'not_required' ? ` · account: ${item.account_state.replaceAll('_', ' ')}` : ''}${item.last_error ? ` · ${item.last_error}` : ''}` : 'Not installed · available separately from the MCP Market' });
+      }
+      runtime.ok = runtime.checks.every(check => check.ok);
+    } else {
+      runtime.checks.push({ name: 'MCP package inventory', ok: false, detail: 'Cannot read package inventory. Repair the MCP manager.' });
+      runtime.ok = false;
+    }
     // ──────────────── Resolve STT Active & Fallback ────────────────
     let sttActive: 'whisper' | 'gemini_live' = 'whisper';
     let sttIsFallback = false;

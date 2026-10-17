@@ -11,6 +11,7 @@ pub fn configure(command: &mut std::process::Command) {
     if !root.join("runtime/python").is_dir() { return; }
     command.env("PIHU_BUNDLED_RUNTIME", "1")
         .env("PIHU_RESOURCE_DIR", root)
+        .env("PIHU_NODE_EXECUTABLE", root.join(if cfg!(windows) { "runtime/node/node.exe" } else { "runtime/node/node" }))
         .env("PYTHONDONTWRITEBYTECODE", "1")
         .env("PYTHONNOUSERSITE", "1")
         .env_remove("PYTHONHOME").env_remove("PYTHONPATH")

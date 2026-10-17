@@ -46,21 +46,8 @@ for name in ['pihu.onnx', 'hey_pihu.onnx', 'hi_pihu.onnx', 'Gen-pihu.onnx', 'sil
     check('Wake model: ' + name, lambda name=name: require(wake_dir / name))
 node = runtime / 'node' / ('node.exe' if os.name == 'nt' else 'node')
 check('Node runtime', lambda: subprocess.check_output([str(require(node)), '--version'], timeout=10, text=True).strip())
-check('WhatsApp bridge', lambda: require(runtime / 'whatsapp-bridge' / ('bridge.exe' if os.name == 'nt' else 'bridge')))
-for name in ['pihu_file_mcp.py', 'pihu_system_mcp.py', 'web_search_mcp/server.py']:
-    # Sources are distributed as a group, import validation covers the common SDK.
-    check('MCP source: ' + name, lambda name=name: next(p for p in (root / 'mcp-agent-bundle').rglob('*.py') if str(p).endswith(name)))
-for name in ['browser', 'spotify']:
-    source = root / '_up_/bin' / (name + '-runtime')
-    if not source.is_dir(): source = root.parent / 'bin' / (name + '-runtime')
-    check('MCP: ' + name, lambda source=source: require(source / 'bridge.mjs'))
-def chromium_path():
-    source = root / '_up_/bin/browser-runtime'
-    if not source.is_dir(): source = root.parent / 'bin/browser-runtime'
-    env = dict(os.environ, PLAYWRIGHT_BROWSERS_PATH=str(runtime / 'browser'))
-    executable = subprocess.check_output([str(node), '--input-type=module', '-e', "import {chromium} from 'playwright'; console.log(chromium.executablePath());"], cwd=source, env=env, text=True, timeout=10).strip()
-    return require(Path(executable))
-check('Chromium browser', chromium_path)
+for name in ['pihu_file_mcp.py', 'pihu_system_mcp.py', 'pihu_project_mcp.js', 'web_search_mcp/server.py']:
+    check('Core MCP source: ' + name, lambda name=name: next(p for p in (root / 'mcp-agent-bundle').rglob('*') if p.is_file() and str(p).endswith(name)))
 check('Kokoro model and voices', lambda: [require(next((runtime / 'tts/hub').rglob(pattern))) for pattern in ['*.pth', 'hf_alpha.pt', 'af_bella.pt']])
 def digest(path):
     with path.open('rb') as stream:
@@ -111,14 +98,6 @@ if args.smoke:
             if not list(KPipeline(lang_code=lang, repo_id='hexgrad/Kokoro-82M')(text, voice=voice)):
                 raise RuntimeError(f'No audio for {voice}')
     check('Offline Hindi and English synthesis', kokoro)
-    def browser():
-        source = root / '_up_/bin/browser-runtime'
-        if not source.is_dir(): source = root.parent / 'bin/browser-runtime'
-        code = "const {chromium}=await import('playwright'); const browser=await chromium.launch({headless:true,channel:'chromium'}); try {const page=await browser.newPage(); await page.setContent('<title>PIHU bundle check</title>'); if(await page.title()!=='PIHU bundle check') process.exitCode=1;} finally {await browser.close();}"
-        env = dict(os.environ, PLAYWRIGHT_BROWSERS_PATH=str(runtime / 'browser'))
-        subprocess.run([str(node), '--input-type=module', '-e', code], cwd=source, env=env, timeout=40, check=True)
-    check('Offline bundled browser launch', browser)
-
     def mcp_tools(name, command, arguments):
         import asyncio
         from mcp import ClientSession, StdioServerParameters

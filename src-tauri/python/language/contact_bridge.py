@@ -8,6 +8,10 @@ import re
 import json
 import sqlite3
 import urllib.request
+try:
+    from .service_endpoints import whatsapp_api_url
+except ImportError:
+    from service_endpoints import whatsapp_api_url
 import urllib.error
 from pathlib import Path
 from typing import Dict, List, Set, Optional, Tuple, Any
@@ -196,7 +200,7 @@ class ContactLanguageBridge:
 
         # 2. Query Live WhatsApp Bridge (/api/chats)
         try:
-            req = urllib.request.Request("http://localhost:8080/api/chats", headers={"User-Agent": "PIHU-Language-Bridge"})
+            req = urllib.request.Request(whatsapp_api_url() + "/chats", headers={"User-Agent": "PIHU-Language-Bridge"})
             with urllib.request.urlopen(req, timeout=1.2) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 for chat in data.get("chats", []):

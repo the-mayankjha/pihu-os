@@ -1,12 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { ArrowLeft, ArrowRight, Check, Download, ExternalLink, RefreshCw, Search, Sparkles, Wrench } from 'lucide-react';
+import { listen } from '@tauri-apps/api/event';
+import { CORE_MCP_IDS, McpPackageControls, type InstalledMcp } from './McpPackageControls';
+import { ArrowLeft, ArrowRight, Check, ExternalLink, RefreshCw, Search, Sparkles, Wrench } from 'lucide-react';
 import { SpiritMarket } from '../spirits/SpiritMarket';
 
-const MCP_REGISTRY_URL = 'https://raw.githubusercontent.com/the-mayankjha/pihu_mcp/pihu_market/market/catalog.json';
+const MCP_REGISTRY_URL = 'https://pihu.nfks.co.in/api/v2/catalog?type=mcp&limit=100';
 
 type McpPackage = {
   type?: string;
+  installable?: boolean;
   id: string;
   name: string;
   displayName?: string;
@@ -40,10 +43,10 @@ function authorName(author: McpPackage['author']) {
   return typeof author === 'string' ? author : author?.name || 'Community';
 }
 
-function McpDetailsPage({ item, onBack, onInstall, onCopy, onConnections }: {
+function McpDetailsPage({ item, onBack, controls, onCopy, onConnections }: {
   item: McpPackage;
   onBack: () => void;
-  onInstall: () => void;
+  controls: ReactNode;
   onCopy: () => void;
   onConnections: () => void;
 }) {
@@ -56,7 +59,7 @@ function McpDetailsPage({ item, onBack, onInstall, onCopy, onConnections }: {
       <div className="min-w-0"><p className="text-[10px] uppercase tracking-[0.18em] text-neutral-400">{item.category || 'MCP'} · {transport}</p><h2 className="mt-2 text-xl font-semibold text-white">{displayName(item)}</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-300">{item.description || 'MCP package from the PIHU registry.'}</p><p className="mt-3 text-xs text-neutral-400">{authorName(item.author)} · v{item.version || '—'} · {runtime} runtime</p>
         <div className="mt-3 flex flex-wrap gap-1.5">{item.tags?.map(tag => <span key={tag} className="rounded-full bg-white/[0.07] px-2.5 py-1 text-[10px] text-neutral-300">{tag}</span>)}</div>
       </div>
-      <div className="flex flex-wrap gap-2"><button type="button" onClick={onInstall} className="inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-xs font-semibold text-neutral-900 hover:bg-neutral-200"><Download size={13} />Install MCP</button><button type="button" onClick={onCopy} className="rounded-xl border border-white/10 px-3 py-2 text-xs text-neutral-200 hover:bg-white/5">Copy install command</button></div>
+      <div className="flex flex-wrap gap-2">{controls}<button type="button" onClick={onCopy} className="rounded-xl border border-white/10 px-3 py-2 text-xs text-neutral-200 hover:bg-white/5">Copy install command</button></div>
     </header>
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(240px,1fr)]">
       <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-4"><h3 className="text-sm font-semibold">Tools ({item.tool_count ?? item.tools_count ?? item.toolsProvided?.length ?? item.tools?.length ?? 0})</h3>{item.tools?.length ? <div className="mt-3 max-h-80 space-y-2 overflow-y-auto">{item.tools.map(tool => <div key={tool.name} className="rounded-xl border border-white/[0.07] bg-black/10 p-3"><p className="text-xs font-medium text-neutral-100">{tool.name}</p>{tool.description && <p className="mt-1 text-[11px] leading-5 text-neutral-400">{tool.description}</p>}</div>)}</div> : <p className="mt-3 text-xs text-neutral-400">Tool descriptions are not published for this package yet.</p>}</section>
@@ -73,7 +76,25 @@ export function Marketplace({ navigateTo }: { navigateTo: (category: 'connection
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [installed, setInstalled] = useState<Record<string, InstalledMcp>>({});
+  const [busy, setBusy] = useState<Record<string, boolean>>({});
+  const [progress, setProgress] = useState<Record<string, string>>({});
+  const [operationError, setOperationError] = useState('');
   const [selectedMcp, setSelectedMcp] = useState<McpPackage | null>(null);
+
+  async function refreshInventory() {
+    const items = await invoke<InstalledMcp[]>('mcp_list_installed');
+    setInstalled(Object.fromEntries(items.map(item => [item.id, item])));
+  }
+
+  useEffect(() => {
+    let disposed = false;
+    const subscription = listen<{ packageId: string; message: string }>('mcp-package-progress', event => {
+      if (!disposed) setProgress(value => ({ ...value, [event.payload.packageId]: event.payload.message }));
+    });
+    void refreshInventory().catch(cause => setOperationError(String(cause)));
+    return () => { disposed = true; void subscription.then(unlisten => unlisten()); };
+  }, []);
 
   async function refresh() {
     setLoading(true);
@@ -100,15 +121,27 @@ export function Marketplace({ navigateTo }: { navigateTo: (category: 'connection
       .some(value => value?.toLowerCase().includes(query)));
   }, [packages, search]);
 
-  async function install(item: McpPackage) {
+  async function operate(id: string, action: string, configuration?: Record<string, string>) {
+    if (busy[id]) return;
+    setBusy(value => ({ ...value, [id]: true }));
+    setOperationError('');
     setNotice('');
     try {
-      const result = await invoke<string>('mcp_install_package', { packageId: item.id });
-      setNotice(result || `${displayName(item)} installed successfully.`);
-      navigateTo('connections');
+      const result = action === 'install'
+        ? await invoke<string>('mcp_install_package', { packageId: id })
+        : await invoke<string>('mcp_manage_package', { packageId: id, action, configuration: configuration ? Object.fromEntries(Object.entries(configuration).filter(([, value]) => value !== '')) : null });
+      setNotice(action === 'install' || action === 'remove' ? result : `${id}: ${action} complete`);
+      await refreshInventory();
     } catch (cause) {
-      setNotice(cause instanceof Error ? cause.message : 'Could not start the MCP installer. Open Connections for setup options.');
+      setOperationError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setBusy(value => ({ ...value, [id]: false }));
+      setProgress(value => ({ ...value, [id]: '' }));
     }
+  }
+
+  function controls(item: McpPackage) {
+    return <McpPackageControls id={item.id} version={item.version} installed={installed[item.id]} busy={!!busy[item.id]} progress={progress[item.id]} installable={item.installable} operate={operate} />;
   }
 
   async function copyInstallCommand(item: McpPackage) {
@@ -125,7 +158,7 @@ export function Marketplace({ navigateTo }: { navigateTo: (category: 'connection
   if (tab === 'mcp' && selectedMcp) return <McpDetailsPage
     item={selectedMcp}
     onBack={() => setSelectedMcp(null)}
-    onInstall={() => void install(selectedMcp)}
+    controls={<>{controls(selectedMcp)}{operationError && <p role="alert" className="text-xs text-red-300">{operationError}</p>}{notice && <p role="status" className="text-xs text-neutral-300">{notice}</p>}</>}
     onCopy={() => void copyInstallCommand(selectedMcp)}
     onConnections={() => navigateTo('connections')}
   />;
@@ -147,9 +180,9 @@ export function Marketplace({ navigateTo }: { navigateTo: (category: 'connection
       {!loading && !error && filteredPackages.length === 0 && <p className="py-8 text-center text-sm text-neutral-400">{packages.length ? 'No MCPs match your search.' : 'No MCPs are currently available.'}</p>}
       {!loading && !error && filteredPackages.length > 0 && <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">{filteredPackages.map(item => <article key={item.id} className="relative rounded-2xl border border-white/10 bg-white/[0.045] p-4 transition hover:border-white/20 hover:bg-white/[0.07]">
         <button type="button" aria-label={`Open ${displayName(item)} MCP details`} onClick={() => setSelectedMcp(item)} className="absolute inset-0 z-0 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-300" />
-        <div className="pointer-events-none relative z-10 flex items-start justify-between gap-3"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="text-sm font-semibold text-white">{displayName(item)}</h3><span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-300">Available</span></div><p className="mt-1 text-xs leading-5 text-neutral-400">{item.description || 'MCP package from the PIHU registry.'}</p></div><Wrench size={16} className="mt-1 shrink-0 text-neutral-400" /></div>
+        <div className="pointer-events-none relative z-10 flex items-start justify-between gap-3"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="text-sm font-semibold text-white">{displayName(item)}</h3><span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-300">{CORE_MCP_IDS.has(item.id) ? 'Built in' : installed[item.id] ? 'Installed' : item.installable === false ? 'Not published' : 'Downloadable'}</span></div><p className="mt-1 text-xs leading-5 text-neutral-400">{item.description || 'MCP package from the PIHU registry.'}</p></div><Wrench size={16} className="mt-1 shrink-0 text-neutral-400" /></div>
         <div className="pointer-events-none relative z-10 mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-neutral-500"><span>{authorName(item.author)}</span>{item.category && <span>{item.category}</span>}{item.runtime && <span>{typeof item.runtime === 'string' ? item.runtime : item.runtime.type}</span>}{item.version && <span>v{item.version}</span>}{(item.tool_count ?? item.tools_count ?? item.toolsProvided?.length ?? item.tools?.length) != null && <span>{item.tool_count ?? item.tools_count ?? item.toolsProvided?.length ?? item.tools?.length} tools</span>}</div>
-        <div className="relative z-20 mt-4 flex flex-wrap gap-2"><button type="button" onClick={() => void install(item)} className="inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-xs font-semibold text-neutral-900 hover:bg-neutral-200"><Download size={13} />Install MCP</button><button type="button" onClick={() => void copyInstallCommand(item)} className="rounded-xl border border-white/10 px-3 py-2 text-xs text-neutral-300 hover:bg-white/5">Copy command</button><button type="button" onClick={() => navigateTo('connections')} className="ml-auto inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs text-neutral-300 hover:bg-white/5">Connections<ArrowRight size={13} /></button></div>
+        <div className="relative z-20 mt-4 flex flex-wrap gap-2">{controls(item)}<button type="button" onClick={() => void copyInstallCommand(item)} className="rounded-xl border border-white/10 px-3 py-2 text-xs text-neutral-300 hover:bg-white/5">Copy command</button><button type="button" onClick={() => navigateTo('connections')} className="ml-auto inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs text-neutral-300 hover:bg-white/5">Connections<ArrowRight size={13} /></button></div>
       </article>)}</div>}
     </>}
 
@@ -157,6 +190,7 @@ export function Marketplace({ navigateTo }: { navigateTo: (category: 'connection
 
     {tab === 'skills' && <div className="flex min-h-56 flex-col items-center justify-center rounded-2xl border border-dashed border-white/15 bg-white/[0.025] p-6 text-center"><Sparkles size={22} className="text-neutral-400" /><h3 className="mt-3 text-sm font-semibold text-neutral-200">Skills are coming later</h3><p className="mt-1 max-w-sm text-xs leading-5 text-neutral-400">The marketplace will include installable PIHU Skills when the registry is ready.</p></div>}
 
+    {operationError && <p role="alert" className="rounded-xl border border-red-300/20 bg-red-400/5 p-3 text-xs text-red-200">{operationError}</p>}
     {notice && <div role="status" className="flex items-start gap-2 rounded-xl border border-white/10 bg-white/[0.06] p-3 text-xs text-neutral-300"><Check size={14} className="mt-0.5 shrink-0 text-emerald-300" /><p className="min-w-0 flex-1 whitespace-pre-wrap">{notice}</p><button type="button" onClick={() => navigateTo(tab === 'spirits' ? 'spirits' : 'connections')} className="inline-flex shrink-0 items-center gap-1 text-neutral-200 hover:text-white">Open settings<ExternalLink size={12} /></button></div>}
   </section>;
 }

@@ -12,6 +12,7 @@ mod browser_mcp;
 mod vtop_credentials;
 mod spirits;
 mod mcp_market;
+mod whatsapp_mcp;
 mod shortcuts;
 mod background_process;
 mod account_file;
@@ -125,6 +126,7 @@ fn main() {
         })
         .manage(system_monitor::SystemMonitorState::new())
         .manage(spotify_mcp::SpotifyMcpState::default())
+        .manage(whatsapp_mcp::WhatsAppMcpState::default())
         .invoke_handler(tauri::generate_handler![
             bundled_runtime::diagnose_runtime,
             spirits::sync_spirits,
@@ -134,6 +136,8 @@ fn main() {
             shortcuts::set_global_shortcut,
             shortcuts::clear_global_shortcut,
             mcp_market::mcp_install_package,
+            mcp_market::mcp_manage_package,
+            whatsapp_mcp::whatsapp_mcp_start,
             mcp_market::mcp_list_installed,
             mcp_market::mcp_list_tools,
             mcp_market::mcp_call_tool,
@@ -175,6 +179,13 @@ fn main() {
             tts::start_tts_server(app.handle().clone());
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| {
+            if matches!(event, tauri::RunEvent::Exit | tauri::RunEvent::ExitRequested { .. }) {
+                let _ = browser_mcp::stop(app);
+                let _ = spotify_mcp::stop(app);
+                let _ = whatsapp_mcp::stop(app);
+            }
+        });
 }

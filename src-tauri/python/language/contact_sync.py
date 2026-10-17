@@ -18,6 +18,10 @@ import re
 import json
 import time
 import urllib.request
+try:
+    from .service_endpoints import whatsapp_api_url
+except ImportError:
+    from service_endpoints import whatsapp_api_url
 import urllib.error
 import sqlite3
 import logging
@@ -27,7 +31,6 @@ from typing import Dict, List, Set, Optional, Any, Tuple
 logger = logging.getLogger("pihu.contact_sync")
 
 # ─── Constants ────────────────────────────────────────────────────────
-WHATSAPP_API = "http://localhost:8080/api/chats"
 GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
 
 # Names that are purely English / generic and don't need Hindi transliteration
@@ -145,7 +148,7 @@ class ContactSyncer:
         # 1. WhatsApp Bridge live API
         try:
             req = urllib.request.Request(
-                WHATSAPP_API,
+                whatsapp_api_url() + "/chats",
                 headers={"User-Agent": "PIHU-ContactSync"}
             )
             with urllib.request.urlopen(req, timeout=3) as resp:

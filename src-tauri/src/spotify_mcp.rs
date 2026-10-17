@@ -5,7 +5,7 @@ use std::sync::{mpsc, Mutex};
 use std::time::Duration;
 use tauri::Manager;
 
-struct Session { child: Child, input: ChildStdin, responses: mpsc::Receiver<String> }
+struct Session { child: Child, input: ChildStdin, responses: mpsc::Receiver<String>, script: std::path::PathBuf }
 impl Drop for Session {
     fn drop(&mut self) {
         let _ = writeln!(self.input, "{{\"action\":\"shutdown\"}}");
@@ -21,6 +21,7 @@ impl Drop for Session {
 pub struct SpotifyMcpState { session: Mutex<Option<Session>> }
 
 fn start(script: &std::path::Path, bundled_node: &std::path::Path) -> Result<Session,String> {
+    if !cfg!(debug_assertions) && !bundled_node.is_file() { return Err("Shared PIHU Node runtime is missing; reinstall PIHU".into()); }
     let node = if bundled_node.is_file() { bundled_node.to_string_lossy().into_owned() } else {
         ["/opt/homebrew/bin/node", "/usr/local/bin/node", "node"].into_iter().find(|p| *p=="node" || std::path::Path::new(p).exists()).unwrap_or("node").to_string()
     };
@@ -34,19 +35,20 @@ fn start(script: &std::path::Path, bundled_node: &std::path::Path) -> Result<Ses
     let stdout = child.stdout.take().ok_or("Missing Spotify stdout")?;
     let (tx,responses) = mpsc::channel();
     std::thread::spawn(move || { for line in BufReader::new(stdout).lines() { match line { Ok(line) if line.len()<=1048576 => { if tx.send(line).is_err(){break;} }, _ => break } } });
-    Ok(Session{child,input,responses})
+    Ok(Session{child,input,responses,script:script.to_path_buf()})
 }
 #[tauri::command]
 pub async fn spotify_mcp_action(app: tauri::AppHandle, payload: serde_json::Value) -> Result<serde_json::Value,String> {
     let request = serde_json::to_string(&payload).map_err(|e|e.to_string())?;
     if !payload.is_object() || request.len()>32768 { return Err("Invalid Spotify request".into()); }
     let root = app.path().resource_dir().map_err(|e|e.to_string())?;
-    let bundled = root.join("_up_/bin/spotify-runtime/bridge.mjs");
-    let script = if bundled.exists(){bundled}else{std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../bin/spotify-runtime/bridge.mjs")};
     let node = root.join(if cfg!(windows) { "runtime/node/node.exe" } else { "runtime/node/node" });
     tauri::async_runtime::spawn_blocking(move || {
+        let _guard = crate::mcp_market::package_lock("spotify-mcp").lock().map_err(|_| "MCP package lock failed")?;
+        let script = crate::mcp_market::installed_asset(&app, "spotify-mcp", "bridge.mjs")?;
         let state = app.state::<SpotifyMcpState>();
         let mut session = state.session.lock().map_err(|_|"Spotify MCP session lock failed")?;
+        if session.as_ref().map(|active| active.script != script).unwrap_or(false) { *session = None; }
         if session.is_none(){*session=Some(start(&script,&node)?);}
         let active=session.as_mut().ok_or("Spotify session missing")?;
         let result = (|| {
@@ -76,4 +78,11 @@ mod tests {
         }
         for key in ["PATH", "HOME", "HTTPS_PROXY", "LANG"] { assert!(super::spotify_environment_allowed(key)); }
     }
+}
+
+pub fn stop(app: &tauri::AppHandle) -> Result<(), String> {
+    if let Some(state) = app.try_state::<SpotifyMcpState>() {
+        *state.session.lock().map_err(|_| "MCP session lock failed")? = None;
+    }
+    Ok(())
 }

@@ -14,19 +14,9 @@ pub fn read_google_accounts(app: tauri::AppHandle) -> Result<String, String> {
 
 #[tauri::command]
 pub async fn google_oauth_start(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
-    let resource = app
-        .path()
-        .resource_dir()
-        .map_err(|e| e.to_string())?
-        .join("pihu_mcps/mcp/servers/google_oauth_server.py");
-    let script = if resource.exists() {
-        resource
-    } else {
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("pihu_mcps/mcp/servers/google_oauth_server.py")
-    };
-
     tauri::async_runtime::spawn_blocking(move || {
+        let _guard = crate::mcp_market::package_lock("google-workspace-mcp").lock().map_err(|_| "MCP package lock failed")?;
+        let script = crate::mcp_market::installed_asset(&app, "google-workspace-mcp", "google_oauth_server.py")?;
         let mut child = crate::background_process::command(crate::get_python_cmd())
             .arg(script)
             .env("PIHU_OAUTH_BROKER", "https://pihu.nfks.co.in/api/v2/oauth/google")
