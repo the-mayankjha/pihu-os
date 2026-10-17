@@ -1,4 +1,4 @@
-use std::process::{Command, Child};
+use std::process::Child;
 use std::thread;
 use std::time::Duration;
 use tauri::Manager;
@@ -18,7 +18,7 @@ impl TtsServer {
         let python_cmd = crate::get_python_cmd();
         println!("TTS Server using python binary: {}", python_cmd);
 
-        let mut command = Command::new(&python_cmd);
+        let mut command = crate::background_process::command(&python_cmd);
         command.arg(resource_dir.join("python/tts_server.py"))
             .current_dir(resource_dir)
             .env("PIHU_RESOURCE_DIR", resource_dir)

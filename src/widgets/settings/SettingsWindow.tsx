@@ -868,9 +868,7 @@ export const SettingsWindow: React.FC = () => {
     const syncAccountsFromFile = async () => {
       try {
         const { invoke } = await import('@tauri-apps/api/core');
-        const tokenPath = '~/.gemini/antigravity/google_workspace_tokens.json';
-        const readCmd = `python3 -c "import os, json; p = os.path.expanduser('${tokenPath}'); print(open(p).read() if os.path.exists(p) else '{}')"`;
-        const result = await invoke<string>('execute_shell_command', { command: readCmd });
+        const result = await invoke<string>('read_google_accounts');
         
         if (result && result.trim().startsWith('{')) {
           const data = JSON.parse(result);

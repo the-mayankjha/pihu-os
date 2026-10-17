@@ -1,4 +1,4 @@
-use std::process::{ChildStdin, Command, Stdio};
+use std::process::{ChildStdin, Stdio};
 use std::io::{BufRead, BufReader};
 use std::thread;
 use std::sync::Mutex;
@@ -19,7 +19,7 @@ pub fn start_stt_server(app: AppHandle) {
         Err(error) => { eprintln!("Could not locate app resources for STT: {error}"); return; }
     };
     let script = resource_dir.join("python/stt_server.py");
-    let mut child = match Command::new(&python_cmd)
+    let mut child = match crate::background_process::command(&python_cmd)
         .arg(&script)
         .current_dir(&resource_dir)
         .env("PIHU_RESOURCE_DIR", &resource_dir)

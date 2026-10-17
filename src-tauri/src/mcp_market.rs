@@ -1,6 +1,5 @@
 use serde_json::Value;
 use std::path::PathBuf;
-use std::process::Command;
 use tauri::Manager;
 
 fn agent_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
@@ -34,7 +33,7 @@ fn run(app: &tauri::AppHandle, args: &[&str]) -> Result<String, String> {
         .into_iter()
         .find(|p| p.join("pihu_file_mcp.py").is_file())
         .ok_or_else(|| "Built-in MCP server files are missing.".to_string())?;
-    let output = Command::new(crate::get_python_cmd())
+    let output = crate::background_process::command(crate::get_python_cmd())
         .args(["-m", "pihu.mcp.cli"])
         .args(args)
         .env("PYTHONPATH", agent)

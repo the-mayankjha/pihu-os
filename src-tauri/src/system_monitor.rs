@@ -205,8 +205,8 @@ pub async fn execute_shell_command(command: String) -> Result<String, String> {
 fn execute_shell_command_blocking(command: String) -> Result<String, String> {
     println!("Executing OS command via Tauri: {}", command);
     let output = if cfg!(target_os = "windows") {
-        std::process::Command::new("cmd")
-            .args(&["/C", &command])
+        crate::background_process::command("cmd")
+            .args(&["/D", "/C", &command])
             .output()
     } else {
         std::process::Command::new("sh")

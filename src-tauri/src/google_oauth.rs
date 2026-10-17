@@ -1,9 +1,16 @@
 //! Start the PIHU-hosted Google OAuth flow with a loopback callback.
 use std::io::{BufRead, BufReader};
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 use std::sync::mpsc;
 use std::time::Duration;
 use tauri::{Emitter, Manager};
+
+#[tauri::command]
+pub fn read_google_accounts(app: tauri::AppHandle) -> Result<String, String> {
+    let path = app.path().home_dir().map_err(|error| error.to_string())?
+        .join(".gemini/antigravity/google_workspace_tokens.json");
+    crate::account_file::read(&path)
+}
 
 #[tauri::command]
 pub async fn google_oauth_start(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
@@ -20,7 +27,7 @@ pub async fn google_oauth_start(app: tauri::AppHandle) -> Result<serde_json::Val
     };
 
     tauri::async_runtime::spawn_blocking(move || {
-        let mut child = Command::new(crate::get_python_cmd())
+        let mut child = crate::background_process::command(crate::get_python_cmd())
             .arg(script)
             .env("PIHU_OAUTH_BROKER", "https://pihu.nfks.co.in/api/v2/oauth/google")
             .env("PIHU_OAUTH_AUTH_PAGE", "https://pihu.nfks.co.in/mcp/google/auth")
@@ -70,21 +77,21 @@ pub async fn google_oauth_start(app: tauri::AppHandle) -> Result<serde_json::Val
             .unwrap_or(auth_url);
 
         #[cfg(target_os = "macos")]
-        let mut opened = Command::new("/usr/bin/open").arg(auth_page_url).status();
+        let mut opened = crate::background_process::command("/usr/bin/open").arg(auth_page_url).status();
         #[cfg(target_os = "windows")]
-        let mut opened = Command::new("cmd").args(["/C", "start", "", auth_page_url]).status();
+        let mut opened = crate::background_process::command("cmd").args(["/C", "start", "", auth_page_url]).status();
         #[cfg(all(not(target_os = "macos"), not(target_os = "windows")))]
-        let mut opened = Command::new("xdg-open").arg(auth_page_url).status();
+        let mut opened = crate::background_process::command("xdg-open").arg(auth_page_url).status();
 
         // If the branded PIHU auth page cannot be opened by the OS, launch the
         // already-prepared Google authorization URL directly as a local fallback.
         if !opened.as_ref().is_ok_and(|status| status.success()) {
             #[cfg(target_os = "macos")]
-            { opened = Command::new("/usr/bin/open").arg(auth_url).status(); }
+            { opened = crate::background_process::command("/usr/bin/open").arg(auth_url).status(); }
             #[cfg(target_os = "windows")]
-            { opened = Command::new("cmd").args(["/C", "start", "", auth_url]).status(); }
+            { opened = crate::background_process::command("cmd").args(["/C", "start", "", auth_url]).status(); }
             #[cfg(all(not(target_os = "macos"), not(target_os = "windows")))]
-            { opened = Command::new("xdg-open").arg(auth_url).status(); }
+            { opened = crate::background_process::command("xdg-open").arg(auth_url).status(); }
         }
 
         if !opened.map(|status| status.success()).unwrap_or(false) {

@@ -78,6 +78,19 @@ jobs:
             librsvg2-dev libssl-dev libwebkit2gtk-4.1-dev patchelf pkg-config \
             python3-dev python3-venv rpm xdg-utils
 
+      - name: Test account file access on a clean environment
+        shell: bash
+        run: |
+          rustc --edition=2021 --test src-tauri/src/account_file.rs -o "$RUNNER_TEMP/pihu-account-tests.exe"
+          "$RUNNER_TEMP/pihu-account-tests.exe"
+
+      - name: Verify Windows background processes do not open a console
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          rustc --edition=2021 --test src-tauri/src/background_process.rs -o "$RUNNER_TEMP/pihu-background-tests.exe"
+          "$RUNNER_TEMP/pihu-background-tests.exe"
+
       - name: Install JavaScript dependencies
         run: npm ci
 

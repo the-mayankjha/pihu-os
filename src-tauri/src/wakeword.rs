@@ -1,4 +1,4 @@
-use std::process::{ChildStdin, Command, Stdio};
+use std::process::{ChildStdin, Stdio};
 use std::io::{BufRead, BufReader, Write};
 use std::thread;
 use std::sync::Mutex;
@@ -61,7 +61,7 @@ pub fn start_wakeword_engine(app: AppHandle) {
     let models_dir = std::path::PathBuf::from(home).join(".pihu-os/models");
 
     // Spawn the Python process with unbuffered stdout (-u)
-    let mut child = match Command::new(&python_cmd)
+    let mut child = match crate::background_process::command(&python_cmd)
         .arg("-u")
         .arg(resource_dir.join("python/wakeword.py"))
         .current_dir(&resource_dir)

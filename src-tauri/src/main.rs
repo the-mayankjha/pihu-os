@@ -13,6 +13,8 @@ mod vtop_credentials;
 mod spirits;
 mod mcp_market;
 mod shortcuts;
+mod background_process;
+mod account_file;
 use tauri::Manager;
 
 pub fn get_python_cmd() -> String {
@@ -67,7 +69,7 @@ fn run_first_launch_setup() {
     for script in &candidates {
         if script.exists() {
             println!("[PIHU] Running setup script: {:?}", script);
-            match std::process::Command::new("bash")
+            match crate::background_process::command("bash")
                 .arg(script)
                 .stdout(std::process::Stdio::inherit())
                 .stderr(std::process::Stdio::inherit())
@@ -140,6 +142,7 @@ fn main() {
             automation::macos_ui_action,
             automation::macos_running_applications,
             google_oauth::google_oauth_start,
+            google_oauth::read_google_accounts,
             spotify_mcp::spotify_mcp_action,
             browser_mcp::browser_mcp_action,
             vtop_credentials::vtop_credentials,

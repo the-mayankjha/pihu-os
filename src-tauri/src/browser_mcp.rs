@@ -1,6 +1,6 @@
 //! Persistent local bridge to Microsoft's Playwright MCP. Serialized requests retain one browser session.
 use std::io::{BufRead, BufReader, Write};
-use std::process::{Child, ChildStdin, Command, Stdio};
+use std::process::{Child, ChildStdin, Stdio};
 use std::sync::{mpsc, Mutex};
 use std::time::Duration;
 use tauri::Manager;
@@ -24,7 +24,7 @@ fn start(script: &std::path::Path, bundled_node: &std::path::Path) -> Result<Ses
     let node = if bundled_node.is_file() { bundled_node.to_string_lossy().into_owned() } else {
         ["/opt/homebrew/bin/node", "/usr/local/bin/node", "node"].into_iter().find(|p| *p=="node" || std::path::Path::new(p).exists()).unwrap_or("node").to_string()
     };
-    let mut command = Command::new(node);
+    let mut command = crate::background_process::command(node);
     for (key, _) in std::env::vars_os() {
         let name = key.to_string_lossy();
         if !browser_environment_allowed(&name) { command.env_remove(key); }

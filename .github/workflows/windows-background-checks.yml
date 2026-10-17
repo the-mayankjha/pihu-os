@@ -1,0 +1,33 @@
+name: Windows background process checks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src-tauri/src/background_process.rs'
+      - 'src-tauri/src/account_file.rs'
+      - 'src/widgets/settings/SettingsWindow.tsx'
+      - '.github/workflows/windows-background-checks.yml'
+  pull_request:
+    paths:
+      - 'src-tauri/src/background_process.rs'
+      - 'src-tauri/src/account_file.rs'
+      - 'src/widgets/settings/SettingsWindow.tsx'
+      - '.github/workflows/windows-background-checks.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Check native file reads and hidden child processes
+        shell: bash
+        run: |
+          rustc --edition=2021 --test src-tauri/src/account_file.rs -o "$RUNNER_TEMP/pihu-account-tests.exe"
+          "$RUNNER_TEMP/pihu-account-tests.exe"
+          rustc --edition=2021 --test src-tauri/src/background_process.rs -o "$RUNNER_TEMP/pihu-background-tests.exe"
+          "$RUNNER_TEMP/pihu-background-tests.exe"
