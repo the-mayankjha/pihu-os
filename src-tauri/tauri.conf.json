@@ -99,7 +99,7 @@
       },
       "frameworks": [],
       "entitlements": null,
-      "signingIdentity": null
+      "signingIdentity": "-"
     },
     "windows": {
       "nsis": {

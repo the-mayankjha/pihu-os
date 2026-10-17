@@ -1,4 +1,4 @@
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
@@ -25,7 +25,18 @@ mkdirSync(dmgDir, { recursive: true });
 const arch = process.arch === 'arm64' ? 'aarch64' : 'x86_64';
 const output = join(dmgDir, `Pihu OS_${version}_${arch}.dmg`);
 const staging = mkdtempSync(join(tmpdir(), 'pihu-os-dmg-'));
-cpSync(app, join(staging, 'Pihu OS.app'), { recursive: true, dereference: true });
+const stagedApp = join(staging, 'Pihu OS.app');
+for (const [command, args] of [
+  ['ditto', [app, stagedApp]],
+  ['codesign', ['--verify', '--deep', '--strict', '--verbose=2', stagedApp]],
+]) {
+  const check = spawnSync(command, args, { stdio: 'inherit' });
+  if (check.error) throw check.error;
+  if (check.status !== 0) {
+    rmSync(staging, { recursive: true, force: true });
+    process.exit(check.status ?? 1);
+  }
+}
 symlinkSync('/Applications', join(staging, 'Applications'), 'dir');
 console.log('Creating the drag-to-Applications disk image...');
 const image = spawnSync('hdiutil', ['create', '-volname', 'Pihu OS', '-srcfolder', staging, '-ov', '-format', 'UDZO', output], {

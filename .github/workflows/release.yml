@@ -116,6 +116,16 @@ jobs:
           prerelease: false
           args: ${{ matrix.platform == 'ubuntu-22.04' && '--bundles deb,appimage' || (matrix.target != '' && format('--target {0}', matrix.target) || '') }}
 
+      - name: Verify macOS app signature before publishing
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          PIHU_TARGET: ${{ matrix.target }}
+        run: |
+          APP="src-tauri/target/$PIHU_TARGET/release/bundle/macos/Pihu OS.app"
+          test -f "$APP/Contents/_CodeSignature/CodeResources"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+
   publish:
     name: Publish GitHub release
     needs: build
