@@ -7,6 +7,12 @@ export function SpiritMarketPreview({ name, src }: { name: string; src: string }
     const target = canvas.current;
     const context = target?.getContext('2d');
     if (!target || !context) return;
+    const pixelRatio = Math.max(1, window.devicePixelRatio || 1);
+    target.width = Math.round(192 * pixelRatio);
+    target.height = Math.round(208 * pixelRatio);
+    context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
 
     let disposed = false;
     let timer: ReturnType<typeof setInterval> | undefined;
@@ -18,13 +24,13 @@ export function SpiritMarketPreview({ name, src }: { name: string; src: string }
     image.decode().then(() => {
       if (disposed) return;
       const draw = () => {
-        context.clearRect(0, 0, target.width, target.height);
-        context.drawImage(image, (frame++ % 4) * 192, 0, 192, 208, 0, 0, target.width, target.height);
+        context.clearRect(0, 0, 192, 208);
+        context.drawImage(image, (frame++ % 4) * 192, 0, 192, 208, 0, 0, 192, 208);
       };
       draw();
       timer = setInterval(draw, 260);
     }).catch(() => {
-      if (!disposed) context.clearRect(0, 0, target.width, target.height);
+      if (!disposed) context.clearRect(0, 0, 192, 208);
     });
 
     return () => {
