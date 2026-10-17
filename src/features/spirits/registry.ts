@@ -69,7 +69,7 @@ function assetFrom(value: unknown, apiOrigin: string): SpiritAsset | null {
 }
 
 async function fetchJSON(url: string, label: string) {
-  const response = await fetch(url, { headers: { Accept: 'application/json' } });
+  const response = await fetch(url, { headers: { Accept: 'application/json' }, cache: 'no-store' });
   if (!response.ok) throw new Error(`${label} (${response.status}).`);
   const length = Number(response.headers.get('content-length') ?? 0);
   if (length > MAX_INDEX_BYTES) throw new Error('The Spirits Market response is too large.');
