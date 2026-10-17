@@ -11,6 +11,17 @@ export function SpiritDetailsPage({ name, details, loading, error, onBack }: {
   error: string;
   onBack: () => void;
 }) {
+  const rawAnimations = details?.manifest.animations;
+  const packagedAnimations = rawAnimations && typeof rawAnimations === 'object' && !Array.isArray(rawAnimations)
+    ? Object.entries(rawAnimations).filter((entry): entry is [string, { path: string; frames: number; fps: number; trigger: string }] => {
+      const animation = entry[1];
+      return Boolean(animation && typeof animation === 'object'
+        && typeof (animation as { path?: unknown }).path === 'string'
+        && Number.isFinite((animation as { frames?: unknown }).frames)
+        && Number.isFinite((animation as { fps?: unknown }).fps)
+        && typeof (animation as { trigger?: unknown }).trigger === 'string');
+    })
+    : [];
   return <section aria-labelledby="spirit-details-title" className="mx-auto w-full max-w-5xl space-y-5 text-neutral-100">
       <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-400"><button type="button" onClick={onBack} className="inline-flex items-center gap-1.5 hover:text-white"><ArrowLeft size={14} /> Marketplace</button><span>›</span><button type="button" onClick={onBack} className="hover:text-white">Spirits</button><span>›</span><span id="spirit-details-title" className="text-neutral-100">{name}</span></div>
       <header className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-4">
@@ -33,6 +44,11 @@ export function SpiritDetailsPage({ name, details, loading, error, onBack }: {
               <a className="inline-flex items-center gap-1 pt-1 text-xs text-pink-200 hover:text-pink-100" href={details.download_url} target="_blank" rel="noreferrer">Package API <ExternalLink size={12} /></a>
             </div>
           </div>
+
+          <section>
+            <h3 className="mb-2 text-sm font-semibold">Packaged animation strips</h3>
+            {packagedAnimations.length ? <div className="grid gap-2 sm:grid-cols-2">{packagedAnimations.map(([id, animation]) => <div key={id} className="rounded-lg border border-white/[0.08] px-3 py-2 text-xs"><div className="font-medium text-neutral-200">{id.replaceAll('_', ' ')}</div><div className="mt-1 text-neutral-400">{animation.path} · {animation.frames} frames · {animation.fps} fps · {animation.trigger}</div></div>)}</div> : <p className="text-xs text-neutral-500">No extra animation strips are published for this Spirit.</p>}
+          </section>
 
           <section>
             <h3 className="mb-2 text-sm font-semibold">Sprite sheet format</h3>

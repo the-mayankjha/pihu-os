@@ -13,8 +13,8 @@ import { bundledSpirits } from './catalog';
 import { useSpiritsStore } from './store';
 import { SpiritSprite } from './SpiritSprite';
 import { useSpiritSocial } from './useSpiritSocial';
-import type { SpiritActivity, SpiritAnimation, SpiritShortcut, ToolbarPreferences } from './model';
-import { ANIMATIONS, SPIRIT_SHORTCUTS, normalizeShortcuts, normalizeToolbar, dragAnimation, lookDirection, safeSpiritSize, spiritActivity, pihuPose } from './model';
+import type { BrowserSpiritTask, SpiritActivity, SpiritAnimation, SpiritShortcut, ToolbarPreferences } from './model';
+import { ANIMATIONS, SPIRIT_SHORTCUTS, normalizeShortcuts, normalizeToolbar, dragAnimation, lookDirection, safeSpiritSize, spiritActivity, pihuPose, pihuV2Pose } from './model';
 
 const ACTIVITY_EVENT = 'pihu-spirit-activity';
 const SHORTCUT_EVENT = 'pihu-spirit-shortcut';
@@ -47,6 +47,7 @@ export function SpiritsHost() {
   const agent = useAgentActivityStore(s => s.status);
   const speaking = useTTSPlaybackStore(s => s.active.length > 0);
   const voiceListening = useVoiceStore(s => s.isListening);
+  const [browserTask, setBrowserTask] = useState<BrowserSpiritTask>(null);
   const { animation, resting, speaking: playbackSpeaking, listening: orbListening, thinking } = spiritActivity(orb, agent, pending, reviewing, processing, speaking);
   const listening = Boolean(voiceListening || orbListening);
   const restingState = resting && !listening;
@@ -68,15 +69,29 @@ export function SpiritsHost() {
     }).then(() => setError(null)).catch(error => setError(String(error)));
   }, [selection, size, setError]);
   useEffect(() => {
-    if (isTauri()) void emit(ACTIVITY_EVENT, { animation, resting: restingState, speaking: playbackSpeaking, listening, thinking, shortcuts, toolbar }).catch(console.error);
-  }, [animation, restingState, playbackSpeaking, listening, thinking, shortcuts, toolbar]);
+    if (isTauri()) void emit(ACTIVITY_EVENT, { animation, resting: restingState, speaking: playbackSpeaking, listening, thinking, browserTask, shortcuts, toolbar }).catch(console.error);
+  }, [animation, restingState, playbackSpeaking, listening, thinking, browserTask, shortcuts, toolbar]);
   useEffect(() => {
     if (!isTauri()) return;
     let disposed = false;
     let unlisten: (() => void) | undefined;
-    void listen('pihu-spirit-ready', () => { void emit(ACTIVITY_EVENT, { animation, resting: restingState, speaking: playbackSpeaking, listening, thinking, shortcuts, toolbar }); }).then(stop => { if (disposed) stop(); else unlisten = stop; });
+    void listen('pihu-spirit-ready', () => { void emit(ACTIVITY_EVENT, { animation, resting: restingState, speaking: playbackSpeaking, listening, thinking, browserTask, shortcuts, toolbar }); }).then(stop => { if (disposed) stop(); else unlisten = stop; });
     return () => { disposed = true; unlisten?.(); };
-  }, [animation, restingState, playbackSpeaking, listening, thinking, shortcuts, toolbar]);
+  }, [animation, restingState, playbackSpeaking, listening, thinking, browserTask, shortcuts, toolbar]);
+  useEffect(() => {
+    if (!isTauri()) return;
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+    const activeCalls = new Map<string, BrowserSpiritTask>();
+    void listen<{ callId: string; kind: Exclude<BrowserSpiritTask, null>; active: boolean }>('pihu-spirit-browser-task', event => {
+      const { callId, kind, active } = event.payload;
+      if (active) activeCalls.set(callId, kind);
+      else activeCalls.delete(callId);
+      const tasks = [...activeCalls.values()];
+      setBrowserTask(tasks.includes('playwright') ? 'playwright' : tasks.includes('web-search') ? 'web-search' : null);
+    }).then(stop => { if (disposed) stop(); else unlisten = stop; });
+    return () => { disposed = true; unlisten?.(); };
+  }, []);
   useEffect(() => {
     if (!isTauri()) return;
     let disposed = false;
@@ -91,11 +106,11 @@ export function SpiritsHost() {
   if (isTauri()) return null;
   return <div className="fixed bottom-24 right-6 flex items-end gap-3 pointer-events-none" style={{ zIndex: 10000 }}>{ids.map(id => {
     const spirit = [...bundledSpirits, ...customSpirits].find(item => item.id === id);
-    return <div key={id} className="pointer-events-auto"><SpiritCompanion id={id} version={spirit?.version} size={size} animation={animation} resting={restingState} speaking={playbackSpeaking} listening={listening} thinking={thinking} shortcuts={shortcuts} toolbar={toolbar} /></div>;
+    return <div key={id} className="pointer-events-auto"><SpiritCompanion id={id} version={spirit?.version} size={size} animation={animation} resting={restingState} speaking={playbackSpeaking} listening={listening} browserTask={browserTask} shortcuts={shortcuts} toolbar={toolbar} /></div>;
   })}</div>;
 }
 
-function SpiritCompanion({ id, version, size, animation, resting = false, speaking = false, listening = false, thinking = false, shortcuts, toolbar }: { id: string; version?: string; size: number; animation: SpiritAnimation; resting?: boolean; speaking?: boolean; listening?: boolean; thinking?: boolean; shortcuts: SpiritShortcut[]; toolbar: ToolbarPreferences }) {
+function SpiritCompanion({ id, version, size, animation, resting = false, speaking = false, listening = false, browserTask = null, shortcuts, toolbar }: { id: string; version?: string; size: number; animation: SpiritAnimation; resting?: boolean; speaking?: boolean; listening?: boolean; browserTask?: BrowserSpiritTask; shortcuts: SpiritShortcut[]; toolbar: ToolbarPreferences }) {
   const [held, setHeld] = useState(false);
   const [interaction, setInteraction] = useState<SpiritAnimation | null>(null);
   const [dragging, setDragging] = useState<SpiritAnimation | null>(null);
@@ -162,7 +177,8 @@ function SpiritCompanion({ id, version, size, animation, resting = false, speaki
     return () => { disposed = true; clearInterval(interval); clearTimeout(gazeTimer); window.removeEventListener('pointermove', follow); };
   }, [animation, resting, size]);
   const [idleMs, setIdleMs] = useState(0);
-  const idleEligible = id === 'pihu' && animation === 'idle' && !resting && !speaking && !dragging && !interaction;
+  const isPihuV2 = id === 'pihu-v2-1-2';
+  const idleEligible = (id === 'pihu' || isPihuV2) && animation === 'idle' && !resting && !speaking && !dragging && !interaction;
   useEffect(() => {
     const started = Date.now();
     const reset = setTimeout(() => setIdleMs(0), 0);
@@ -170,8 +186,8 @@ function SpiritCompanion({ id, version, size, animation, resting = false, speaki
     return () => { clearTimeout(reset); clearInterval(interval); };
   }, [idleEligible]);
   const social = useSpiritSocial(id, size, speaking || listening || held || Boolean(dragging || interaction), element, (dx, dy) => setOffset(previous => ({ x: previous.x + dx, y: previous.y + dy })));
-  const personal = id === 'piyu' && speaking ? 'speaking' : id === 'pihu' ? pihuPose(animation, speaking, idleEligible ? idleMs : 0) : animation;
-  const shown = dragging ?? (speaking ? personal : listening ? 'listening' : id === 'pihu-v2' && thinking ? 'thinking' : interaction ?? social.animation ?? personal);
+  const personal = id === 'piyu' && speaking ? 'speaking' : id === 'pihu' ? pihuPose(animation, speaking, idleEligible ? idleMs : 0) : isPihuV2 ? pihuV2Pose(animation, speaking, idleEligible ? idleMs : 0, browserTask) : animation;
+  const shown = dragging ?? (speaking ? personal : listening ? 'listening' : interaction ?? social.animation ?? personal);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const hideShortcuts = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const revealShortcuts = () => {
@@ -310,5 +326,5 @@ export function SpiritWindow({ id }: { id: string }) {
     }).then(stop => { if (disposed) stop(); else unlisten = stop; });
     return () => { disposed = true; clearTimeout(timer); unlisten?.(); };
   }, [id]);
-  return <SpiritCompanion id={id} size={size} animation={activity.animation} resting={activity.resting} speaking={activity.speaking} listening={activity.listening} thinking={activity.thinking} shortcuts={shortcuts} toolbar={toolbar} />;
+  return <SpiritCompanion id={id} size={size} animation={activity.animation} resting={activity.resting} speaking={activity.speaking} listening={activity.listening} browserTask={activity.browserTask} shortcuts={shortcuts} toolbar={toolbar} />;
 }
