@@ -114,7 +114,7 @@ jobs:
           releaseBody: Installers and signed in-app updater bundles for macOS, Windows, and Linux.
           releaseDraft: true
           prerelease: false
-          args: ${{ matrix.target != '' && format('--target {0}', matrix.target) || '' }}
+          args: ${{ matrix.platform == 'ubuntu-22.04' && '--bundles deb,appimage' || (matrix.target != '' && format('--target {0}', matrix.target) || '') }}
 
   publish:
     name: Publish GitHub release
