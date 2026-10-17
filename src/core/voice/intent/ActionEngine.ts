@@ -1,5 +1,5 @@
 import { readGmailSubject } from '../../services/gmailRead';
-import { draftProjectGoogleDoc } from '../../services/googleDocDraft';
+import { draftProjectGoogleDoc, draftGoogleDoc } from '../../services/googleDocDraft';
 import { hasMcpUpdate } from '../../services/mcpVersion';
 import { openMcpConfiguration } from '../../services/mcpNavigation';
 import { parseSpotifyIntent } from '../../services/spotifyIntent';
@@ -788,9 +788,10 @@ export class ActionEngine {
         if (installed) return installed;
       }
 
-      if (/\b(?:create|make|draft|write)\b/i.test(cleanText) && /\bgoogle\s+doc(?:s|ument)?\b/i.test(cleanText) && /\b(?:project|architecture|codebase)\b/i.test(cleanText)) {
+      if (/\b(?:create|make|draft|write)\b/i.test(cleanText) && /\b(?:google\s+)?(?:doc|document)s?\b/i.test(cleanText)) {
         onMode('thinking');
-        return await draftProjectGoogleDoc(cleanText);
+        if (/\b(?:architecture|codebase)\b|\b(?:this|my|active|current)\s+project\b/i.test(cleanText)) return await draftProjectGoogleDoc(cleanText);
+        return await draftGoogleDoc(cleanText);
       }
       let spotifyIntent = parseSpotifyIntent(cleanText);
       let spotifyConnected = false;

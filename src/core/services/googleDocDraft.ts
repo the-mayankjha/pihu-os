@@ -26,3 +26,26 @@ export async function draftProjectGoogleDoc(request: string): Promise<string> {
   useVoiceStore.getState().setProcessingStatus(null);
   return 'Your architecture draft is ready in the editable preview. Review it, then click Create Google Doc to upload it.';
 }
+
+export async function draftGoogleDoc(request: string): Promise<string> {
+  const named = request.match(/\b(?:called|named|titled)\s+["“]?(.+?)["”]?(?=\s+(?:and|about|with|containing)\b|[.!?]*$)/i);
+  const title = named?.[1]?.trim().replace(/["”]+$/, '') || 'New document';
+  useVoiceStore.getState().setProcessingStatus(`Drafting “${title}”…`);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const content = await Promise.race([
+      LLMManager.getInstance().generatePrimaryTask({
+        prompt: request,
+        systemInstruction: 'Write the full text of the document requested by the user. Return document content only, with clear headings and paragraphs. PIHU OS is a personal AI desktop companion with voice interaction, desktop widgets, project tools, and optional MCP integrations installed from its Market, including Google Workspace and Spotify. Use these facts when writing about PIHU. Do not invent technical details, version numbers, benchmarks, or claim to have read project files. Do not perform an upload or claim one happened; the user will review and edit the draft first.',
+        maxOutputTokens: 5000,
+      }),
+      new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('Document drafting timed out. Please try again.')), 60000); }),
+    ]);
+    if (!content.trim()) return 'I could not generate document content. Please try again.';
+    useGoogleDocDraft.getState().setDraft({title, content, sources: [], limited: false});
+    return `The draft “${title}” is ready in the editable preview. Review it, then click Create Google Doc to upload.`;
+  } finally {
+    if (timer) clearTimeout(timer);
+    useVoiceStore.getState().setProcessingStatus(null);
+  }
+}
