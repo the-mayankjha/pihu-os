@@ -66,13 +66,14 @@ export function pihuV2Pose(animation: SpiritAnimation, speaking: boolean, idleMs
   if (browserTask === 'web-search') return 'browser-automation';
   if (speaking) return 'talking-expressive';
   if (animation !== 'idle') return animation;
-  const idleCycle = idleMs % 54000;
-  if (idleCycle >= 12000 && idleCycle < 18000) return 'idle-hairflip';
-  if (idleCycle >= 18000 && idleCycle < 24000) return 'idle-cat';
-  if (idleCycle >= 24000 && idleCycle < 30000) return 'idle-sitting';
-  if (idleCycle >= 30000 && idleCycle < 36000) return 'idle-butterfly';
-  if (idleCycle >= 36000 && idleCycle < 42000) return 'idle-guitar';
-  if (idleCycle >= 42000 && idleCycle < 48000) return 'idle-pouting';
+  // Sitting is reserved for the browser-work transition. Rotate through all
+  // other idle performances before returning to the regular idle loop.
+  const idleCycle = idleMs % 48000;
+  if (idleCycle >= 6000 && idleCycle < 12000) return 'idle-hairflip';
+  if (idleCycle >= 12000 && idleCycle < 18000) return 'idle-cat';
+  if (idleCycle >= 18000 && idleCycle < 24000) return 'idle-butterfly';
+  if (idleCycle >= 24000 && idleCycle < 30000) return 'idle-guitar';
+  if (idleCycle >= 30000 && idleCycle < 36000) return 'idle-pouting';
   return 'idle';
 }
 

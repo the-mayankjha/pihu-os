@@ -286,7 +286,7 @@ function SpiritCompanion({ id, version, size, animation, resting = false, speaki
       onPointerCancel={() => { setHeld(false); pointer.current.pressed = false; setDragging(null); }}
       onLostPointerCapture={() => { if (pointer.current.pressed) { setHeld(false); pointer.current.pressed = false; setDragging(null); } }}
       onClick={event => { if (event.detail === 0 || !pointer.current.dragged) play('waving'); }}>
-      <SpiritSprite id={id} version={version} size={size} animation={shown} pair={social.pair} resting={!dragging && !interaction && !social.animation && resting} direction={shown === 'idle' && (!resting || social.animation) ? social.direction ?? direction : null} />
+      <SpiritSprite id={id} version={version} size={size} animation={shown} pair={social.pair} browserTask={isPihuV2 ? browserTask : null} resting={!dragging && !interaction && !social.animation && resting} direction={shown === 'idle' && (!resting || social.animation) ? social.direction ?? direction : null} />
     </button>
     <SpiritToolbar name={name} size={size} shortcuts={shortcuts} disabled={Boolean(dragging)} onShortcut={shortcut => {
       setShortcutsOpen(false);

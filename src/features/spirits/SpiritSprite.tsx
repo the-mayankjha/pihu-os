@@ -3,10 +3,11 @@ import { loadSpiritSheet, spiritListeningStateStrip, spiritThinkingStrip, spirit
 import { CELL_HEIGHT, CELL_WIDTH, lookCell, LOOK_DIRECTIONS, poseConfig } from './model';
 import { SPIRIT_EXTRA_ANIMATIONS } from './model';
 import type { SpiritExtraAnimation, SpiritPose } from './model';
+import type { BrowserSpiritTask } from './model';
 import { SOCIAL_RENDER_ACTIONS, socialFrame, socialLooping } from './socialModel';
 import type { PairPose } from './socialModel';
 
-export function SpiritSprite({ id, version, size = 128, animation = 'idle', direction = null, resting = false, pair = null }: { id: string; version?: string; size?: number; animation?: SpiritPose; direction?: number | null; resting?: boolean; pair?: PairPose | null }) {
+export function SpiritSprite({ id, version, size = 128, animation = 'idle', direction = null, resting = false, pair = null, browserTask = null }: { id: string; version?: string; size?: number; animation?: SpiritPose; direction?: number | null; resting?: boolean; pair?: PairPose | null; browserTask?: BrowserSpiritTask }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const [source, setSource] = useState<{ id: string; image?: HTMLImageElement; error?: string }>();
   const [listeningState, setListeningState] = useState<{ id: string; image: HTMLImageElement; frames: number }>();
@@ -18,6 +19,18 @@ export function SpiritSprite({ id, version, size = 128, animation = 'idle', dire
   const [extraAnimations, setExtraAnimations] = useState<{ id: string; strips: Partial<Record<SpiritExtraAnimation, HTMLImageElement>> }>();
   const [listeningPhase, setListeningPhase] = useState<'off' | 'putting-on' | 'focused' | 'putting-off'>('off');
   const wasListening = useRef(false);
+  const [browserPhase, setBrowserPhase] = useState<'off' | 'sitting-down' | 'working' | 'standing-up'>('off');
+  const wasBrowserActive = useRef(false);
+
+  useEffect(() => {
+    const active = Boolean(browserTask);
+    if (active && !wasBrowserActive.current) {
+      setBrowserPhase(matchMedia('(prefers-reduced-motion: reduce)').matches ? 'working' : 'sitting-down');
+    } else if (!active && wasBrowserActive.current) {
+      setBrowserPhase(matchMedia('(prefers-reduced-motion: reduce)').matches ? 'off' : 'standing-up');
+    }
+    wasBrowserActive.current = active;
+  }, [browserTask]);
   useEffect(() => {
     let cancelled = false;
     void Promise.all((['pihu', 'piyu'] as const).flatMap(companion => SOCIAL_RENDER_ACTIONS.map(async action => {
@@ -121,7 +134,11 @@ export function SpiritSprite({ id, version, size = 128, animation = 'idle', dire
     const motion = matchMedia('(prefers-reduced-motion: reduce)');
     const extra = extraAnimations?.id === id ? extraAnimations.strips : undefined;
     const hasListeningTransition = Boolean(extra?.['headphones-transition'] && extra?.listening);
-    const config = hasListeningTransition && listeningPhase === 'putting-on' && animation === 'listening' ? { row: 6, frames: 5, fps: 10 }
+    const sittingStrip = extra?.['idle-sitting'];
+    const browserTransition = browserPhase === 'sitting-down' || browserPhase === 'standing-up';
+    const browserConfig = browserPhase === 'sitting-down' ? { row: 0, frames: 4, fps: 8 } : { row: 0, frames: 3, fps: 8 };
+    const config = browserTransition ? browserConfig
+      : hasListeningTransition && listeningPhase === 'putting-on' && animation === 'listening' ? { row: 6, frames: 5, fps: 10 }
       : hasListeningTransition && listeningPhase === 'putting-off' ? { row: 6, frames: 3, fps: 10 }
         : animation === 'listening' && hasListeningTransition ? { row: 6, frames: SPIRIT_EXTRA_ANIMATIONS.listening.frames, fps: SPIRIT_EXTRA_ANIMATIONS.listening.fps }
       : animation === 'listening' && listeningState?.id === id ? { row: 0, frames: listeningState!.frames, fps: 8 }
@@ -135,7 +152,9 @@ export function SpiritSprite({ id, version, size = 128, animation = 'idle', dire
         ? lookCell(gaze.current) : { row: config.row, column: frame };
       context.clearRect(0, 0, CELL_WIDTH, CELL_HEIGHT);
       const listeningSheet = animation === 'listening' && listeningState?.id === id ? listeningState.image : undefined;
-      const extraPose = extra?.[animation as SpiritExtraAnimation];
+      const extraPose = browserPhase === 'working' && browserTask
+        ? extra?.[browserTask === 'playwright' ? 'browser-automation-enhanced' : 'browser-automation']
+        : extra?.[animation as SpiritExtraAnimation];
       const transitionStrip = hasListeningTransition ? extra?.['headphones-transition'] : undefined;
       const focusedListeningStrip = hasListeningTransition ? extra?.listening : undefined;
       const thinkingSheet = animation === 'thinking' && thinking?.id === id ? thinking.image : undefined;
@@ -146,7 +165,11 @@ export function SpiritSprite({ id, version, size = 128, animation = 'idle', dire
       const specialFrames = pair?.soloKey ? specialImages[pair.soloKey] : undefined;
       const specialImage = specialFrames?.[socialFrame(pair!.started, Date.now(), false, pair!.frameCount ?? specialFrames?.length ?? 4)];
       const pairImage = pairFrames?.[socialFrame(pair!.started, Date.now(), socialLooping(pair!.action), pair!.frameCount ?? pairFrames.length)];
-      if (transitionStrip && focusedListeningStrip && listeningPhase === 'putting-on' && animation === 'listening') {
+      if (browserTransition && sittingStrip) {
+        const startFrame = browserPhase === 'standing-up' ? 3 : 0;
+        context.drawImage(sittingStrip, (startFrame + frame) * CELL_WIDTH, 0, CELL_WIDTH, CELL_HEIGHT, 0, 0, CELL_WIDTH, CELL_HEIGHT);
+      }
+      else if (transitionStrip && focusedListeningStrip && listeningPhase === 'putting-on' && animation === 'listening') {
         context.drawImage(transitionStrip, frame * CELL_WIDTH, 0, CELL_WIDTH, CELL_HEIGHT, 0, 0, CELL_WIDTH, CELL_HEIGHT);
       }
       else if (transitionStrip && focusedListeningStrip && listeningPhase === 'putting-off') {
@@ -177,7 +200,12 @@ export function SpiritSprite({ id, version, size = 128, animation = 'idle', dire
       else if (mouth) context.drawImage(mouth, 0, 0, CELL_WIDTH, CELL_HEIGHT);
       else context.drawImage(image, (animation === 'speaking' ? cell.column % 4 : cell.column) * CELL_WIDTH, cell.row * CELL_HEIGHT, CELL_WIDTH, CELL_HEIGHT, 0, 0, CELL_WIDTH, CELL_HEIGHT);
       // Loop the full headphone, smooth blink, removal, and relaxed-hold sequence.
-      if (transitionStrip && focusedListeningStrip && listeningPhase === 'putting-on' && animation === 'listening') {
+      if (browserTransition && sittingStrip) {
+        if (frame + 1 >= config.frames) {
+          frame = 0;
+          setBrowserPhase(browserPhase === 'sitting-down' ? 'working' : 'off');
+        } else frame += 1;
+      } else if (transitionStrip && focusedListeningStrip && listeningPhase === 'putting-on' && animation === 'listening') {
         if (frame + 1 >= config.frames) { frame = 0; setListeningPhase('focused'); }
         else frame += 1;
       } else if (transitionStrip && focusedListeningStrip && listeningPhase === 'putting-off') {
@@ -210,6 +238,6 @@ export function SpiritSprite({ id, version, size = 128, animation = 'idle', dire
     start();
     motion.addEventListener('change', start);
     return () => { clearTimeout(timer); motion.removeEventListener('change', start); };
-  }, [image, animation, resting, listeningState, thinking, talking, id, pair, socialImages, specialImages, listeningImages, extraAnimations, listeningPhase]);
+  }, [image, animation, resting, listeningState, thinking, talking, id, pair, socialImages, specialImages, listeningImages, extraAnimations, listeningPhase, browserPhase, browserTask]);
   return <>{error && <span role="alert" className="text-xs text-rose-300">{error}</span>}<canvas ref={canvas} width={CELL_WIDTH} height={CELL_HEIGHT} style={{ width: size, height: size * CELL_HEIGHT / CELL_WIDTH, display: error ? 'none' : 'block', pointerEvents: 'none' }} aria-label={`${hasLook ? `looking ${LOOK_DIRECTIONS[direction!]}` : animation} Spirit`} /></>;
 }
