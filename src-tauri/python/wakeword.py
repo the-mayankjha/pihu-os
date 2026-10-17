@@ -1,6 +1,6 @@
 import os
 import sys
-import pyaudio
+import sounddevice as sd
 import numpy as np
 from openwakeword.model import Model
 
@@ -40,12 +40,15 @@ try:
     import openwakeword
     import shutil
     oww_resource_dir = os.path.join(os.path.dirname(openwakeword.__file__), 'resources', 'models')
-    os.makedirs(oww_resource_dir, exist_ok=True)
+    if os.environ.get("PIHU_BUNDLED_RUNTIME") != "1":
+        os.makedirs(oww_resource_dir, exist_ok=True)
     
     # Check if models exist in MODELS_DIR or candidate dirs and copy them
     for base_m in ['melspectrogram.onnx', 'embedding_model.onnx']:
         target_path = os.path.join(oww_resource_dir, base_m)
         if not os.path.exists(target_path):
+            if os.environ.get("PIHU_BUNDLED_RUNTIME") == "1":
+                raise RuntimeError(f"Missing bundled wake preprocessing model: {base_m}")
             found_src = None
             for d in candidate_dirs:
                 cand = os.path.join(d, base_m)
@@ -72,19 +75,23 @@ except Exception as e:
     sys.stdout.flush()
     sys.exit(1)
 
-# PyAudio Configuration
-FORMAT = pyaudio.paInt16
+# RawInputStream preserves the existing PCM protocol without a system PyAudio build.
 CHANNELS = 1
 RATE = 16000
 CHUNK = 512
-
-audio = pyaudio.PyAudio()
-
+class Microphone:
+    def __init__(self):
+        self.stream = sd.RawInputStream(samplerate=RATE, channels=CHANNELS, dtype='int16', blocksize=CHUNK)
+        self.stream.start()
+    def is_active(self): return self.stream.active
+    def start_stream(self): self.stream.start()
+    def stop_stream(self): self.stream.stop()
+    def close(self): self.stream.close()
+    def read(self, frames, exception_on_overflow=False): return bytes(self.stream.read(frames)[0])
 try:
-    stream = audio.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
+    stream = Microphone()
 except Exception as e:
-    print(f"WAKEWORD_ERROR: Could not open microphone: {e}")
-    sys.stdout.flush()
+    print(f"WAKEWORD_ERROR: Could not open microphone: {e}", flush=True)
     sys.exit(1)
 
 import time
@@ -92,8 +99,6 @@ import math
 import onnxruntime as ort
 import threading
 
-print("WAKEWORD_READY")
-sys.stdout.flush()
 
 # Start background thread to listen for manual trigger commands
 def listen_stdin():
@@ -156,6 +161,7 @@ FRAMES_FOR_SILENCE_AFTER_SPEECH = int((16000 / CHUNK) * 1.5)  # 1.5 seconds of s
 FRAMES_FOR_IDLE_TIMEOUT = int((16000 / CHUNK) * 5.0)  # 5 seconds of silence to sleep
 vad_state = np.zeros((2, 1, 128), dtype=np.float32)
 speech_detected_in_session = False
+print("WAKEWORD_READY", flush=True)
 
 while True:
     try:
@@ -210,7 +216,7 @@ while True:
 try:
     stream.stop_stream()
     stream.close()
-    audio.terminate()
+
 except Exception:
     pass
 

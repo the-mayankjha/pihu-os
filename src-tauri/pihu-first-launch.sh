@@ -177,7 +177,7 @@ fi
 # ─── 6. Write Master Config & Lock File ──────────────
 cat > "$PIHU_HOME/config.json" << CONFIG_EOF
 {
-  "version": "1.2.7",
+  "version": "1.2.8",
   "venv_path": "$VENV_DIR",
   "models_path": "$MODELS_DIR",
   "stt_model": "$STT_MODEL",

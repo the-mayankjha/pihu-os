@@ -29,7 +29,17 @@ export async function connectBrowser(options = {}) {
   let context;
   const profile = options.profile || path.join(homedir(), '.pihu-os', 'browser-profile');
   const getContext = async () => {
-    if (!context) context = await chromium.launchPersistentContext(profile, {channel:'chrome',headless:!!options.headless,timeout:30000,env:browserEnvironment()});
+    if (!context) {
+      const launchOptions = {headless:!!options.headless,timeout:30000,env:browserEnvironment()};
+      try {
+        context = await chromium.launchPersistentContext(profile, {...launchOptions,channel:'chrome'});
+      } catch (error) {
+        // Existing Chrome is preferred. Only a missing installation warrants the
+        // bundled fallback; profile locks, permission failures and timeouts stay visible.
+        if (process.env.PIHU_BUNDLED_RUNTIME !== '1' || !/Executable doesn.t exist|distribution.*not found|chrome.*not found/i.test(String(error.message || error))) throw error;
+        context = await chromium.launchPersistentContext(profile, launchOptions);
+      }
+    }
     return context;
   };
   const server = await createConnection({ timeouts:{action:5000,navigation:20000},webmcp:false }, getContext);

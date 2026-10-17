@@ -1,11 +1,17 @@
 """Copy only tracked MCP runtime source into Tauri resources."""
+import argparse
+import os
 import shutil
 import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-REPO = ROOT / "pihu_mcps"
+parser = argparse.ArgumentParser()
+parser.add_argument("--source", type=Path, default=Path(os.environ.get("PIHU_MCP_SOURCE", str(ROOT / "pihu_mcps"))))
+REPO = parser.parse_args().source.resolve()
 DEST = ROOT / "mcp-agent-bundle"
+if not (REPO / "agent/pihu/mcp/cli.py").is_file():
+    raise RuntimeError(f"MCP source is not initialized: {REPO}")
 shutil.rmtree(DEST, ignore_errors=True)
 paths = subprocess.check_output(["git", "-C", str(REPO), "ls-files", "-z", "agent", "mcp/servers"]).decode().split("\0")
 for raw in paths:

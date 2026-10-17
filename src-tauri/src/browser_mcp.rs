@@ -43,7 +43,7 @@ pub async fn browser_mcp_action(app: tauri::AppHandle, payload: serde_json::Valu
     let root = app.path().resource_dir().map_err(|e|e.to_string())?;
     let bundled = root.join("_up_/bin/browser-runtime/bridge.mjs");
     let script = if bundled.exists(){bundled}else{std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../bin/browser-runtime/bridge.mjs")};
-    let node = root.join("_up_/bin/spotify-runtime/node_modules/node/bin/node");
+    let node = root.join(if cfg!(windows) { "runtime/node/node.exe" } else { "runtime/node/node" });
     tauri::async_runtime::spawn_blocking(move || {
         let state = app.state::<BrowserMcpState>();
         let mut session = state.session.lock().map_err(|_|"Browser MCP session lock failed")?;

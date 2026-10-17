@@ -1247,12 +1247,24 @@ export const SettingsWindow: React.FC = () => {
 
                   {/* Diagnosis Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                    {diagnostics.bundle && (
+                      <div className="space-y-2 rounded-2xl border border-white/10 bg-black/10 p-4">
+                        <h3 className="text-sm font-semibold">Release bundle · {diagnostics.bundle.ok ? 'Complete' : 'Needs attention'}</h3>
+                        {diagnostics.bundle.checks.map(check => (
+                          <div key={check.name} className="text-xs">
+                            <span className={check.ok ? 'text-emerald-400' : 'text-rose-400'}>{check.ok ? '✓' : '×'} {check.name}</span>
+                            {!check.ok && <p className="mt-1 break-words text-neutral-400">{check.detail}</p>}
+                          </div>
+                        ))}
+                        {diagnostics.wakeWord.error && <p className="text-xs text-rose-400">{diagnostics.wakeWord.error}</p>}
+                      </div>
+                    )}
                     {/* STT Status Card */}
                     <div className="p-3.5 rounded-2xl bg-black/[0.12] backdrop-blur-lg border border-white/5 flex items-center justify-between">
                       <div className="pr-2">
                         <span className="text-[10px] text-neutral-500 font-semibold block">STT Engine</span>
                         <span className="text-xs font-bold text-neutral-200 block truncate">
-                          {diagnostics.stt.activeEngine === 'whisper' ? 'Whisper.cpp GGML Base' : 'Gemini Live Cloud STT'}
+                          {diagnostics.stt.activeEngine === 'whisper' ? 'Whisper.cpp Small (Hindi + English)' : 'Gemini Live Cloud STT'}
                         </span>
                         <span className="text-[10px] text-neutral-400 block">
                           {diagnostics.stt.whisper.online 
@@ -1290,7 +1302,7 @@ export const SettingsWindow: React.FC = () => {
                             ? 'Sarvam AI (Aarti hi-IN)' 
                             : diagnostics.tts.activeEngine === 'elevenlabs' 
                             ? 'ElevenLabs Multilingual' 
-                            : 'macOS Native Speech'}
+                            : 'System Native Speech'}
                         </span>
                         <span className="text-[10px] text-neutral-400 block">
                           {diagnostics.tts.kokoro.online 
@@ -1299,7 +1311,7 @@ export const SettingsWindow: React.FC = () => {
                             ? `Sarvam Aarti (${diagnostics.tts.sarvam.latencyMs ?? 0}ms)` 
                             : diagnostics.tts.elevenLabs.online 
                             ? 'ElevenLabs Multilingual' 
-                            : 'macOS Native Voice'}
+                            : 'System Native Voice'}
                         </span>
                       </div>
                       <div className="flex flex-col items-end gap-1">
@@ -1328,10 +1340,10 @@ export const SettingsWindow: React.FC = () => {
                       <div>
                         <span className="text-[10px] text-neutral-500 font-semibold block">WakeWord Listener</span>
                         <span className="text-xs font-bold text-neutral-200">OpenWakeWord + Silero VAD</span>
-                        <span className="text-[10px] text-neutral-400 block">pyaudio stream 16kHz</span>
+                        <span className="text-[10px] text-neutral-400 block">Microphone · PCM 16 kHz</span>
                       </div>
-                      <span className="text-[10px] font-mono text-emerald-400 px-2 py-0.5 rounded-md bg-emerald-500/10">
-                        {diagnostics.wakeWord.modelsCount} Models Ready
+                      <span className={`text-[10px] font-mono px-2 py-0.5 rounded-md ${diagnostics.wakeWord.online ? 'text-emerald-400 bg-emerald-500/10' : 'text-rose-400 bg-rose-500/10'}`}>
+                        {diagnostics.wakeWord.online ? `${diagnostics.wakeWord.modelsCount} models · Listening` : 'Not running'}
                       </span>
                     </div>
 

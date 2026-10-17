@@ -46,7 +46,7 @@ def init_model():
     resource_models_dir = os.path.normpath(os.path.join(current_dir, '..', '_up_', 'models', 'stt'))
     user_models_dir = os.path.expanduser('~/.pihu-os/models/stt')
     source_models_dir = os.path.join(project_root, 'models', 'stt')
-    models_dir = next((path for path in (user_models_dir, resource_models_dir, source_models_dir)
+    models_dir = next((path for path in (os.path.join(os.environ.get('PIHU_RESOURCE_DIR', ''), 'runtime', 'models', 'stt'), user_models_dir, resource_models_dir, source_models_dir)
                        if os.path.isdir(path) and any(os.path.isfile(os.path.join(path, name))
                        for name in ('ggml-small.bin', 'ggml-base.bin', 'ggml-base.en.bin'))), user_models_dir)
     os.makedirs(models_dir, exist_ok=True)
@@ -67,6 +67,10 @@ def init_model():
                 return True
             except Exception as e:
                 logger.warning(f"Could not load {c}: {e}")
+
+    if os.environ.get('PIHU_BUNDLED_RUNTIME') == '1':
+        logger.error('Bundled Whisper model missing or failed to load; reinstall this release.')
+        return False
 
     # 2. Try loading multilingual 'small' / 'base' model via pywhispercpp auto-download
     for fallback_name in ['small', 'base', 'base.en']:
@@ -157,7 +161,9 @@ async def handle_client(websocket):
                 data = json.loads(message)
                 logger.info(f"Received JSON message: {data}")
                 
-                if data.get("type") == "reset":
+                if data.get("type") == "diagnostics":
+                    await websocket.send(json.dumps({"type": "diagnostics", "service": "pihu-stt", "ready": model is not None}))
+                elif data.get("type") == "reset":
                     audio_accumulator.clear()
                 elif data.get("type") == "process":
                     if model and len(audio_accumulator) > 0:

@@ -1,6 +1,6 @@
 {
   "productName": "Pihu OS",
-  "version": "1.2.7",
+  "version": "1.2.8",
   "identifier": "com.mayankjha.pihuos",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -72,9 +72,10 @@
       "../bin/pihu-project-mcp.js",
       "../bin/browser-runtime/",
       "../bin/spotify-runtime/",
-      "runtime/whatsapp-bridge/*",
-      "runtime/tts/hub/",
-      "pihu-first-launch.sh"
+      "pihu-first-launch.sh",
+      "runtime/",
+      "python/runtime_check.py",
+      "python/espeak_runtime.py"
     ],
     "category": "Productivity",
     "copyright": "© 2026 Mayank Jha. All rights reserved.",
@@ -116,10 +117,7 @@
       },
       "deb": {
         "depends": [
-          "python3",
-          "python3-pip",
-          "python3-venv",
-          "portaudio19-dev"
+          "libportaudio2"
         ]
       }
     }

@@ -31,15 +31,17 @@ SAMPLE_RATE = 24000
 def init_pipelines():
     global pipeline_hi, pipeline_en
     try:
+        from espeak_runtime import configure_espeak
+        configure_espeak()
         print("[TTS Server] Initializing Kokoro Dual Pipelines...", flush=True)
         try:
-            pipeline_hi = KPipeline(lang_code='h')
+            pipeline_hi = KPipeline(repo_id="hexgrad/Kokoro-82M", lang_code='h')
             print("[TTS Server] ✅ Kokoro Hindi Pipeline (hf_alpha) Ready!", flush=True)
         except Exception as eh:
             print(f"[TTS Server] ⚠️ Kokoro Hindi unavailable: {eh}", flush=True)
 
         try:
-            pipeline_en = KPipeline(lang_code='a')
+            pipeline_en = KPipeline(repo_id="hexgrad/Kokoro-82M", lang_code='a')
             print("[TTS Server] ✅ Kokoro English Pipeline (af_bella) Ready!", flush=True)
         except Exception as ea:
             print(f"[TTS Server] ⚠️ Kokoro English unavailable: {ea}", flush=True)
@@ -196,9 +198,10 @@ def synthesize_speech(text: str, requested_voice: str = 'auto', speed: float = 1
 
 @app.route('/health', methods=['GET'])
 def health():
-    ready = bool(pipeline_hi or pipeline_en)
+    ready = bool(pipeline_hi and pipeline_en)
     if ready:
         return {
+            "service": "pihu-tts",
             "status": "ready",
             "hindi_ready": pipeline_hi is not None,
             "english_ready": pipeline_en is not None

@@ -17,12 +17,13 @@ jobs:
         include:
           - platform: macos-latest
             target: aarch64-apple-darwin
-          - platform: macos-latest
+          - platform: macos-15-intel
             target: x86_64-apple-darwin
           - platform: windows-latest
             target: ''
           - platform: ubuntu-22.04
             target: ''
+    timeout-minutes: 90
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
@@ -53,6 +54,8 @@ jobs:
         with:
           python-version: '3.12'
 
+      - uses: astral-sh/setup-uv@v6
+
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24.x'
@@ -74,9 +77,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            build-essential curl file libasound2-dev libayatana-appindicator3-dev \
+            build-essential curl file libasound2-dev libnss3 libgbm1 libayatana-appindicator3-dev \
             librsvg2-dev libssl-dev libwebkit2gtk-4.1-dev patchelf pkg-config \
-            python3-dev python3-venv rpm xdg-utils
+            python3-dev python3-venv libportaudio2 rpm xdg-utils
 
       - name: Test account file access on a clean environment
         shell: bash
@@ -136,6 +139,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           PIHU_BRIDGE_PREBUILT: '1'
+          PIHU_TARGET: ${{ matrix.target }}
         with:
           tagName: v__VERSION__
           releaseName: Pihu OS v__VERSION__
@@ -153,6 +157,12 @@ jobs:
           APP="src-tauri/target/$PIHU_TARGET/release/bundle/macos/Pihu OS.app"
           test -f "$APP/Contents/_CodeSignature/CodeResources"
           codesign --verify --deep --strict --verbose=2 "$APP"
+
+      - name: Validate installed runtime offline before publishing
+        env:
+          PIHU_TARGET: ${{ matrix.target }}
+        shell: bash
+        run: python bin/verify-packaged-runtime.py --target "$PIHU_TARGET"
 
   publish:
     name: Publish GitHub release

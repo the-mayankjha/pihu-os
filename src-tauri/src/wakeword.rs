@@ -5,6 +5,8 @@ use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, State, Manager};
 use serde::Serialize;
 
+pub static HEALTH: std::sync::Mutex<(bool, Option<String>)> = std::sync::Mutex::new((false, None));
+
 pub struct WakewordState {
     pub stdin: Mutex<Option<ChildStdin>>,
 }
@@ -74,6 +76,7 @@ pub fn start_wakeword_engine(app: AppHandle) {
     {
         Ok(child) => child,
         Err(e) => {
+            *HEALTH.lock().unwrap() = (false, Some(format!("Cannot start wake-word engine: {e}")));
             eprintln!("Failed to start python wakeword engine: {}", e);
             return;
         }
@@ -92,6 +95,9 @@ pub fn start_wakeword_engine(app: AppHandle) {
         let reader = BufReader::new(stdout);
         for line in reader.lines() {
             if let Ok(line) = line {
+                if line.contains("WAKEWORD_READY") { *HEALTH.lock().unwrap() = (true, None); }
+                if line.contains("WAKEWORD_ERROR") { *HEALTH.lock().unwrap() = (false, Some(line.clone())); }
+
                 if line.starts_with("WAKEWORD_DETECTED:") {
                     let parts: Vec<&str> = line.split(":").collect();
                     if parts.len() >= 2 {
@@ -113,6 +119,9 @@ pub fn start_wakeword_engine(app: AppHandle) {
                 }
             }
         }
+        let mut health = HEALTH.lock().unwrap();
+        health.0 = false;
+        if health.1.is_none() { health.1 = Some("Wake-word process exited. Check microphone permission and runtime dependencies.".into()); }
     });
 
     // Thread to read stderr
@@ -120,6 +129,7 @@ pub fn start_wakeword_engine(app: AppHandle) {
         let reader = BufReader::new(stderr);
         for line in reader.lines() {
             if let Ok(line) = line {
+                if line.contains("WAKEWORD_ERROR") { *HEALTH.lock().unwrap() = (false, Some(line.clone())); }
                 eprintln!("[WakeWord Stderr] {}", line);
             }
         }

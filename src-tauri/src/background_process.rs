@@ -11,6 +11,8 @@ pub fn command(program: impl AsRef<OsStr>) -> Command {
         const CREATE_NO_WINDOW: u32 = 0x08000000;
         command.creation_flags(CREATE_NO_WINDOW);
     }
+    #[cfg(not(test))]
+    crate::bundled_runtime::configure(&mut command);
     command
 }
 

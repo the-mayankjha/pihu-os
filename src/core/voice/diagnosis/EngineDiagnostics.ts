@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core';
 import { create } from 'zustand';
 import { useSettingsStore } from '../../../stores/settingsStore';
 import { useVoiceStore } from '../../../stores/voiceStore';
@@ -12,6 +13,7 @@ export interface ServiceDiagnosis {
 }
 
 export interface EngineDiagnosticsState {
+  bundle: { ok: boolean; checks: { name: string; ok: boolean; detail: string }[] } | null;
   isDiagnosing: boolean;
   lastDiagnosedAt: number | null;
   
@@ -47,6 +49,7 @@ export interface EngineDiagnosticsState {
 }
 
 export const useDiagnosticsStore = create<EngineDiagnosticsState>((set, get) => ({
+  bundle: null,
   isDiagnosing: false,
   lastDiagnosedAt: null,
 
@@ -100,18 +103,18 @@ export const useDiagnosticsStore = create<EngineDiagnosticsState>((set, get) => 
     },
     native: {
       name: 'System SpeechSynthesis (Native)',
-      online: true,
-      latencyMs: 0,
-      statusText: 'Available',
+      online: false,
+      latencyMs: null,
+      statusText: 'Not checked',
       error: null,
     },
     error: null,
   },
 
   wakeWord: {
-    online: true,
-    modelsCount: 4,
-    models: ['hey_pihu.onnx', 'hi_pihu.onnx', 'pihu.onnx', 'silero_vad.onnx'],
+    online: false,
+    modelsCount: 0,
+    models: [],
     error: null,
   },
 
@@ -119,6 +122,11 @@ export const useDiagnosticsStore = create<EngineDiagnosticsState>((set, get) => 
     if (get().isDiagnosing) return;
     set({ isDiagnosing: true });
 
+    const runtimePromise = invoke<{ ok: boolean; checks: { name: string; ok: boolean; detail: string }[]; wakeWord: { online: boolean; error: string | null } }>('diagnose_runtime').catch(error => ({
+      ok: false, checks: [{ name: 'Bundled runtime', ok: false, detail: String(error) }],
+      wakeWord: { online: false, error: String(error) }
+    }));
+    const nativeAvailable = typeof speechSynthesis !== 'undefined' && speechSynthesis.getVoices().length > 0;
     const settings = useSettingsStore.getState();
 
     // ──────────────── 1. Probe Whisper WebSocket STT ────────────────
@@ -141,13 +149,17 @@ export const useDiagnosticsStore = create<EngineDiagnosticsState>((set, get) => 
             }
           }, 1800);
 
-          ws.onopen = () => {
-            if (!resolved) {
-              resolved = true;
-              clearTimeout(timer);
-              try { ws?.close(); } catch {}
-              resolve(true);
-            }
+          ws.onopen = () => ws?.send(JSON.stringify({ type: 'diagnostics' }));
+          ws.onmessage = event => {
+            try {
+              const data = JSON.parse(event.data);
+              if (!resolved && data.type === 'diagnostics' && data.service === 'pihu-stt') {
+                resolved = true;
+                clearTimeout(timer);
+                ws?.close();
+                resolve(data.ready === true);
+              }
+            } catch { /* Wait for a valid PIHU service response. */ }
           };
           ws.onerror = () => {
             if (!resolved) {
@@ -161,7 +173,7 @@ export const useDiagnosticsStore = create<EngineDiagnosticsState>((set, get) => 
         const elapsed = Math.round(performance.now() - startTime);
         if (wsAvailable) {
           return {
-            name: 'Whisper.cpp GGML Base',
+            name: 'Whisper.cpp Small (Hindi + English)',
             online: true,
             latencyMs: elapsed,
             statusText: `Online (${elapsed}ms)`,
@@ -170,7 +182,7 @@ export const useDiagnosticsStore = create<EngineDiagnosticsState>((set, get) => 
           };
         } else {
           return {
-            name: 'Whisper.cpp GGML Base',
+            name: 'Whisper.cpp Small (Hindi + English)',
             online: false,
             latencyMs: null,
             statusText: 'Offline',
@@ -180,7 +192,7 @@ export const useDiagnosticsStore = create<EngineDiagnosticsState>((set, get) => 
         }
       } catch (e: any) {
         return {
-          name: 'Whisper.cpp GGML Base',
+          name: 'Whisper.cpp Small (Hindi + English)',
           online: false,
           latencyMs: null,
           statusText: 'Offline',
@@ -251,7 +263,7 @@ export const useDiagnosticsStore = create<EngineDiagnosticsState>((set, get) => 
         const elapsed = Math.round(performance.now() - startTime);
         if (res.ok) {
           const data = await res.json().catch(() => ({}));
-          const ready = data.status === 'ready';
+          const ready = data.service === 'pihu-tts' && data.status === 'ready' && data.hindi_ready === true && data.english_ready === true;
           return {
             name: 'Kokoro Neural Synthesizer',
             online: ready,
@@ -377,6 +389,7 @@ export const useDiagnosticsStore = create<EngineDiagnosticsState>((set, get) => 
       probeElevenLabs()
     ]);
 
+    const runtime = await runtimePromise;
     // ──────────────── Resolve STT Active & Fallback ────────────────
     let sttActive: 'whisper' | 'gemini_live' = 'whisper';
     let sttIsFallback = false;
@@ -433,7 +446,7 @@ export const useDiagnosticsStore = create<EngineDiagnosticsState>((set, get) => 
       } else {
         ttsActive = 'native';
         ttsIsFallback = true;
-        ttsError = `Local AI & Cloud TTS offline. Active fallback: macOS Native Speech.`;
+        ttsError = `Local AI & Cloud TTS offline. Active fallback: System Native Speech.`;
       }
     }
 
@@ -444,12 +457,13 @@ export const useDiagnosticsStore = create<EngineDiagnosticsState>((set, get) => 
       ? 'Sarvam AI (Aarti hi-IN)' 
       : ttsActive === 'elevenlabs' 
       ? 'ElevenLabs Multilingual' 
-      : 'macOS Native Speech';
+      : 'System Native Speech';
     useVoiceStore.getState().setActiveVoiceEngine(voiceEngineLabel);
     useVoiceStore.getState().setLastTTSError(ttsError);
 
     set({
       isDiagnosing: false,
+      bundle: runtime,
       lastDiagnosedAt: Date.now(),
       stt: {
         activeEngine: sttActive,
@@ -466,19 +480,19 @@ export const useDiagnosticsStore = create<EngineDiagnosticsState>((set, get) => 
         elevenLabs: elevenLabsRes,
         native: {
           name: 'System SpeechSynthesis (Native)',
-          online: true,
-          latencyMs: 0,
-          statusText: 'Always Available',
-          error: null,
+          online: nativeAvailable,
+          latencyMs: null,
+          statusText: nativeAvailable ? 'Available' : 'Unavailable',
+          error: nativeAvailable ? null : 'No system speech voices available',
           details: 'Web Speech API'
         },
         error: ttsError,
       },
       wakeWord: {
-        online: true,
-        modelsCount: 4,
-        models: ['hey_pihu.onnx', 'hi_pihu.onnx', 'pihu.onnx', 'silero_vad.onnx'],
-        error: null,
+        online: runtime.wakeWord.online,
+        modelsCount: runtime.checks.filter(c => c.name.startsWith('Wake model:') && c.ok).length,
+        models: runtime.checks.filter(c => c.name.startsWith('Wake model:') && c.ok).map(c => c.name.slice(12)),
+        error: runtime.wakeWord.error,
       }
     });
   }

@@ -15,9 +15,14 @@ mod mcp_market;
 mod shortcuts;
 mod background_process;
 mod account_file;
+mod bundled_runtime;
 use tauri::Manager;
 
 pub fn get_python_cmd() -> String {
+    if let Some(python) = bundled_runtime::python() {
+        // Release builds must never silently use the host Python or an old user venv.
+        if !cfg!(debug_assertions) || python.is_file() { return python.to_string_lossy().into_owned(); }
+    }
     // 1. Check ~/.pihu-os/venv (installed app)
     let home = std::env::var("HOME").unwrap_or_default();
     let installed_venv = format!("{home}/.pihu-os/venv/bin/python");
@@ -121,6 +126,7 @@ fn main() {
         .manage(system_monitor::SystemMonitorState::new())
         .manage(spotify_mcp::SpotifyMcpState::default())
         .invoke_handler(tauri::generate_handler![
+            bundled_runtime::diagnose_runtime,
             spirits::sync_spirits,
             spirits::refresh_spirit_windows,
             spirits::sync_voice_overlay,
@@ -157,8 +163,10 @@ fn main() {
             }
         })
         .setup(|app| {
-            // Auto-setup on first launch (installs Python venv, models, credentials)
-            run_first_launch_setup();
+            // Release resources are prepared at build time; legacy setup is developer-only.
+            let resources = app.path().resource_dir()?;
+            bundled_runtime::initialize(resources);
+            if cfg!(debug_assertions) { run_first_launch_setup(); }
 
             let app_handle = app.handle().clone();
             wakeword::start_wakeword_engine(app_handle.clone());

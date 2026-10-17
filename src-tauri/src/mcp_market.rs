@@ -3,7 +3,9 @@ use std::path::PathBuf;
 use tauri::Manager;
 
 fn agent_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
-    let home = std::env::var("HOME").map_err(|e| e.to_string())?;
+    let home = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")).map_err(|e| e.to_string())?;
+    let bundled = app.path().resource_dir().map_err(|e| e.to_string())?.join("mcp-agent-bundle/agent");
+    if !cfg!(debug_assertions) { return Ok(bundled); }
     let candidates = [
         PathBuf::from(format!("{home}/.pihu-os/agent")),
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("pihu_mcps/agent"),
@@ -23,8 +25,9 @@ fn agent_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
 fn run(app: &tauri::AppHandle, args: &[&str]) -> Result<String, String> {
     let agent = agent_path(app)?;
     let resource_dir = app.path().resource_dir().map_err(|e| e.to_string())?;
-    let home = std::env::var("HOME").unwrap_or_default();
+    let home = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")).unwrap_or_default();
     let server_candidates = [
+        resource_dir.join("mcp-agent-bundle/mcp/servers"),
         PathBuf::from(format!("{home}/.pihu-os/mcp/servers")),
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("pihu_mcps/mcp/servers"),
         resource_dir.join("mcp-agent-bundle/mcp/servers"),
