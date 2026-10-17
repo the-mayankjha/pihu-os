@@ -18,7 +18,7 @@
  *   ./bin/pihu mcp       # Start pihu-project-mcp server
  */
 
-import { spawn, execSync } from 'child_process';
+import { spawn, spawnSync, execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';

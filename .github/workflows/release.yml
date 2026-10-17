@@ -101,6 +101,21 @@ jobs:
         env:
           PIHU_TARGET: ${{ matrix.target }}
 
+      - name: Read release notes
+        id: release-notes
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { appendFileSync, existsSync, readFileSync } from 'node:fs';
+          import { randomUUID } from 'node:crypto';
+          const file = `docs/release-notes/${process.env.GITHUB_REF_NAME}.md`;
+          const body = existsSync(file)
+            ? readFileSync(file, 'utf8').trim()
+            : 'Installers and signed in-app updater bundles for macOS, Windows, and Linux.';
+          const delimiter = `PIHU_NOTES_${randomUUID()}`;
+          appendFileSync(process.env.GITHUB_OUTPUT, `body<<${delimiter}\n${body}\n${delimiter}\n`);
+          NODE
+
       - name: Build and upload release assets
         uses: tauri-apps/tauri-action@action-v1.0.0
         env:
@@ -111,7 +126,7 @@ jobs:
         with:
           tagName: v__VERSION__
           releaseName: Pihu OS v__VERSION__
-          releaseBody: Installers and signed in-app updater bundles for macOS, Windows, and Linux.
+          releaseBody: ${{ steps.release-notes.outputs.body }}
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.platform == 'ubuntu-22.04' && '--bundles deb,appimage' || (matrix.target != '' && format('--target {0}', matrix.target) || '') }}
