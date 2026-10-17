@@ -53,31 +53,17 @@ export const todoTools: ActionTool[] = [
         repeat: args.repeat,
       });
 
-      // Synchronize to Google Tasks if connected
-      let googleTaskSynced = false;
-      try {
-        const { useSettingsStore } = await import('../../../../stores/settingsStore');
-        const settings = useSettingsStore.getState();
-        if (settings.googleAccountConnected || (settings.connectedGoogleAccounts && settings.connectedGoogleAccounts.length > 0)) {
-          const { runGoogleApiClient } = await import('./googleWorkspaceTools');
-          const syncRes = await runGoogleApiClient('create_task', args.text, args.dueDate || '', args.description || '');
-          if (syncRes && !syncRes.error) {
-            googleTaskSynced = true;
-          }
-        }
-      } catch (err) {
-        console.warn('[todoTools] Google Tasks sync error:', err);
-      }
+      // Local task creation must not wait on optional cloud services.
+      const layout = useLayoutStore.getState();
+      if (!layout.widgets['task-window']?.isOpen) layout.toggleWidget('task-window');
 
       return {
         success: true,
         data: {
           added: args.text,
           priority: args.priority ?? 'Medium',
-          syncedToGoogleTasks: googleTaskSynced,
-          message: googleTaskSynced
-            ? `Created task "${args.text}" in PIHU Tasks and synced to Google Tasks, Sir.`
-            : `Created task "${args.text}" in PIHU Tasks, Sir.`
+          syncedToGoogleTasks: false,
+          message: `Created task "${args.text}" in PIHU Tasks.`
         }
       };
     },

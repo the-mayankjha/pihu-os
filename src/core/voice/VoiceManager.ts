@@ -155,7 +155,13 @@ export class VoiceManager {
     this.safetyTimer = setTimeout(() => {
       if (this.isProcessing || useOrbStore.getState().currentState !== OrbState.IDLE) {
         console.warn('[VOICE MANAGER] ⚠️ Safety timeout! Force-resetting to IDLE.');
+        const wasProcessing = this.isProcessing;
         this.resetToIdle();
+        if (wasProcessing) {
+          useVoiceStore.getState().setIsActive(true);
+          useVoiceStore.getState().setResponse('This request took too long. Check Connections or Engine Diagnostics before retrying; an external action may still have completed.');
+          useVoiceStore.getState().setProcessingStatus(null);
+        }
       }
     }, duration);
   }
@@ -183,7 +189,7 @@ export class VoiceManager {
   }
 
   private setupListeners() {
-    this.sttManager.onIdleTimeout = () => this.resetToIdle();
+    this.sttManager.onIdleTimeout = () => { if (!this.isProcessing) this.resetToIdle(); };
 
     // ── STT Transcription received ──────────────────────────────────────────
     this.sttManager.onTranscription = async (text) => {
@@ -195,6 +201,11 @@ export class VoiceManager {
       }
 
       console.log('[VOICE MANAGER] Valid transcription. Processing intent...');
+      this.isProcessing = true;
+      useVoiceStore.getState().setIsActive(true);
+      this.sttManager.stopListening();
+      useVoiceStore.getState().setIsListening(false);
+      this.startSafetyTimer(150000);
       useVoiceStore.getState().setTranscription(text);
       const { planSequence } = await import('./../automation/sequenceIntent');
       const sequence = planSequence(text);
@@ -205,6 +216,7 @@ export class VoiceManager {
       if (parseBrowserIntent(text) || parseUIIntent(text)) this.startSafetyTimer(90000);
       if (sequence && !sequence.error) this.startSafetyTimer(sequence.steps.length * 20000 + 45000);
 
+      if (/\b(?:google|gmail|emails?|mails?|calendar|tasks?|drive|sheets?|slides?|docs?)\b/i.test(text)) this.startSafetyTimer(150000);
       if (messageNotifications.awaitingReply) this.startSafetyTimer(150000);
 
       try {
@@ -400,6 +412,7 @@ export class VoiceManager {
     if (!trimmed) return '';
 
     console.log(`[VOICE MANAGER] 💬 Processing command palette text: "${trimmed}"`);
+    this.startSafetyTimer(150000);
     this.speechInterrupted = false;
     this.isProcessing = true;
     this.cancelInterruptionMonitor();

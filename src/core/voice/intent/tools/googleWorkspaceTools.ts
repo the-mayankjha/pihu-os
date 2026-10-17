@@ -4,20 +4,23 @@ import type { ActionTool, ToolResult } from './types';
 export const runGoogleApiClient = async (command: string, ...args: string[]): Promise<any> => {
   try {
     const { invoke } = await import('@tauri-apps/api/core');
-    // Encode [command, ...args] cleanly into base64 to avoid shell escaping / multiline issues
-    const payloadJson = JSON.stringify([command, ...args]);
-    const b64Payload = btoa(unescape(encodeURIComponent(payloadJson)));
-
-    const pyCmd = `python3 -c "import os, sys, subprocess, base64, json; payload = json.loads(base64.b64decode('${b64Payload}').decode('utf-8')); script = next((p for p in ['src-tauri/pihu_mcps/mcp/servers/google_api_client.py', 'pihu_mcps/mcp/servers/google_api_client.py', '/Users/mayankjha/Documents/projects/pihu-os/src-tauri/pihu_mcps/mcp/servers/google_api_client.py'] if os.path.exists(p)), None); print(subprocess.check_output(['python3', script] + payload).decode('utf-8')) if script else print('{}')"`;
-    
-    const result = await invoke<string>('execute_shell_command', { command: pyCmd });
-    if (result && result.trim().startsWith('{')) {
-      return JSON.parse(result);
-    }
-    return { error: 'Invalid response from Google API client', raw: result };
-  } catch (e: any) {
-    return { error: e?.message || String(e) };
-  }
+    const routes: Record<string, { name: string; args: Record<string, unknown>; list?: string }> = {
+      search_gmail: { name: 'gmail_search', args: { query: args[0] || '', max_results: Number(args[1]) || 5 } },
+      get_unread_emails: { name: 'gmail_check_unread', args: {} },
+      send_email: { name: 'gmail_send', args: { recipient: args[0], subject: args[1], body: args[2] } },
+      list_calendar_events: { name: 'calendar_list', args: { max_results: Number(args[0]) || 5 }, list: 'events' },
+      create_calendar_event: { name: 'calendar_create_event', args: { summary: args[0], start_time: args[1], end_time: args[2], description: args[3] } },
+      list_tasks: { name: 'tasks_list_tasks', args: {}, list: 'tasks' },
+      create_task: { name: 'tasks_create_task', args: { title: args[0], ...(args[1] ? { due: args[1] } : {}), notes: args[2] || '' } },
+      search_drive: { name: 'drive_search', args: { query: args[0] || '' }, list: 'files' },
+    };
+    const route = routes[command];
+    if (!route) return { error: `Unsupported Google action: ${command}` };
+    const raw = await invoke<string>('mcp_call_tool', { serverId: 'google-workspace-mcp', toolName: route.name, arguments: route.args });
+    const data = JSON.parse(raw);
+    if (data?.error || data?.status === 'error') return { error: data.error || data.message || 'Google action failed' };
+    return route.list && Array.isArray(data) ? { [route.list]: data, count: data.length } : data;
+  } catch (error) { return { error: String(error) }; }
 };
 
 // Helper to execute pending email send
@@ -455,18 +458,18 @@ export const googleWorkspaceTools: ActionTool[] = [
           },
           start_time: {
             type: 'STRING',
-            description: 'Start time in ISO format or descriptive time string.',
+            description: 'Start time in RFC3339 format with an explicit timezone offset.',
           },
           end_time: {
             type: 'STRING',
-            description: 'End time in ISO format or descriptive time string.',
+            description: 'End time in RFC3339 format with timezone; omit to use one hour after start.',
           },
           description: {
             type: 'STRING',
             description: 'Optional description or agenda for the meeting.',
           },
         },
-        required: ['summary'],
+        required: ['summary', 'start_time'],
       },
     },
     execute: async (args): Promise<ToolResult> => {

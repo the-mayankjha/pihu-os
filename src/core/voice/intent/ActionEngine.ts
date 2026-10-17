@@ -1,3 +1,4 @@
+import { readGmailSubject } from '../../services/gmailRead';
 import { draftProjectGoogleDoc } from '../../services/googleDocDraft';
 import { hasMcpUpdate } from '../../services/mcpVersion';
 import { openMcpConfiguration } from '../../services/mcpNavigation';
@@ -345,7 +346,7 @@ export class ActionEngine {
       if (toolRes.success && toolRes.data?.message) {
         return toolRes.data.message;
       }
-      return isHindi ? "Gmail inbox check kar liya gaya hai." : "Checked your Gmail inbox, Sir.";
+      return `Could not check Gmail: ${toolRes.error || 'No message details were returned.'}`;
     }
 
     // B. Send Email Fast Path (Stage preview card)
@@ -450,7 +451,7 @@ export class ActionEngine {
     }
 
     // Tasks & Todo Window (Open / Close)
-    if (/\b(?:task\s+window|tasks\s+window|task\s+manager|tasks|todos|todo\s+window|todo\s+list)\b/i.test(lower) &&
+    if (!/\bgoogle\b/i.test(lower) && /\b(?:task\s+window|tasks\s+window|task\s+manager|tasks|todos|todo\s+window|todo\s+list)\b/i.test(lower) &&
         /\b(?:open|show|kholo|view|dikhao|display|launch|close|band|hatao|hide)\b/i.test(lower)) {
       const layout = useLayoutStore.getState();
       const isClose = /\b(?:close|hide|band|hatao|dismiss)\b/i.test(lower);
@@ -745,6 +746,41 @@ export class ActionEngine {
         return "";
       }
 
+      const readMail = cleanText.replace(/^(?:can you|could you|please)\s+/i, '').match(/^read\s+(?:(?:the|this)\s+)?(?:(?:email|mail)(?:\s+(?:called|titled|about|with subject))?\s+)?(.+)$/i);
+      if (readMail && /\b(?:mail|email|gmail)\b/i.test(cleanText)) {
+        onMode('executing');
+        useVoiceStore.getState().setProcessingStatus('Finding and reading the email…');
+        try { return await readGmailSubject(readMail[1]); }
+        catch (error) { return `I could not read that email: ${String(error)}`; }
+        finally { useVoiceStore.getState().setProcessingStatus(null); }
+      }
+      if (/\bgoogle\s+tasks\b/i.test(cleanText) && /^(?:please\s+)?(?:list|show|read|check)\b/i.test(cleanText)) {
+        onMode('executing');
+        try {
+          const raw = await invoke<string>('mcp_call_tool', {serverId: 'google-workspace-mcp', toolName: 'tasks_list_tasks', arguments: {}});
+          const data = JSON.parse(raw);
+          if (!Array.isArray(data)) return `Could not list Google Tasks: ${data.error || data.message || 'Unexpected response'}`;
+          return data.length ? `Your Google Tasks: ${data.map((item: {title: string}) => item.title).join('; ')}` : 'You have no active Google Tasks.';
+        } catch (error) { return `Could not list Google Tasks: ${String(error)}`; }
+      }
+      const taskRequest = cleanText.replace(/^(?:can you|could you|please)\s+/i, '').match(/^(?:create|add|make)\s+(?:a\s+|an?\s+new\s+)?(?:(google)\s+)?(?:task|todo)\s+(?:(?:called|named|titled)\s+)?(.+?)[.!?]*$/i);
+      if (taskRequest) {
+        onMode('executing');
+        const google = !!taskRequest[1] || /\s+(?:in|on|to)\s+google(?:\s+tasks)?[.!?]*$/i.test(taskRequest[2]);
+        const title = taskRequest[2].replace(/\s+(?:in|on|to)\s+google(?:\s+tasks)?[.!?]*$/i, '').trim();
+        if (!title) return 'What should the task be called?';
+        if (google) {
+          try {
+            const raw = await invoke<string>('mcp_call_tool', { serverId: 'google-workspace-mcp', toolName: 'tasks_create_task', arguments: { title } });
+            const result = JSON.parse(raw);
+            if (result.error || result.status === 'error' || !result.task_id) return `Could not create the Google Task: ${result.error || result.message}`;
+            return `Created Google Task “${title}”.`;
+          } catch (error) { return `Could not create the Google Task. Check that Google Workspace MCP is installed and connected. ${String(error)}`; }
+        }
+        const result = await executeTool('todo_add', { text: title });
+        return result.success ? result.data?.message || `Created task “${title}” in PIHU Tasks.` : `Could not create the task: ${result.error || 'Unknown error'}`;
+      }
+
       if (/^(?:please\s+)?(?:install|add|get|update|upgrade)\s+/i.test(cleanText) || /^(?:check|list|show)(?:\s+for)?\s+(?:mcp\s+)?updates[.!?]*$/i.test(cleanText)) {
         onMode('executing');
         const installed = await this.tryFastDirectIntent(cleanText, executeTool);
@@ -910,8 +946,9 @@ export class ActionEngine {
         executeTool
       );
 
+      const requestTimeout = /\b(?:google|gmail|emails?|mails?|calendar|tasks?|drive|sheets?|slides?|docs?)\b/i.test(cleanText) ? 90000 : 25000;
       const timeoutPromise = new Promise<string>((_, reject) =>
-        setTimeout(() => reject(new Error('LLM request timed out after 25s')), 25000)
+        setTimeout(() => reject(new Error('AI request timed out; check whether any external action completed before retrying')), requestTimeout)
       );
 
       const rawResponse = await Promise.race([llmPromise, timeoutPromise]);
