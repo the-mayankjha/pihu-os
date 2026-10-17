@@ -125,4 +125,5 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG_NAME: ${{ github.ref_name }}
-        run: gh release edit "$TAG_NAME" --draft=false
+          REPOSITORY: ${{ github.repository }}
+        run: gh release edit "$TAG_NAME" --repo "$REPOSITORY" --draft=false
