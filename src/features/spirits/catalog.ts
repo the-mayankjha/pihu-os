@@ -1,4 +1,6 @@
 import type { Spirit } from './model';
+import { SPIRIT_EXTRA_ANIMATIONS } from './model';
+import type { SpiritExtraAnimation } from './model';
 import type { SocialAction, SocialCompanion } from './socialModel';
 
 // Pihu is the single bundled Spirit. Other packages are fetched through PIHU
@@ -141,6 +143,10 @@ export async function loadSpiritAsset(id: string, path: string): Promise<string 
 }
 
 async function loadSpiritAssets(id: string, prefix: string): Promise<string[]> {
+  return (await loadSpiritAssetEntries(id, prefix)).map(([, url]) => url);
+}
+
+async function loadSpiritAssetEntries(id: string, prefix: string): Promise<[string, string][]> {
   const db = await database();
   try {
     const keys = await new Promise<IDBValidKey[]>((resolve, reject) => {
@@ -151,10 +157,20 @@ async function loadSpiritAssets(id: string, prefix: string): Promise<string[]> {
     const paths = keys.map(String).filter(key => key.startsWith(`${id}::${prefix}`)).map(key => key.slice(id.length + 2)).sort();
     if (!paths.length && id === 'pihu') return Object.entries(bundledAssets)
       .filter(([path]) => path.startsWith(`../../../src-tauri/spirits/pihu/${prefix}`))
-      .sort(([a], [b]) => a.localeCompare(b)).map(([, url]) => url);
-    return (await Promise.all(paths.map(path => loadSpiritAsset(id, path))))
-      .filter((url): url is string => Boolean(url));
+      .sort(([a], [b]) => a.localeCompare(b)).map(([path, url]) => [path.slice('../../../src-tauri/spirits/pihu/'.length), url]);
+    const entries: Array<[string, string | undefined]> = await Promise.all(paths.map(async path => [path, await loadSpiritAsset(id, path)]));
+    return entries.filter((entry): entry is [string, string] => Boolean(entry[1]));
   } finally { db.close(); }
+}
+
+export async function spiritExtraAnimationStrips(id: string): Promise<Partial<Record<SpiritExtraAnimation, string>>> {
+  const entries = await loadSpiritAssetEntries(id, 'animations/');
+  const byPath = new Map(entries);
+  return Object.fromEntries(Object.entries(SPIRIT_EXTRA_ANIMATIONS)
+    .flatMap(([name, animation]) => {
+      const url = byPath.get(animation.path);
+      return url ? [[name, url]] : [];
+    })) as Partial<Record<SpiritExtraAnimation, string>>;
 }
 
 export async function spiritSocialFrames(action: SocialAction, companion: SocialCompanion = 'pihu'): Promise<string[]> {

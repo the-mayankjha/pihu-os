@@ -64,10 +64,28 @@ export async function loadInstalledMcpTools(): Promise<ActionTool[]> {
       return {
         declaration: { name, description: `[${tool.server}] ${tool.description || tool.name}`, parameters: toGeminiSchema(tool.inputSchema) },
         execute: async (args: Record<string, any>) => {
+          const serverName = tool.server.toLowerCase().replaceAll('_', '-');
+          const browserTask = serverName.includes('playwright') ? 'playwright'
+            : serverName.includes('web-search') ? 'web-search' : null;
+          const callId = browserTask ? crypto.randomUUID() : undefined;
+          if (browserTask && callId) {
+            try {
+              const { emit } = await import('@tauri-apps/api/event');
+              await emit('pihu-spirit-browser-task', { callId, kind: browserTask, active: true });
+            } catch (error) { console.debug('[Spirit] Could not start browser animation:', error); }
+          }
           try {
             const data = await invoke<string>('mcp_call_tool', { serverId: tool.server, toolName: tool.name, arguments: args });
             return { success: true, data };
           } catch (error) { return { success: false, error: String(error) }; }
+          finally {
+            if (browserTask && callId) {
+              try {
+                const { emit } = await import('@tauri-apps/api/event');
+                await emit('pihu-spirit-browser-task', { callId, kind: browserTask, active: false });
+              } catch (error) { console.debug('[Spirit] Could not stop browser animation:', error); }
+            }
+          }
         },
       };
     });

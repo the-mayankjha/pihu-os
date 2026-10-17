@@ -22,7 +22,23 @@ export const ANIMATIONS = {
   review: { row: 8, frames: 6, fps: 6 },
 } as const;
 export type SpiritAnimation = keyof typeof ANIMATIONS;
-export type SpiritPose = SpiritAnimation | 'cat-play' | 'hair-flip' | 'speaking' | 'listening' | 'thinking';
+export const SPIRIT_EXTRA_ANIMATIONS = {
+  'idle-guitar': { path: 'animations/idle/guitar.png', frames: 6, fps: 6, fallback: 'idle' },
+  'idle-sitting': { path: 'animations/idle/sitting.png', frames: 6, fps: 6, fallback: 'idle' },
+  'idle-butterfly': { path: 'animations/idle/butterfly.png', frames: 6, fps: 6, fallback: 'idle' },
+  'idle-cat': { path: 'animations/idle/cat.png', frames: 6, fps: 6, fallback: 'running' },
+  'idle-hairflip': { path: 'animations/idle/hairflip.png', frames: 6, fps: 6, fallback: 'review' },
+  'idle-pouting': { path: 'animations/idle/pouting.png', frames: 6, fps: 6, fallback: 'review' },
+  'talking-expressive': { path: 'animations/talking/expressive.png', frames: 16, fps: 8, fallback: 'review' },
+  talking: { path: 'animations/talking/talking.png', frames: 8, fps: 10, fallback: 'review' },
+  'headphones-transition': { path: 'animations/listening/headphones-transition.png', frames: 8, fps: 10, fallback: 'waiting' },
+  listening: { path: 'animations/listening/focused.png', frames: 6, fps: 6, fallback: 'waiting' },
+  'browser-automation': { path: 'animations/browser/automation.png', frames: 8, fps: 8, fallback: 'running' },
+  'browser-automation-enhanced': { path: 'animations/browser/automation-enhanced.png', frames: 8, fps: 8, fallback: 'running' },
+} as const;
+export type SpiritExtraAnimation = keyof typeof SPIRIT_EXTRA_ANIMATIONS;
+export type SpiritPose = SpiritAnimation | SpiritExtraAnimation | 'cat-play' | 'hair-flip' | 'speaking' | 'thinking';
+export type BrowserSpiritTask = 'playwright' | 'web-search' | null;
 
 export function pihuPose(animation: SpiritAnimation, speaking: boolean, idleMs: number): SpiritPose {
   if (speaking && animation !== 'failed') return 'speaking';
@@ -36,9 +52,29 @@ export function poseConfig(pose: SpiritPose) {
   if (pose === 'cat-play') return { ...ANIMATIONS.running, fps: 4 };
   if (pose === 'hair-flip') return ANIMATIONS.review;
   if (pose === 'speaking') return { row: 3, frames: 8, fps: 10 };
-  if (pose === 'listening') return { row: 0, frames: 16, fps: 8 };
   if (pose === 'thinking') return { ...ANIMATIONS.running, fps: 6 };
-  return ANIMATIONS[pose];
+  if (Object.hasOwn(SPIRIT_EXTRA_ANIMATIONS, pose)) {
+    const extra = SPIRIT_EXTRA_ANIMATIONS[pose as SpiritExtraAnimation];
+    const fallback = ANIMATIONS[extra.fallback];
+    return { ...fallback, frames: extra.frames, fps: extra.fps };
+  }
+  return ANIMATIONS[pose as SpiritAnimation];
+}
+
+export function pihuV2Pose(animation: SpiritAnimation, speaking: boolean, idleMs: number, browserTask: BrowserSpiritTask = null): SpiritPose {
+  if (browserTask === 'playwright') return 'browser-automation-enhanced';
+  if (browserTask === 'web-search') return 'browser-automation';
+  if (speaking) return 'talking-expressive';
+  if (animation !== 'idle') return animation;
+  // Sitting is reserved for the browser-work transition. Rotate through all
+  // other idle performances before returning to the regular idle loop.
+  const idleCycle = idleMs % 48000;
+  if (idleCycle >= 6000 && idleCycle < 12000) return 'idle-hairflip';
+  if (idleCycle >= 12000 && idleCycle < 18000) return 'idle-cat';
+  if (idleCycle >= 18000 && idleCycle < 24000) return 'idle-butterfly';
+  if (idleCycle >= 24000 && idleCycle < 30000) return 'idle-guitar';
+  if (idleCycle >= 30000 && idleCycle < 36000) return 'idle-pouting';
+  return 'idle';
 }
 
 export interface SpiritActivity {
@@ -47,6 +83,7 @@ export interface SpiritActivity {
   speaking?: boolean;
   listening?: boolean;
   thinking?: boolean;
+  browserTask?: BrowserSpiritTask;
 }
 
 export const SPIRIT_SHORTCUTS = {
