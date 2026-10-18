@@ -1,7 +1,8 @@
 // Build-time only: ship a managed, relocatable CPython, never a developer venv.
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, statSync, readFileSync } from 'node:fs';
+import { resolve, basename } from 'node:path';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const runtime = resolve(root, 'src-tauri/runtime');
@@ -43,3 +44,25 @@ function removeBytecode(directory) {
   }
 }
 removeBytecode(resolve(runtime, 'python'));
+
+// linuxdeploy resolves transitive dependencies outside wheel-specific RPATHs.
+// Retain the wheel copies and also expose private shared libraries centrally.
+if (process.platform === 'linux') {
+  const native = resolve(runtime, 'native');
+  mkdirSync(native, { recursive: true });
+  const hash = path => createHash('sha256').update(readFileSync(path)).digest('hex');
+  const collect = (directory, insideWheelLibraries = false) => {
+    const privateLibraries = insideWheelLibraries || basename(directory).endsWith('.libs');
+    for (const name of readdirSync(directory)) {
+      const source = resolve(directory, name);
+      if (statSync(source).isDirectory()) collect(source, privateLibraries);
+      else if (privateLibraries && name.includes('.so')) {
+        const destination = resolve(native, name);
+        if (existsSync(destination) && hash(source) !== hash(destination)) throw new Error(`Conflicting wheel library: ${name}`);
+        copyFileSync(source, destination);
+      }
+    }
+  };
+  collect(resolve(runtime, 'python/lib/python3.11/site-packages'));
+  console.log('Staged private Python wheel libraries for linuxdeploy and packaged runtime resolution.');
+}
