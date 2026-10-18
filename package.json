@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "tauri": "tauri",
+    "tauri:ci": "node bin/tauri-ci-build.mjs",
     "mcp:project": "node bin/pihu-project-mcp.js",
     "start": "node bin/pihu",
     "pihu:dev": "node bin/pihu dev",

@@ -111,11 +111,6 @@ jobs:
           appendFileSync(process.env.GITHUB_OUTPUT, `body<<${delimiter}\n${body}\n${delimiter}\n`);
           NODE
 
-      - name: Enable CI-owned temporary DMG detach recovery
-        if: runner.os == 'macOS'
-        shell: bash
-        run: echo "$GITHUB_WORKSPACE/bin/macos-ci:$PATH" >> "$GITHUB_PATH"
-
       - name: Build and upload release assets
         uses: tauri-apps/tauri-action@action-v1.0.0
         env:
@@ -129,6 +124,7 @@ jobs:
           NO_STRIP: 'true'
           LD_LIBRARY_PATH: ${{ runner.os == 'Linux' && format('{0}/src-tauri/runtime/native:{0}/src-tauri/runtime/python/lib:{0}/src-tauri/runtime/python/lib/python3.11/site-packages:{0}/src-tauri/runtime/python/lib/python3.11/site-packages/torch/lib:{0}/src-tauri/runtime/python/lib/python3.11/site-packages/onnxruntime/capi', github.workspace) || '' }}
         with:
+          tauriScript: npm run tauri:ci
           tagName: v__VERSION__
           releaseName: Pihu OS v__VERSION__
           releaseBody: ${{ steps.release-notes.outputs.body }}

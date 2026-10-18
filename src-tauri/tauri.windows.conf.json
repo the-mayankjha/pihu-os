@@ -17,6 +17,9 @@
       "python/espeak_runtime.py",
       "runtime.zip",
       "windows/install-runtime.ps1"
+    ],
+    "targets": [
+      "nsis"
     ]
   }
 }
