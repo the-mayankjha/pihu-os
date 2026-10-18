@@ -9,6 +9,7 @@ import platform
 import subprocess
 import sys
 import shutil
+import struct
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--root', type=Path, required=True)
@@ -69,13 +70,44 @@ check('Kokoro model and voices', lambda: [require(next((runtime / 'tts/hub').rgl
 def digest(path):
     with path.open('rb') as stream:
         return hashlib.file_digest(stream, 'sha256').hexdigest()
+def elf_code_digest(path):
+    # linuxdeploy rewrites ELF RPATHs and headers. Fingerprint executable sections
+    # instead of their mutable container size, without trusting arbitrary changes.
+    with path.open('rb') as stream:
+        ident = stream.read(16)
+        if ident[:4] != b'\x7fELF': return None
+        if ident[4] not in (1, 2) or ident[5] not in (1, 2):
+            raise RuntimeError(f'Invalid ELF format: {path.name}')
+        endian = '<' if ident[5] == 1 else '>'
+        wide = ident[4] == 2
+        header_format = endian + ('HHIQQQIHHHHHH' if wide else 'HHIIIIIHHHHHH')
+        header = struct.unpack(header_format, stream.read(struct.calcsize(header_format)))
+        section_offset, section_size, section_count = header[5], header[10], header[11]
+        section_format = endian + ('IIQQQQIIQQ' if wide else 'IIIIIIIIII')
+        digest_code = hashlib.sha256()
+        executable_sections = 0
+        for index in range(section_count):
+            stream.seek(section_offset + index * section_size)
+            section = struct.unpack(section_format, stream.read(struct.calcsize(section_format)))
+            if section[2] & 4:  # SHF_EXECINSTR: code, including PLT stubs
+                stream.seek(section[4])
+                data = stream.read(section[5])
+                if len(data) != section[5]: raise RuntimeError(f'Truncated ELF: {path.name}')
+                digest_code.update(data)
+                executable_sections += 1
+        if not executable_sections: return None
+        return digest_code.hexdigest()
 if args.verify:
     manifest = {'schema': 1, 'platform': sys.platform, 'architecture': platform.machine(), 'files': {}, 'wakeFiles': {}}
     for path in sorted(wake_dir.iterdir()):
         if path.is_file(): manifest['wakeFiles'][path.name] = {'size': path.stat().st_size, 'sha256': digest(path)}
     for path in sorted(runtime.rglob('*')):
         if path.is_file() and path.name != 'manifest.json' and '__pycache__' not in path.parts:
-            manifest['files'][str(path.relative_to(runtime))] = {'size': path.stat().st_size, 'sha256': digest(path)}
+            metadata = {'size': path.stat().st_size, 'sha256': digest(path)}
+            if sys.platform == 'linux':
+                code_hash = elf_code_digest(path)
+                if code_hash: metadata['elfCodeSha256'] = code_hash
+            manifest['files'][str(path.relative_to(runtime))] = metadata
     (runtime / 'manifest.json').write_text(json.dumps(manifest, indent=2))
 def validate_manifest():
     manifest = json.loads(require(runtime / 'manifest.json').read_text())
@@ -85,7 +117,10 @@ def validate_manifest():
     for name, metadata in manifest['files'].items():
         path = runtime / name
         if not path.is_file(): raise RuntimeError(f'Missing packaged file: {name}')
-        if path.stat().st_size != metadata['size']:
+        if metadata.get('elfCodeSha256'):
+            if elf_code_digest(path) != metadata['elfCodeSha256']:
+                raise RuntimeError(f'Corrupt executable code: {name}')
+        elif path.stat().st_size != metadata['size']:
             raise RuntimeError(f'Incorrect file size: {name}')
         if path.suffix in {'.bin', '.onnx', '.pth', '.pt', '.data'} and digest(path) != metadata['sha256']:
             raise RuntimeError(f'Corrupt speech model: {name}')
