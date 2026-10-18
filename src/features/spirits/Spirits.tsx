@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { isTauri, invoke } from '@tauri-apps/api/core';
 import { emit, emitTo, listen } from '@tauri-apps/api/event';
 import { cursorPosition, getCurrentWindow, LogicalPosition } from '@tauri-apps/api/window';
@@ -296,6 +296,12 @@ function SpiritCompanion({ id, version, size, animation, resting = false, speaki
 }
 
 export function SpiritWindow({ id }: { id: string }) {
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    const previous = root.getAttribute('data-pihu-surface');
+    root.setAttribute('data-pihu-surface', 'spirit');
+    return () => { if (previous === null) root.removeAttribute('data-pihu-surface'); else root.setAttribute('data-pihu-surface', previous); };
+  }, []);
   const [activity, setActivity] = useState<SpiritActivity>({ animation: 'idle', resting: false });
   const [size, setSize] = useState(safeSpiritSize(window.innerWidth));
   const [toolbar, setToolbar] = useState<ToolbarPreferences>(normalizeToolbar(useSpiritsStore.getState().toolbar));

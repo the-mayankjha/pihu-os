@@ -46,7 +46,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: '26.8.1'
           cache: npm
 
       - uses: actions/setup-python@v5
@@ -78,7 +78,7 @@ jobs:
           sudo apt-get install -y \
             build-essential curl file libasound2-dev libnss3 libgbm1 libayatana-appindicator3-dev \
             librsvg2-dev libssl-dev libwebkit2gtk-4.1-dev patchelf pkg-config \
-            python3-dev python3-venv libportaudio2 rpm xdg-utils
+            python3-dev python3-venv libportaudio2 libfuse2 rpm xdg-utils
 
       - name: Test account file access on a clean environment
         shell: bash
@@ -118,13 +118,28 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           PIHU_TARGET: ${{ matrix.target }}
+          CI: 'true'
+          TAURI_BUNDLER_DMG_IGNORE_CI: 'false'
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+          NO_STRIP: 'true'
         with:
           tagName: v__VERSION__
           releaseName: Pihu OS v__VERSION__
           releaseBody: ${{ steps.release-notes.outputs.body }}
           releaseDraft: true
           prerelease: false
-          args: ${{ matrix.platform == 'ubuntu-22.04' && '--bundles deb,appimage' || (matrix.target != '' && format('--target {0}', matrix.target) || '') }}
+          args: ${{ matrix.platform == 'ubuntu-22.04' && '--verbose --bundles deb,appimage' || (matrix.target != '' && format('--verbose --target {0}', matrix.target) || '--verbose') }}
+
+      - name: Preserve packaging diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: packaging-diagnostics-${{ matrix.platform }}-${{ matrix.target || 'native' }}
+          if-no-files-found: ignore
+          retention-days: 7
+          path: |
+            src-tauri/target/**/bundle/dmg/bundle_dmg.sh
+            src-tauri/target/**/bundle/**/*.log
 
       - name: Verify macOS app signature before publishing
         if: runner.os == 'macOS'

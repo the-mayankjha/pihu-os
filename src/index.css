@@ -49,3 +49,25 @@ html, body, #root {
   background: rgba(241, 245, 249, 0.4);
   background-clip: padding-box;
 }
+
+/* Companion webviews never expose page or nested scrollbars on any platform. */
+html[data-pihu-surface="spirit"],
+html[data-pihu-surface="spirit"] body,
+html[data-pihu-surface="spirit"] #root {
+  width: 100%;
+  height: 100%;
+  max-width: 100vw;
+  max-height: 100vh;
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+html[data-pihu-surface="spirit"] * {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+html[data-pihu-surface="spirit"]::-webkit-scrollbar,
+html[data-pihu-surface="spirit"] *::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
