@@ -99,6 +99,8 @@
     "windows": {
       "nsis": {
         "installMode": "both",
+        "compression": "zlib",
+        "installerHooks": "windows/installer-hooks.nsh",
         "displayLanguageSelector": false,
         "headerImage": null,
         "sidebarImage": null
