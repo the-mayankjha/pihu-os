@@ -7,7 +7,7 @@ const setDraft = (draft: GoogleDocDraft | null) => useVoiceStore.setState({ pend
 export const useGoogleDocDraft = Object.assign(() => ({ draft: useVoiceStore(state => state.pendingGoogleDoc), setDraft }), {
   getState: () => ({ draft: useVoiceStore.getState().pendingGoogleDoc, setDraft })
 });
-export async function draftProjectGoogleDoc(request: string): Promise<string> {
+export async function draftProjectGoogleDoc(request: string, title?: string, signal?: AbortSignal): Promise<string> {
   const project = useVoiceStore.getState().activeProject;
   if (!project?.dir) return 'Select an active project first, then ask me to draft its architecture document.';
   const inventory = await invoke<Array<{id: string; enabled?: boolean}>>('mcp_list_installed');
@@ -22,14 +22,13 @@ export async function draftProjectGoogleDoc(request: string): Promise<string> {
     maxOutputTokens: 6000,
   });
   if (!content.trim()) throw new Error('The document model returned an empty draft.');
-  useGoogleDocDraft.getState().setDraft({ title: `${project.name} — Project Architecture`, content, sources: context.files.map(file => file.path), limited: context.limited });
+  signal?.throwIfAborted();
+  useGoogleDocDraft.getState().setDraft({ title: title || `${project.name} — Project Architecture`, content, sources: context.files.map(file => file.path), limited: context.limited });
   useVoiceStore.getState().setProcessingStatus(null);
   return 'Your architecture draft is ready in the editable preview. Review it, then click Create Google Doc to upload it.';
 }
 
-export async function draftGoogleDoc(request: string): Promise<string> {
-  const named = request.match(/\b(?:called|named|titled)\s+["“]?(.+?)["”]?(?=\s+(?:and|about|with|containing)\b|[.!?]*$)/i);
-  const title = named?.[1]?.trim().replace(/["”]+$/, '') || 'New document';
+export async function draftGoogleDoc(request: string, title: string = 'New document', signal?: AbortSignal): Promise<string> {
   useVoiceStore.getState().setProcessingStatus(`Drafting “${title}”…`);
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
@@ -42,10 +41,11 @@ export async function draftGoogleDoc(request: string): Promise<string> {
       new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('Document drafting timed out. Please try again.')), 60000); }),
     ]);
     if (!content.trim()) return 'I could not generate document content. Please try again.';
+    signal?.throwIfAborted();
     useGoogleDocDraft.getState().setDraft({title, content, sources: [], limited: false});
     return `The draft “${title}” is ready in the editable preview. Review it, then click Create Google Doc to upload.`;
   } finally {
     if (timer) clearTimeout(timer);
-    useVoiceStore.getState().setProcessingStatus(null);
+    if (!signal?.aborted) useVoiceStore.getState().setProcessingStatus(null);
   }
 }

@@ -39,5 +39,5 @@ export interface ToolResult {
 
 export interface ActionTool {
   declaration: FunctionDeclaration;
-  execute: (args: Record<string, any>) => Promise<ToolResult> | ToolResult;
+  execute: (args: Record<string, any>, context?: { signal?: AbortSignal }) => Promise<ToolResult> | ToolResult;
 }

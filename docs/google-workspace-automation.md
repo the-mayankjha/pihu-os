@@ -28,3 +28,11 @@ Reconnect Google after updating to grant the added Drive file, Sheets and Slides
 Deletion and file sharing tools require explicit confirmation. Drive deletion moves files to Trash rather than permanently deleting them. Sheets writes use RAW values so cell content is not interpreted as formulas. Scheduled/background execution is not introduced by this feature; these are interactive, model-orchestrated tool chains.
 
 Google Keep is not included. Full rich document rendering, charts, arbitrary binary uploads, and offline Google API execution are not implemented.
+
+## Semantic intent execution
+
+Google operations are selected by the language model from available, typed tool declarations. There are no command-specific Google regex routes in ActionEngine. File and speech normalization are separate from intent selection. Explicit pending-review confirmations remain contextual controls.
+
+The model may perform up to eight tool rounds and twelve tool calls, sequentially. Arguments are validated before execution. MCP schemas are normalized for the model, including nullable parameters and local schema references. Tool failures are returned to the model, and only tools supplied for the current request may execute. The recent six tool results (bounded excerpts) provide real IDs for follow-up requests; email and file content remains untrusted data.
+
+Requests have a two-minute deadline and cancellation checks between actions. Cancelling prevents future actions from starting; an external operation already in flight cannot always be revoked. A new request cancels the previous intent. Document creation is exposed through review/draft tools; the raw installed docs_create tool is withheld from model selection so upload remains a user action.

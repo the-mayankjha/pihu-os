@@ -175,6 +175,7 @@ export class VoiceManager {
 
   /** Clean reset to IDLE state — stops browser mic, sets Orb IDLE, signals Python to resume wake word. */
   public resetToIdle() {
+    this.actionEngine.cancel();
     this.cancelInterruptionMonitor();
     console.log('[VOICE MANAGER] 🔄 Resetting to IDLE state.');
     this.speechInterrupted = true;
