@@ -1,6 +1,6 @@
 {
   "productName": "Pihu OS",
-  "version": "1.2.8",
+  "version": "1.2.9",
   "identifier": "com.mayankjha.pihuos",
   "build": {
     "beforeDevCommand": "node bin/prepare-dev-runtime.mjs && npm run dev",
@@ -72,7 +72,7 @@
       "python/espeak_runtime.py"
     ],
     "category": "Productivity",
-    "copyright": "\u00a9 2026 Mayank Jha. All rights reserved.",
+    "copyright": "© 2026 Mayank Jha. All rights reserved.",
     "shortDescription": "AI-powered desktop OS companion with voice control",
     "longDescription": "Pihu OS is an AI-powered desktop companion featuring voice control (wake word, STT, TTS), YouTube Music integration, Google Workspace tools, project scaffolding across 10+ languages, and a beautiful macOS-style desktop environment.",
     "macOS": {
