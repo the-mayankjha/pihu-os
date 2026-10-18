@@ -1,0 +1,27 @@
+#!/usr/bin/env python3
+"""Retry detach only for temporary Tauri DMGs owned by this CI workspace."""
+import os
+from pathlib import Path
+import plistlib
+import re
+import subprocess
+import sys
+
+arguments = sys.argv[1:]
+result = subprocess.run(['/usr/bin/hdiutil', *arguments])
+if result.returncode and len(arguments) == 2 and arguments[0] == 'detach' and re.fullmatch(r'/dev/disk\d+', arguments[1]):
+    try:
+        info = plistlib.loads(subprocess.check_output(['/usr/bin/hdiutil', 'info', '-plist'], timeout=30))
+        workspace = Path(os.environ['GITHUB_WORKSPACE']).resolve()
+        owned = False
+        for image in info.get('images', []):
+            path = Path(image.get('image-path', '')).resolve()
+            if workspace in path.parents and '/release/bundle/macos/' in str(path) and path.name.startswith('rw.'):
+                owned = any(entity.get('dev-entry') == arguments[1] for entity in image.get('system-entities', []))
+                if owned: break
+        if owned:
+            print('Retrying detach for the CI-owned temporary Tauri disk image.', flush=True)
+            result = subprocess.run(['/usr/bin/hdiutil', 'detach', '-force', arguments[1]], timeout=150)
+    except (OSError, ValueError, subprocess.SubprocessError) as error:
+        print(f'Cannot retry temporary DMG detach: {error}', file=sys.stderr)
+sys.exit(result.returncode)

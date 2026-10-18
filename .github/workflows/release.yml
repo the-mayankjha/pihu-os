@@ -111,6 +111,11 @@ jobs:
           appendFileSync(process.env.GITHUB_OUTPUT, `body<<${delimiter}\n${body}\n${delimiter}\n`);
           NODE
 
+      - name: Enable CI-owned temporary DMG detach recovery
+        if: runner.os == 'macOS'
+        shell: bash
+        run: echo "$GITHUB_WORKSPACE/bin/macos-ci:$PATH" >> "$GITHUB_PATH"
+
       - name: Build and upload release assets
         uses: tauri-apps/tauri-action@action-v1.0.0
         env:

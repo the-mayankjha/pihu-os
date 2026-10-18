@@ -36,3 +36,5 @@ src-tauri/python/venv/
 # Scratch & Tests
 test.java
 *.class
+
+/src-tauri/runtime.zip

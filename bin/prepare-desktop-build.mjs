@@ -50,4 +50,5 @@ if (license) {
   console.log(`Included official Node ${version} license and third-party notices.`);
 }
 run(process.platform === 'win32' ? resolve(root, 'src-tauri/runtime/python/python.exe') : resolve(root, 'src-tauri/runtime/python/bin/python3'), ['src-tauri/python/runtime_check.py', '--root', 'src-tauri', '--verify', '--smoke']);
+if (process.platform === 'win32') run(bundledPython, ['bin/prepare-windows-runtime-archive.py']);
 run('npm', ['run', 'build']);

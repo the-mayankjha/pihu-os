@@ -1,0 +1,22 @@
+{
+  "bundle": {
+    "resources": [
+      "mcp-agent-bundle/agent/",
+      "mcp-agent-bundle/mcp/servers/",
+      "python/stt_server.py",
+      "python/tts_server.py",
+      "python/wakeword.py",
+      "python/ytmusic_server.py",
+      "python/language/",
+      "python/requirements.txt",
+      "python/automations/macos/pihu-macos-automation-v2/",
+      "../models/wakeWord/*",
+      "../bin/pihu-project-mcp.js",
+      "pihu-first-launch.sh",
+      "python/runtime_check.py",
+      "python/espeak_runtime.py",
+      "runtime.zip",
+      "windows/install-runtime.ps1"
+    ]
+  }
+}
