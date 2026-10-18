@@ -55,8 +55,16 @@ for name in ['pihu.onnx', 'hey_pihu.onnx', 'hi_pihu.onnx', 'Gen-pihu.onnx', 'sil
     check('Wake model: ' + name, lambda name=name: require(wake_dir / name))
 node = Path(os.environ.get('PIHU_NODE_EXECUTABLE') or shutil.which('node') or 'node') if args.development else runtime / 'node' / ('node.exe' if os.name == 'nt' else 'node')
 check('Node runtime', lambda: subprocess.check_output([str(require(node)), '--version'], timeout=10, text=True).strip())
+def core_source(name):
+    expected = tuple(name.split('/'))
+    bundle = root / 'mcp-agent-bundle'
+    for path in bundle.rglob(expected[-1]):
+        if path.is_file() and tuple(path.parts[-len(expected):]) == expected:
+            return require(path)
+    raise FileNotFoundError(f"Core MCP source missing: {name} under {bundle}")
+
 for name in ['pihu_file_mcp.py', 'pihu_system_mcp.py', 'pihu_project_mcp.js', 'web_search_mcp/server.py']:
-    check('Core MCP source: ' + name, lambda name=name: next(p for p in (root / 'mcp-agent-bundle').rglob('*') if p.is_file() and str(p).endswith(name)))
+    check('Core MCP source: ' + name, lambda name=name: core_source(name))
 check('Kokoro model and voices', lambda: [require(next((runtime / 'tts/hub').rglob(pattern))) for pattern in ['*.pth', 'hf_alpha.pt', 'af_bella.pt']])
 def digest(path):
     with path.open('rb') as stream:
