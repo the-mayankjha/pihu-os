@@ -122,7 +122,7 @@ jobs:
           TAURI_BUNDLER_DMG_IGNORE_CI: 'false'
           APPIMAGE_EXTRACT_AND_RUN: '1'
           NO_STRIP: 'true'
-          LD_LIBRARY_PATH: ${{ runner.os == 'Linux' && format('{0}/src-tauri/runtime/native', github.workspace) || '' }}
+          LD_LIBRARY_PATH: ${{ runner.os == 'Linux' && format('{0}/src-tauri/runtime/native:{0}/src-tauri/runtime/python/lib:{0}/src-tauri/runtime/python/lib/python3.11/site-packages:{0}/src-tauri/runtime/python/lib/python3.11/site-packages/torch/lib:{0}/src-tauri/runtime/python/lib/python3.11/site-packages/onnxruntime/capi', github.workspace) || '' }}
         with:
           tagName: v__VERSION__
           releaseName: Pihu OS v__VERSION__
