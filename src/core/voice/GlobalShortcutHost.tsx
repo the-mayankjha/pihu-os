@@ -1,3 +1,4 @@
+import { openMcpMarket } from '../services/mcpNavigation';
 import { useEffect } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { invoke, isTauri } from '@tauri-apps/api/core';
@@ -8,7 +9,7 @@ import { VoiceManager } from './VoiceManager';
 import { matchesAccelerator } from '../shortcuts';
 import { useVoiceStore } from '../../stores/voiceStore';
 
-const GLOBAL_ACTIONS = ['voice', 'globalCommandPalette'] as const;
+const GLOBAL_ACTIONS = ['voice', 'globalCommandPalette', 'marketplace'] as const;
 
 export function GlobalShortcutHost() {
   const keybindings = useSettingsStore(state => state.keybindings);
@@ -50,7 +51,7 @@ export function GlobalShortcutHost() {
           useLayoutStore.getState().toggleWidget('ytmusic-plugin');
           break;
         case 'marketplace':
-          useLayoutStore.getState().toggleWidget('marketplace-window');
+          openMcpMarket();
           break;
         case 'commandPalette':
           useVoiceStore.getState().toggleCommandPalette();
@@ -78,6 +79,7 @@ export function GlobalShortcutHost() {
     }
 
     const onKeyDown = (event: KeyboardEvent) => {
+      if (event.repeat || event.defaultPrevented) return;
       if (matchesAccelerator(event, keybindings.commandPalette)) {
         event.preventDefault();
         runAction('commandPalette');
@@ -92,10 +94,10 @@ export function GlobalShortcutHost() {
         }
       }
     };
-    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keydown', onKeyDown, true);
     return () => {
       unlisten?.();
-      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keydown', onKeyDown, true);
     };
   }, [keybindings]);
 

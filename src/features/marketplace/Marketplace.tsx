@@ -166,9 +166,9 @@ export function Marketplace({ navigateTo }: { navigateTo: (category: 'connection
     onConnections={() => openMcpConfiguration(selectedMcp.id)}
   />;
 
-  return <section className="space-y-5" aria-label="PIHU Marketplace">
+  return <section className="space-y-6" aria-label="PIHU Marketplace">
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <div><p className="text-xs uppercase tracking-[0.2em] text-neutral-400">PIHU MARKETPLACE</p><p className="mt-1 text-sm text-neutral-300">Browse packages, install them, and manage their settings.</p></div>
+      <div><h2 className="text-lg font-semibold tracking-tight text-white">Find tools for your workspace</h2><p className="mt-1 text-xs leading-5 text-neutral-300">Connect your apps. Add a companion. Make PIHU yours.</p></div>
       {tab === 'mcp' && <button type="button" onClick={() => void refresh()} disabled={loading} className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-neutral-200 hover:bg-white/10 disabled:opacity-50"><RefreshCw size={14} className={loading ? 'animate-spin' : ''} />Refresh catalog</button>}
     </div>
 
@@ -177,20 +177,20 @@ export function Marketplace({ navigateTo }: { navigateTo: (category: 'connection
     </div>
 
     {tab === 'mcp' && <>
-      <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/10 px-4 py-3 text-neutral-400"><Search size={16} /><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search MCPs, tools, publishers…" className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-neutral-500" aria-label="Search MCP catalog" /></label>
+      <label className="flex items-center gap-3 rounded-2xl border border-white/15 bg-black/20 px-4 py-3.5 focus-within:border-white/35 text-neutral-400"><Search size={16} /><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search MCPs, tools, publishers…" className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-neutral-500" aria-label="Search MCP catalog" /></label>
       {loading && <p className="py-8 text-center text-sm text-neutral-400">Loading the MCP registry…</p>}
       {!loading && error && <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 text-sm text-neutral-300"><p>{error}</p><button type="button" onClick={() => void refresh()} className="mt-3 rounded-lg bg-white/10 px-3 py-2 text-xs">Try again</button></div>}
       {!loading && !error && filteredPackages.length === 0 && <p className="py-8 text-center text-sm text-neutral-400">{packages.length ? 'No MCPs match your search.' : 'No MCPs are currently available.'}</p>}
-      {!loading && !error && filteredPackages.length > 0 && <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">{filteredPackages.map(item => {
+      {!loading && !error && filteredPackages.length > 0 && <div className="grid grid-cols-1 gap-5 md:grid-cols-2">{filteredPackages.map(item => {
         const local = installed[item.id];
         const working = !!busy[item.id];
         const updateAvailable = !!local && item.installable !== false && hasMcpUpdate(local.version, item.version);
         const count = item.tool_count ?? item.tools_count ?? item.toolsProvided?.length ?? item.tools?.length;
-        return <article key={item.id} className="group flex flex-col rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.07] via-white/[0.025] to-transparent p-5 transition hover:border-white/25">
-          <div className="flex items-start justify-between gap-3"><Wrench size={21} strokeWidth={1.6} className="text-neutral-200" /><span className={`text-[10px] ${local ? 'text-emerald-300' : item.installable === false ? 'text-neutral-500' : 'text-neutral-400'}`}>{local ? 'Installed' : item.installable === false ? 'Coming soon' : 'Available to download'}</span></div>
-          <button onClick={() => setSelectedMcp(item)} className="mt-5 text-left focus-visible:outline-none focus-visible:underline"><p className="text-[10px] uppercase tracking-[0.14em] text-neutral-500">{item.category || 'Integration'}</p><h3 className="mt-1 text-base font-semibold tracking-tight text-white">{displayName(item)}</h3></button>
-          <p className="mt-2 min-h-12 text-xs leading-6 text-neutral-400">{item.description || 'Extend PIHU with tools from this MCP.'}</p>
-          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-neutral-500"><span className="w-full text-xs font-medium text-neutral-300">{authorName(item.author)}</span><span>v{local?.version || item.version || '—'}</span>{count != null && <span>{count} tools</span>}{updateAvailable && <span className="font-medium text-amber-300">· Update available · v{item.version}</span>}</div>
+        return <article key={item.id} className="market-package-card group flex flex-col rounded-2xl p-5 transition">
+          <div className="flex items-start justify-between gap-3"><span className="rounded-xl border border-white/10 bg-white/[0.06] p-2.5 text-neutral-200"><Wrench size={21} strokeWidth={1.6} /></span><span className={`text-[10px] ${local ? 'text-emerald-300' : item.installable === false ? 'text-neutral-500' : 'text-neutral-400'}`}>{updateAvailable ? 'Update available' : local ? 'Installed' : item.installable === false ? 'Coming soon' : 'Ready to install'}</span></div>
+          <button onClick={() => setSelectedMcp(item)} className="mt-4 text-left focus-visible:outline-none focus-visible:underline"><p className="text-[10px] uppercase tracking-[0.14em] text-neutral-300/70">{item.category || 'Integration'}</p><h3 className="mt-1 text-base font-semibold tracking-tight text-white">{displayName(item)}</h3></button>
+          <p className="mt-2 min-h-12 text-xs leading-5 text-neutral-200/80">{item.description || 'Extend PIHU with tools from this MCP.'}</p>
+          <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 pt-5 text-[11px] text-neutral-400"><span className="w-full text-xs font-medium text-neutral-300">{authorName(item.author)}</span><span>v{local?.version || item.version || '—'}</span>{count != null && <span>{count} tools</span>}{updateAvailable && <span className="font-medium text-amber-300">· Update available · v{item.version}</span>}</div>
           <div className="mt-5 flex items-stretch gap-2.5 border-t border-white/10 pt-4">
             <button onClick={() => local && !updateAvailable ? openMcpConfiguration(item.id) : void operate(item.id, 'install')} disabled={working || (!local && item.installable === false)} className="inline-flex min-h-12 min-w-0 flex-1 items-center justify-center gap-2.5 rounded-2xl bg-white/[0.12] px-4 py-3 text-sm font-semibold text-neutral-200 backdrop-blur-lg transition hover:bg-white/[0.18] disabled:opacity-40">{working ? <RefreshCw size={14} className="animate-spin" /> : local && !updateAvailable ? <Wrench size={14} /> : <Download size={14} />}{working ? 'Working…' : updateAvailable ? 'Update MCP' : local ? 'Configure' : item.installable === false ? 'Not published' : 'Install MCP'}</button>
             {local && <button onClick={() => setRemoveCandidate(item.id)} disabled={working} aria-label={`Uninstall ${displayName(item)}`} title="Uninstall MCP" className="inline-flex min-h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/[0.025] text-neutral-400 transition hover:border-red-300/30 hover:bg-red-400/10 hover:text-red-300 disabled:opacity-40"><Trash2 size={18} strokeWidth={1.7} /></button>}

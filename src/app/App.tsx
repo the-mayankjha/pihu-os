@@ -1,3 +1,5 @@
+import { checkAppUpdates, useAppUpdates } from '../core/updates/appUpdates';
+import { UpdatePrompt } from '../core/updates/SoftwareUpdate';
 import { useEffect } from 'react';
 import { SpiritsHost } from '../features/spirits/Spirits';
 import { ClockWidget } from '../widgets/clock/ClockWidget';
@@ -66,12 +68,19 @@ export default function App() {
       voiceMgr.triggerStartupGreeting();
     }, 500);
 
-    return () => clearTimeout(timer);
+    const updateTimer = setTimeout(() => {
+      void checkAppUpdates(true).then(() => {
+        const update = useAppUpdates.getState();
+        if (update.phase === 'available') void voiceMgr.announceAppUpdate(update.version);
+      });
+    }, 15000);
+    return () => { clearTimeout(timer); clearTimeout(updateTimer); };
   }, []);
 
   return (
     <div className={`relative h-screen w-full overflow-hidden ${quietDesktopMode ? 'bg-transparent' : 'bg-black/40'}`}>
       <GlobalMusicProvider />
+      <UpdatePrompt />
       
       {!quietDesktopMode && <>
       {(!widgets['clock-widget'] || widgets['clock-widget'].isOpen) && <ClockWidget />}
@@ -122,7 +131,6 @@ export default function App() {
         />
       )}
 
-      {(widgets['marketplace-window']?.isOpen) && <MarketplaceWindow />}
       <CodeOutputWindow />
 
       <YTMusicPlugin />
@@ -131,6 +139,7 @@ export default function App() {
       <WidgetDrawer />
       </>}
       {(widgets['settings-window']?.isOpen) && <SettingsWindow />}
+      {(widgets['marketplace-window']?.isOpen) && <MarketplaceWindow />}
       <NativeVoiceOverlayHost />
       <NativeCommandPaletteHost />
       <GlobalShortcutHost />

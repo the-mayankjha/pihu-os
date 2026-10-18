@@ -63,6 +63,8 @@ export interface SettingsState {
   // Appearance & Workspace Preferences
   themeAccent: 'pink' | 'purple' | 'cyan' | 'emerald' | 'amber';
   blurIntensity: number;
+  glassOpacity: number;
+  reduceTransparency: boolean;
   dockPosition: 'bottom' | 'left' | 'right';
   dockMagnification: boolean;
   dockVisible: boolean;
@@ -94,6 +96,8 @@ export interface SettingsState {
   setDeveloperMode: (enabled: boolean) => void;
   setThemeAccent: (accent: 'pink' | 'purple' | 'cyan' | 'emerald' | 'amber') => void;
   setBlurIntensity: (val: number) => void;
+  setGlassOpacity: (value: number) => void;
+  setReduceTransparency: (value: boolean) => void;
   setDockPosition: (pos: 'bottom' | 'left' | 'right') => void;
   setDockMagnification: (enabled: boolean) => void;
   setDockVisible: (visible: boolean) => void;
@@ -138,6 +142,8 @@ export const useSettingsStore = create<SettingsState>()(
       developerMode: false,
       themeAccent: 'pink',
       blurIntensity: 24,
+      glassOpacity: 0.35,
+      reduceTransparency: false,
       dockPosition: 'bottom',
       dockMagnification: true,
       dockVisible: true,
@@ -149,7 +155,9 @@ export const useSettingsStore = create<SettingsState>()(
       contacts: [],
 
       setThemeAccent: (accent) => set({ themeAccent: accent }),
-      setBlurIntensity: (blurIntensity) => set({ blurIntensity }),
+      setBlurIntensity: (blurIntensity) => set({ blurIntensity: Math.max(12, Math.min(48, blurIntensity)) }),
+      setGlassOpacity: (value) => set({ glassOpacity: Math.max(0.2, Math.min(0.9, value)) }),
+      setReduceTransparency: (reduceTransparency) => set({ reduceTransparency }),
       setDockPosition: (dockPosition) => set({ dockPosition }),
       setDockMagnification: (dockMagnification) => set({ dockMagnification }),
       setDockVisible: (dockVisible) => set({ dockVisible }),

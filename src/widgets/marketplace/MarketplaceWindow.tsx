@@ -46,7 +46,7 @@ export function MarketplaceWindow() {
         exit={{ opacity: 0, scale: 0.94, y: 10, filter: 'blur(8px)' }}
         transition={{ type: 'spring', stiffness: 300, damping: 25, mass: 0.82 }}
       >
-        <GlassCard blur="xl" frost="heavy" className="relative flex h-[min(760px,90vh)] w-full flex-col overflow-hidden rounded-3xl text-white font-sans" style={{ backgroundColor: 'rgba(18,18,18,0.18)', backdropFilter: 'blur(40px) saturate(115%)', WebkitBackdropFilter: 'blur(40px) saturate(115%)', borderRadius: 24, border: '1px solid rgba(255,255,255,0.16)', boxShadow: '0 24px 80px rgba(0,0,0,0.35)' }}>
+        <GlassCard blur="xl" frost="heavy" className="market-frost-window relative flex h-[min(760px,90vh)] w-full flex-col overflow-hidden rounded-3xl text-white font-sans" style={{ backgroundColor: 'rgba(18,18,18,0.18)', backdropFilter: 'blur(40px) saturate(115%)', WebkitBackdropFilter: 'blur(40px) saturate(115%)', borderRadius: 24, border: '1px solid rgba(255,255,255,0.16)', boxShadow: '0 24px 80px rgba(0,0,0,0.35)' }}>
           <header className="flex shrink-0 items-center justify-between border-b border-white/10 bg-white/[0.06] px-6 py-4">
             <div className="flex items-center gap-3"><ShoppingBag size={18} className="text-pink-300" /><div><h1 className="text-sm font-semibold">PIHU Marketplace</h1><p className="text-[11px] text-white/50">Discover MCPs and Spirits</p></div></div>
             <button type="button" onClick={close} aria-label="Close Marketplace" title="Close" className="rounded-xl p-2 text-white/60 transition hover:bg-white/10 hover:text-white"><X size={16} /></button>

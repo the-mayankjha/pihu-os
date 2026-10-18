@@ -1,3 +1,4 @@
+import { checkAppUpdates, openUpdates, useAppUpdates } from '../../../updates/appUpdates';
 import { capabilityRegistry } from '../../../capabilities/capabilityRegistry';
 import { useVoiceStore } from '../../../../stores/voiceStore';
 import { invoke } from '@tauri-apps/api/core';
@@ -7,6 +8,15 @@ import { readGmailSubject } from '../../../services/gmailRead';
 import { openMcpConfiguration } from '../../../services/mcpNavigation';
 
 export const workflowTools: ActionTool[] = [
+  {
+    declaration: {name:'workflow_pihu_update', description:'Check for PIHU application updates or open the update confirmation panel. Use for update PIHU, upgrade the app, or check latest version. This is for the desktop app, not MCP package updates. Installation requires the user to click Download & install.', parameters:{type:'OBJECT',properties:{}}},
+    execute: async () => {
+      openUpdates();
+      await checkAppUpdates();
+      const state = useAppUpdates.getState();
+      return {success:state.phase !== 'error',data:{message:state.phase === 'available' ? `PIHU ${state.version} is available. Review it in General Settings and choose Download & install to confirm.` : state.phase === 'current' ? 'PIHU is up to date.' : state.phase === 'error' ? state.error : `Update status: ${state.phase}.`}};
+    },
+  },
   {
     declaration: {name: 'workflow_coding_task', description: 'Execute a software implementation or code-change task in the active project. Use only for actual coding, not document writing or Google Workspace operations.', parameters: {type: 'OBJECT', properties: {instructions: {type: 'STRING'}}, required: ['instructions']}},
     execute: async args => {

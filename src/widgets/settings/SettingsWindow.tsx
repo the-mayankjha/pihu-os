@@ -1,3 +1,4 @@
+import { SoftwareUpdate } from '../../core/updates/SoftwareUpdate';
 import { SpotifyConnection, SpotifyDeveloperSettings } from './SpotifyConnection';
 import { useVoiceStore } from '../../stores/voiceStore';
 import { ensureWhatsAppBridge, WHATSAPP_API_URL } from '../../core/services/whatsappBridge';
@@ -6,8 +7,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { isTauri } from '@tauri-apps/api/core';
 import { getVersion } from '@tauri-apps/api/app';
-import { check } from '@tauri-apps/plugin-updater';
-import { relaunch } from '@tauri-apps/plugin-process';
 import { DEFAULT_KEYBINDINGS, useSettingsStore } from '../../stores/settingsStore';
 import type { KeybindingAction } from '../../stores/settingsStore';
 import { acceleratorFromKeyboardEvent, formatAccelerator } from '../../core/shortcuts';
@@ -149,8 +148,7 @@ export const SettingsWindow: React.FC = () => {
     setDeveloperMode,
     removeConnectedGoogleAccount,
     setPrimaryGoogleAccount,
-    themeAccent,
-    setThemeAccent,
+    glassOpacity, setGlassOpacity, reduceTransparency, setReduceTransparency,
     blurIntensity,
     setBlurIntensity,
     dockVisible,
@@ -194,39 +192,6 @@ export const SettingsWindow: React.FC = () => {
   const [googleOAuthMessage, setGoogleOAuthMessage] = useState('');
   const [googleOAuthError, setGoogleOAuthError] = useState('');
   const [appVersion, setAppVersion] = useState('Loading…');
-  const [updateBusy, setUpdateBusy] = useState(false);
-  const [updateMessage, setUpdateMessage] = useState('');
-
-  const handleCheckForUpdates = async () => {
-    if (!isTauri()) {
-      setUpdateMessage('Update checks are available in the installed desktop app.');
-      return;
-    }
-
-    setUpdateBusy(true);
-    setUpdateMessage('Checking for updates…');
-    try {
-      const update = await check();
-      if (!update) {
-        setUpdateMessage(`PIHU OS is up to date (v${appVersion}).`);
-        return;
-      }
-
-      setUpdateMessage(`Downloading PIHU OS ${update.version}…`);
-      await update.downloadAndInstall((event) => {
-        if (event.event === 'Progress') {
-          setUpdateMessage(`Downloading PIHU OS ${update.version}…`);
-        }
-      });
-      setUpdateMessage('Update installed. Restarting PIHU OS…');
-      await relaunch();
-    } catch (error) {
-      setUpdateMessage(`Update failed: ${error instanceof Error ? error.message : String(error)}`);
-    } finally {
-      setUpdateBusy(false);
-    }
-  };
-
   useEffect(() => {
     if (activeSidebarCategory !== 'diagnostics') return;
     const refresh = () => { if (!document.hidden) void useDiagnosticsStore.getState().runDiagnosis(); };
@@ -619,13 +584,7 @@ export const SettingsWindow: React.FC = () => {
     { id: 'about', label: 'About PIHU', icon: Info },
   ];
 
-  const quietModeAccentClass = {
-    pink: 'bg-pink-500 focus-visible:ring-pink-300/70',
-    purple: 'bg-purple-500 focus-visible:ring-purple-300/70',
-    cyan: 'bg-cyan-500 focus-visible:ring-cyan-300/70',
-    emerald: 'bg-emerald-500 focus-visible:ring-emerald-300/70',
-    amber: 'bg-amber-500 focus-visible:ring-amber-300/70',
-  }[themeAccent];
+  const quietModeAccentClass = 'bg-emerald-500 focus-visible:ring-emerald-300/70';
 
   return (
     <motion.div
@@ -776,6 +735,7 @@ export const SettingsWindow: React.FC = () => {
             {/* ══════ SECTION 1: GENERAL (PIHU OS Core Profile) ══════ */}
             {activeSidebarCategory === 'general' && (
               <div className="space-y-6">
+                <SoftwareUpdate />
 
                 <div className="flex items-center justify-between gap-4 rounded-3xl border border-white/5 bg-white/[0.045] p-5">
                   <div>
@@ -795,7 +755,7 @@ export const SettingsWindow: React.FC = () => {
                 </div>
 
                 {/* OS Identity & Salutation */}
-                <div className="p-5 rounded-3xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-4">
+                <div className="p-5 rounded-3xl settings-frost-panel space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-2xl bg-white/10   flex items-center justify-center text-white shadow-lg shadow-neutral-500/20">
@@ -838,7 +798,7 @@ export const SettingsWindow: React.FC = () => {
 
                 {/* System Startup & Memory Cache Controls */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-5 rounded-3xl bg-white/[0.045] backdrop-blur-md border border-white/5 flex items-center justify-between">
+                  <div className="p-5 rounded-3xl settings-frost-panel flex items-center justify-between">
                     <div>
                       <h4 className="text-xs font-semibold text-white">Auto-Start on Boot</h4>
                       <p className="text-[11px] text-neutral-500">Launch PIHU OS daemon on login</p>
@@ -857,7 +817,7 @@ export const SettingsWindow: React.FC = () => {
                     </button>
                   </div>
 
-                  <div className="p-5 rounded-3xl bg-white/[0.045] backdrop-blur-md border border-white/5 flex items-center justify-between">
+                  <div className="p-5 rounded-3xl settings-frost-panel flex items-center justify-between">
                     <div>
                       <h4 className="text-xs font-semibold text-white">Memory & Cache</h4>
                       <p className="text-[11px] text-neutral-500">Active project context & index</p>
@@ -882,36 +842,18 @@ export const SettingsWindow: React.FC = () => {
                 </div>
 
                 {/* Theme & Blur Controls */}
-                <div className="p-5 rounded-3xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-4">
+                <div className="p-5 rounded-3xl settings-frost-panel space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="text-xs font-bold text-white uppercase tracking-wider">Theme & Glass Accent</h4>
-                      <p className="text-[11px] text-neutral-400">Customize system accent highlights and backdrop glass blur</p>
+                      <h4 className="text-xs font-bold text-white uppercase tracking-wider">Appearance & Readability</h4>
+                      <p className="text-[11px] text-neutral-400">Adjust glass depth and contrast. Quiet mode adds a subtle dark tint while keeping the glass frosted.</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {[
-                        { id: 'pink', color: 'bg-white/10' },
-                        { id: 'purple', color: 'bg-white/10' },
-                        { id: 'cyan', color: 'bg-white/10' },
-                        { id: 'emerald', color: 'bg-white/10' },
-                        { id: 'amber', color: 'bg-white/10' },
-                      ].map((t) => (
-                        <button
-                          key={t.id}
-                          onClick={() => setThemeAccent(t.id as any)}
-                          className={`px-2 h-7 text-[10px] capitalize rounded-lg ${t.color} flex items-center justify-center transition ring-offset-2 ring-offset-slate-950 ${
-                            themeAccent === t.id ? 'ring-2 ring-white scale-110 shadow-md' : 'opacity-60 hover:opacity-100'
-                          }`}
-                        >
-                          {t.id}
-                        </button>
-                      ))}
-                    </div>
+
                   </div>
 
                   <div className="space-y-1.5 pt-1">
                     <div className="flex justify-between text-xs text-neutral-300">
-                      <span>Glassmorphism Blur</span>
+                      <span>Background blur</span>
                       <span className="font-mono text-neutral-400">{blurIntensity}px</span>
                     </div>
                     <input
@@ -923,6 +865,9 @@ export const SettingsWindow: React.FC = () => {
                       className="w-full accent-neutral-500 cursor-pointer"
                     />
                   </div>
+                  <label className="block space-y-2 text-xs text-neutral-300"><span className="flex justify-between">Glass tint <span>{Math.round(glassOpacity * 100)}%</span></span><input aria-label="Glass tint" type="range" min="20" max="90" value={Math.round(glassOpacity*100)} onChange={e => setGlassOpacity(Number(e.target.value)/100)} className="w-full accent-neutral-400"/></label>
+                  <label className="flex items-center justify-between gap-4 text-xs text-neutral-200"><span>Reduce transparency<small className="mt-1 block text-neutral-400">Use solid surfaces for maximum readability.</small></span><input type="checkbox" checked={reduceTransparency} onChange={e => setReduceTransparency(e.target.checked)} className="h-4 w-4 accent-neutral-400"/></label>
+                  <button type="button" onClick={() => {setBlurIntensity(24);setGlassOpacity(0.35);setReduceTransparency(false);}} className="rounded-xl border border-white/10 px-3 py-2 text-xs text-neutral-300 hover:bg-white/10">Reset appearance</button>
                 </div>
 
               </div>
@@ -931,7 +876,7 @@ export const SettingsWindow: React.FC = () => {
             {/* ══════ ADVANCED SETTINGS ══════ */}
             {activeSidebarCategory === 'advanced' && (
               <div className="space-y-6">
-                <section className="p-5 rounded-3xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-5">
+                <section className="p-5 rounded-3xl settings-frost-panel space-y-5">
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-start gap-3">
                       <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-neutral-200"><Code className="w-5 h-5" /></div>
@@ -1008,7 +953,7 @@ export const SettingsWindow: React.FC = () => {
                         {connectedGoogleAccounts.map((account, idx) => (
                           <div
                             key={idx}
-                            className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 hover:border-white/10 transition"
+                            className="flex items-center justify-between p-4 rounded-2xl settings-frost-panel hover:border-white/10 transition"
                           >
                             <div className="flex items-center gap-3">
                               <div className="w-9 h-9 rounded-full bg-white/10   flex items-center justify-center text-xs font-bold text-white shadow">
@@ -1052,7 +997,7 @@ export const SettingsWindow: React.FC = () => {
                 {id === 'spotify-mcp' && <>{developerMode && <SpotifyDeveloperSettings enabled={true} />}<SpotifyConnection onConnectionChange={() => {}} /></>}
                 {id === 'pihu-whatsapp-mcp' && <>
                     {/* WhatsApp MCP Device Pairing & QR Code Card */}
-                    <div className="p-5 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-4">
+                    <div className="p-5 rounded-2xl settings-frost-panel space-y-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-lg shadow-emerald-500/20">
@@ -1189,7 +1134,7 @@ export const SettingsWindow: React.FC = () => {
                     return (
                       <div
                         key={w.id}
-                        className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5"
+                        className="flex items-center justify-between p-4 rounded-2xl settings-frost-panel"
                       >
                         <div>
                           <h4 className="text-xs font-semibold text-white">{w.name}</h4>
@@ -1211,7 +1156,7 @@ export const SettingsWindow: React.FC = () => {
                 </div>
 
                 {/* Dock Position & Magnification */}
-                <div className="p-4 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-4">
+                <div className="p-4 rounded-2xl settings-frost-panel space-y-4">
                   <h4 className="text-xs font-semibold text-white">Dock Layout & Magnification</h4>
                   <div className="flex items-center justify-between gap-4 pb-4 border-b border-white/10">
                     <div><h5 className="text-sm font-medium text-white">Show dock</h5>
@@ -1271,7 +1216,7 @@ export const SettingsWindow: React.FC = () => {
                   { title: 'Action Completion Chimes', desc: 'Play subtle harmonic tones when voice tools finish executing', state: soundChimes, toggle: () => setSoundChimes(!soundChimes) },
                   { title: 'Do Not Disturb', desc: 'Silence all audio cues and spoken responses during meetings or focus hours', state: doNotDisturb, toggle: () => setDoNotDisturb(!doNotDisturb) },
                 ].map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5">
+                  <div key={idx} className="flex items-center justify-between p-4 rounded-2xl settings-frost-panel">
                     <div>
                       <h4 className="text-xs font-semibold text-white">{item.title}</h4>
                       <p className="text-[11px] text-neutral-500">{item.desc}</p>
@@ -1299,7 +1244,7 @@ export const SettingsWindow: React.FC = () => {
               <div className="space-y-6">
 
                 {/* ── Sarvam AI Cloud STT & TTS ── */}
-                <div className="p-5 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-4">
+                <div className="p-5 rounded-2xl settings-frost-panel space-y-4">
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-bold text-white flex items-center gap-2">
                       <Mic className="w-3.5 h-3.5 text-neutral-400" />
@@ -1427,7 +1372,7 @@ export const SettingsWindow: React.FC = () => {
                 </div>
 
                 {/* ── ElevenLabs Cloud TTS ── */}
-                <div className="p-5 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-4">
+                <div className="p-5 rounded-2xl settings-frost-panel space-y-4">
                   <h4 className="text-xs font-bold text-white flex items-center gap-2">
                     <Volume2 className="w-3.5 h-3.5 text-neutral-400" />
                     ElevenLabs — High-Fidelity Cloud TTS
@@ -1500,7 +1445,7 @@ export const SettingsWindow: React.FC = () => {
                 </div>
 
                 {/* Speed Slider */}
-                <div className="p-4 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-2">
+                <div className="p-4 rounded-2xl settings-frost-panel space-y-2">
                   <div className="flex justify-between text-xs text-neutral-300">
                     <span className="font-semibold">Speech Rate Multiplier</span>
                     <span className="text-neutral-400 font-mono">{ttsSpeed}x</span>
@@ -1517,7 +1462,7 @@ export const SettingsWindow: React.FC = () => {
                 </div>
 
                 {/* Default TTS Strategy */}
-                <div className="p-5 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-3">
+                <div className="p-5 rounded-2xl settings-frost-panel space-y-3">
                   <h4 className="text-xs font-bold text-neutral-200">Default TTS Fallback Strategy:</h4>
                   <ol className="space-y-2 text-xs text-neutral-400 list-decimal list-inside">
                     <li><strong className="text-neutral-400">Kokoro Neural TTS</strong> (Local On-Device AI — Port 48126)</li>
@@ -1682,7 +1627,7 @@ export const SettingsWindow: React.FC = () => {
                 </div>
 
                 {/* ── Sarvam AI Cloud Configuration ── */}
-                <div className="p-5 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-4">
+                <div className="p-5 rounded-2xl settings-frost-panel space-y-4">
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-bold text-white flex items-center gap-2">
                       <Mic className="w-3.5 h-3.5 text-neutral-400" />
@@ -1810,7 +1755,7 @@ export const SettingsWindow: React.FC = () => {
                 </div>
 
                 {/* ── ElevenLabs Cloud Configuration ── */}
-                <div className="p-5 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-4">
+                <div className="p-5 rounded-2xl settings-frost-panel space-y-4">
                   <h4 className="text-xs font-bold text-white flex items-center gap-2">
                     <Volume2 className="w-3.5 h-3.5 text-neutral-400" />
                     ElevenLabs — High-Fidelity Cloud TTS
@@ -1889,7 +1834,7 @@ export const SettingsWindow: React.FC = () => {
             {activeSidebarCategory === 'diagnostics' && (
               <div className="space-y-6">
                 {/* Real AI Engine Diagnosis & Architecture Stack */}
-                <div className="p-5 rounded-3xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-4">
+                <div className="p-5 rounded-3xl settings-frost-panel space-y-4">
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
                       <Cpu className="w-4 h-4 text-neutral-400" /> Live Engine Diagnostics
@@ -2066,7 +2011,7 @@ export const SettingsWindow: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 flex items-center justify-between">
+                <div className="p-4 rounded-2xl settings-frost-panel flex items-center justify-between">
                   <div>
                     <h4 className="text-xs font-semibold text-white">API Key Masking & Storage</h4>
                     <p className="text-[11px] text-neutral-500">Keys are encrypted in browser local storage</p>
@@ -2134,7 +2079,7 @@ export const SettingsWindow: React.FC = () => {
 
                 {/* Contacts List Grid */}
                 {contacts.length === 0 ? (
-                  <div className="p-12 text-center rounded-3xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-3">
+                  <div className="p-12 text-center rounded-3xl settings-frost-panel space-y-3">
                     <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-neutral-500 mx-auto">
                       <Users className="w-6 h-6" />
                     </div>
@@ -2168,7 +2113,7 @@ export const SettingsWindow: React.FC = () => {
                         return (
                           <div
                             key={c.id}
-                            className="p-4 rounded-2xl bg-white/[0.045] backdrop-blur-md border border-white/5 hover:border-neutral-500/30 transition duration-200 flex flex-col justify-between space-y-3 group shadow-lg"
+                            className="p-4 rounded-2xl settings-frost-panel hover:border-neutral-500/30 transition duration-200 flex flex-col justify-between space-y-3 group shadow-lg"
                           >
                             <div className="flex items-start justify-between">
                               <div className="flex items-center gap-3">
@@ -2380,7 +2325,7 @@ export const SettingsWindow: React.FC = () => {
 
             {/* ══════ SECTION 11: ABOUT PIHU ══════ */}
             {activeSidebarCategory === 'about' && (
-              <div className="p-8 rounded-3xl bg-white/[0.045] backdrop-blur-md border border-white/5 space-y-6">
+              <div className="p-8 rounded-3xl settings-frost-panel space-y-6">
                 <div className="flex flex-col items-center gap-3 text-center">
                   <img src={pihuLogo} alt="PIHU logo" className="w-20 h-20 object-contain" />
                   <div>
@@ -2414,18 +2359,7 @@ export const SettingsWindow: React.FC = () => {
                     </tbody>
                   </table>
                 </div>
-                <div className="flex flex-col items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => void handleCheckForUpdates()}
-                    disabled={updateBusy}
-                    className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-medium text-neutral-100 transition hover:bg-white/10 disabled:cursor-wait disabled:opacity-60"
-                  >
-                    <RefreshCw size={15} className={updateBusy ? 'animate-spin' : ''} />
-                    {updateBusy ? 'Updating…' : 'Check for updates'}
-                  </button>
-                  {updateMessage && <p role="status" className="max-w-2xl text-center text-xs text-neutral-400">{updateMessage}</p>}
-                </div>
+                <SoftwareUpdate />
                 <p className="text-xs text-neutral-500 text-center">Created by Mayank Jha</p>
               </div>
             )}

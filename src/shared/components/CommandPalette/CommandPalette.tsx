@@ -100,7 +100,7 @@ export const CommandPalette: React.FC<{ nativeWindow?: boolean }> = ({ nativeWin
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Ask PIHU anything or type a coding command..."
+                  placeholder="Ask PIHU anything · /update for software updates"
                   className="min-w-0 flex-1 bg-transparent py-1 text-[15px] font-medium tracking-[0.005em] text-white outline-none placeholder:font-normal placeholder:text-neutral-300/65 focus:outline-none sm:text-base"
                   autoComplete="off"
                   spellCheck={false}

@@ -408,9 +408,23 @@ export class VoiceManager {
    * Processes typed text input (e.g. from redesigned Command Palette)
    * using the exact same ActionEngine, Orb states, VoiceOverlay, and TTS speech.
    */
+  public async announceAppUpdate(version: string) {
+    if (this.isProcessing) return;
+    await this.speakConversational(`PIHU ${version} is available. Would you like to review the update? You can say check PIHU updates.`);
+  }
+
   public async processTextInput(text: string): Promise<string> {
     const trimmed = text.trim();
     if (!trimmed) return '';
+    if (trimmed.toLowerCase() === '/update') {
+      const {openUpdates, checkAppUpdates, useAppUpdates} = await import('../updates/appUpdates');
+      openUpdates();
+      await checkAppUpdates();
+      const update = useAppUpdates.getState();
+      const message = update.phase === 'available' ? `PIHU ${update.version} is available. Choose Download and install in General Settings.` : update.phase === 'current' ? 'PIHU is up to date.' : update.error || `Update status: ${update.phase}.`;
+      useVoiceStore.getState().setResponse(message);
+      return message;
+    }
 
     console.log(`[VOICE MANAGER] 💬 Processing command palette text: "${trimmed}"`);
     this.startSafetyTimer(150000);
