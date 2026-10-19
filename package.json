@@ -1,7 +1,7 @@
 {
   "name": "Pihu-OS",
   "private": true,
-  "version": "1.2.11",
+  "version": "1.2.12",
   "pihuBuildName": "Release",
   "type": "module",
   "scripts": {

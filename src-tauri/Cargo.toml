@@ -1,6 +1,6 @@
 [package]
 name = "Pihu-OS"
-version = "1.2.11"
+version = "1.2.12"
 description = "PIHU OS"
 authors = ["Mayank Jha"]
 edition = "2021"
