@@ -20,7 +20,7 @@ export function checkAppUpdates(prompt = false): Promise<void> {
   if (checking) return checking;
   if (installing) return Promise.resolve();
   checking = (async () => {
-    useAppUpdates.setState({phase:'checking', error:''});
+    useAppUpdates.setState({phase:'checking', error:'', version:'', notes:'', prompt:false});
     try {
       if (!isTauri()) throw new Error('Updates are available in the installed desktop app.');
       if (candidate) { await candidate.close(); candidate = null; }

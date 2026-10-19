@@ -4,6 +4,7 @@ import os
 import urllib.request
 import urllib.error
 import uuid
+from urllib.parse import quote, urlparse, unquote
 
 repo = os.environ.get('REPOSITORY', 'the-mayankjha/pihu-os')
 tag = os.environ['TAG_NAME']
@@ -32,10 +33,15 @@ assets = release['assets']
 manifest_asset = next(a for a in assets if a['name'] == 'latest.json')
 manifest = json.loads(request(manifest_asset['url'], extra={'Accept': 'application/octet-stream'}))
 for platform, package in manifest['platforms'].items():
-    matches = [a for a in assets if package['url'] in [a['url'], a['browser_download_url']]]
+    parsed = urlparse(package['url'])
+    # Published manifests may still contain GitHub's temporary draft URLs.
+    known_download = parsed.hostname == 'github.com' and parsed.path.startswith(f'/{repo}/releases/download/')
+    matches = [a for a in assets if package['url'] in [a['url'], a['browser_download_url']]
+               or (known_download and unquote(parsed.path.rsplit('/', 1)[-1]) == a['name'])]
     if len(matches) != 1 or not package.get('signature'):
         raise RuntimeError(f'Cannot resolve signed updater artifact: {platform}')
-    package['url'] = matches[0]['browser_download_url']
+    # Draft browser_download_url contains untagged-* until publication.
+    package['url'] = f"https://github.com/{repo}/releases/download/{quote(tag, safe='')}/{quote(matches[0]['name'], safe='')}"
 if manifest['version'] != tag.removeprefix('v'): raise RuntimeError('Manifest version mismatch')
 payload = json.dumps(manifest, indent=2).encode()
 # Stage replacement first so a failed upload leaves the existing feed intact.
